@@ -4,14 +4,22 @@ namespace Aoyon.MaterialEditor;
 
 internal static class MaterialUtility
 {
-    public static IEnumerable<MaterialProperty> GetProperties(Material material)
+    public static IEnumerable<MaterialProperty> EnumerateRawProperties(Material material)
     {
         var shader = material.shader;
         var propertyCount = shader.GetPropertyCount();
-        var seenNames = new HashSet<string>();
         for (var i = 0; i < propertyCount; i++)
         {
             if (!MaterialProperty.TryGet(material, i, out var property)) continue;
+            yield return property;
+        }
+    }
+    
+    public static IEnumerable<MaterialProperty> GetProperties(Material material)
+    {
+        var seenNames = new HashSet<string>();
+        foreach (var property in EnumerateRawProperties(material))
+        {
             // なんか同名で複数の値が存在することがあるらしい？エッジケースだと思うけど
             // 前と後のどちらが優先されるかは未確認。ここでは実装の簡単のために、前を採用
             // Todo: ちゃんと調べる
@@ -19,7 +27,7 @@ internal static class MaterialUtility
             yield return property;
         }
     }
-    
+
     public static IEnumerable<MaterialProperty> GetPropertyOverrides(Material original, Material overrided, 
         bool strict, bool includeExtra, bool includeTextures = true)
     {

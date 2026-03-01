@@ -19,7 +19,7 @@ internal class MaterialAdvancedDropdown : AdvancedDropdown
 
     protected override AdvancedDropdownItem BuildRoot()
     {
-        var root = new AdvancedDropdownItem("Select Material");
+        var root = new AdvancedDropdownItem("Editor:SelectMaterial".LS());
         int itemId = 0;
 
         foreach (var mat in _materials)

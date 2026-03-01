@@ -6,28 +6,20 @@ using EditorMaterialProperty = UnityEditor.MaterialProperty;
 
 namespace Aoyon.MaterialEditor.UI;
 
-/// <summary>
-/// Material インスペクタで override 中のプロパティ左側にマージンラインを描く。
-/// 高さは GetPropertyHeight のみで決める。Drawer が GetPropertyHeight を正しく返せば正しく表示される。
-/// Prefab override と同様に EditorGUI.DrawMarginLineForRect を使用（利用可能な場合）。
-/// </summary>
 [InitializeOnLoad]
 internal static class MaterialEditorPatcher
 {
-
     static MaterialEditorPatcher()
     {
         try
         {
             var harmony = new Harmony(typeof(MaterialEditorPatcher).FullName);
 
-            var materialEditorType = typeof(EditorMaterialEditor);
             var shaderPropertyMethod = AccessTools.Method(
-                materialEditorType,
+                typeof(EditorMaterialEditor),
                 "ShaderPropertyInternal",
                 new[] { typeof(Rect), typeof(EditorMaterialProperty), typeof(GUIContent) }
-            );
-            if (shaderPropertyMethod == null) throw new Exception("ShaderPropertyInternal method not found");
+            ) ?? throw new Exception("ShaderPropertyInternal method not found");
 
             harmony.Patch(
                 shaderPropertyMethod,

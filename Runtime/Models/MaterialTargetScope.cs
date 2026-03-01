@@ -9,7 +9,7 @@ internal class MaterialTargetScope : IEquatable<MaterialTargetScope>
         Slot,
     }
 
-    public ScopeType Type;
+    public ScopeType Type = ScopeType.Asset;
 
     // Asset
     [MaterialSelector]

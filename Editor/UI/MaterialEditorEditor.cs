@@ -22,7 +22,7 @@ internal class MaterialEditorEditor : Editor
     private UnityEditor.MaterialEditor _materialEditor = null!;
     private MaterialEntrySettings? _cachedEntrySettings;
 
-    private string _recordingMaterialName = "Recording Material";
+    private const string RecordingMaterialName = "Recording…";
 
     private void OnEnable()
     {
@@ -40,10 +40,10 @@ internal class MaterialEditorEditor : Editor
 
         _recordingSourceMaterial = AutoSelectRecordingSourceMaterial();
         if (_recordingSourceMaterial != null) { 
-            _recordingMaterial = new Material(_recordingSourceMaterial) { name = _recordingMaterialName };
+            _recordingMaterial = new Material(_recordingSourceMaterial) { name = RecordingMaterialName };
         }
         else {
-            _recordingMaterial = new Material(Shader.Find("Standard")) { name = _recordingMaterialName };
+            _recordingMaterial = new Material(Shader.Find("Standard")) { name = RecordingMaterialName };
         }
         _materialEditor = (UnityEditor.MaterialEditor)CreateEditor(_recordingMaterial, typeof(UnityEditor.MaterialEditor));
 
@@ -65,6 +65,8 @@ internal class MaterialEditorEditor : Editor
     {
         serializedObject.Update();
 
+        Localization.DrawLanguageSwitcher();
+        EditorGUILayout.Space();
         DrawInformationGUI();
         EntrySettingsGUI();
         EditorGUILayout.Space(); 
@@ -77,25 +79,25 @@ internal class MaterialEditorEditor : Editor
     {
         if (_avatarRoot == null)
         {
-            EditorGUILayout.HelpBox("No avatar root is found", MessageType.Error);
+            EditorGUILayout.HelpBox("HelpBox:NoAvatarRoot".LS(), MessageType.Error);
         }
 
         var effective = MaterialEditorProcessor.IsEffective(_target);
         if (!effective)
         {
-            EditorGUILayout.HelpBox("This component is not effective", MessageType.Warning);
+            EditorGUILayout.HelpBox("HelpBox:NotEffective".LS(), MessageType.Warning);
         }
     }
 
     private void EntrySettingsGUI()
     {
-        EditorGUILayout.LabelField("対象設定", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("# " + "Label:TargetSettings".LS(), EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(_entrySettings);
     }
 
     private void MaterialAndOverrideGUI()
     {
-        EditorGUILayout.LabelField("編集", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("# " + "Label:Edit".LS(), EditorStyles.boldLabel);
         if (_recordingSourceMaterial != null && _materialEditor != null)
         {
             _materialEditor.DrawHeader();
@@ -106,7 +108,7 @@ internal class MaterialEditorEditor : Editor
         }
         else 
         {
-            EditorGUILayout.HelpBox("No material is selected", MessageType.Warning, true);
+            EditorGUILayout.HelpBox("HelpBox:NoMaterialSelected".LS(), MessageType.Warning, true);
             OverridesGUI();
         }
     }
@@ -129,15 +131,10 @@ internal class MaterialEditorEditor : Editor
             fontSize = EditorStyles.boldLabel.fontSize
         };
 
-        if (GUI.Button(labelRect, $"現在の編集内容: {count}", labelStyle))
+        if (GUI.Button(labelRect, string.Format("Label:CurrentOverridesCount".LS(), count), labelStyle))
             _showOverrides = !_showOverrides;
 
-        // Draw a thin white line below the area
-        var lineHeight = 1f;
-        var lineSpacing = 2f; // Space between label and line
-        var lineRectBelow = new Rect(lineRect.x, lineRect.yMax + lineSpacing, lineRect.width, lineHeight);
-        EditorGUI.DrawRect(lineRectBelow, Color.white);
-        GUILayout.Space(lineHeight + lineSpacing);
+        GUIHelper.DrawLine(lineRect);
 
         if (_showOverrides)
         {
@@ -222,10 +219,10 @@ internal class MaterialEditorEditor : Editor
     {
         UpdateTargetMaterials();
         AutoSelectRecordingSourceMaterial();
-        OnRecordingMaterialChanged();
+        OnRecordingSourceMaterialChanged();
     }
 
-    private void OnRecordingMaterialChanged()
+    private void OnRecordingSourceMaterialChanged()
     {
         SyncRecordingMaterialFromComponent();
     }
@@ -276,7 +273,7 @@ internal class MaterialEditorEditor : Editor
         // 新しい差分をマージ(上書き, 追加, 重複削除)する
         MaterialOverrideSettings.MergeInto(newOvrs, cloned);
 
-        Undo.RecordObject(_target, "Sync Component from Recording Material");
+        Undo.RecordObject(_target, "Sync AO Material Editor from Recording Material");
         _target.OverrideSettings = cloned;
     }
 }

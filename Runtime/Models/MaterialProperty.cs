@@ -9,7 +9,7 @@ internal struct MaterialProperty
     public ShaderPropertyType PropertyType;
 
     // ShaderPropertyType.Texture
-    public Texture TextureValue;
+    public Texture? TextureValue;
     public Vector2 TextureOffsetValue;
     public Vector2 TextureScaleValue;
     // ShaderPropertyType.Color
@@ -20,6 +20,19 @@ internal struct MaterialProperty
     public int IntValue;
     // ShaderPropertyType.Float, ShaderPropertyType.Range
     public float FloatValue;
+
+    public MaterialProperty()
+    {
+        PropertyName = string.Empty;
+        PropertyType = ShaderPropertyType.Float;
+        TextureValue = null;
+        TextureOffsetValue = Vector2.zero;
+        TextureScaleValue = Vector2.one;
+        ColorValue = Color.white;
+        VectorValue = Vector4.zero;
+        IntValue = 0;
+        FloatValue = 0f;
+    }
 
     public readonly bool TrySet(Material mat)
     {
@@ -142,14 +155,11 @@ internal struct MaterialProperty
         switch (PropertyType)
         {
             case ShaderPropertyType.Texture:
-                if (strict)
-                {
-                    return TextureValue.Equals(other.TextureValue) && TextureOffsetValue.Equals(other.TextureOffsetValue) && TextureScaleValue.Equals(other.TextureScaleValue);
-                }
-                else
-                {
-                    return TextureValue == other.TextureValue && TextureOffsetValue == other.TextureOffsetValue && TextureScaleValue == other.TextureScaleValue;
-                }
+                var textureEquals = (TextureValue == null && other.TextureValue == null)
+                    || (TextureValue != null && TextureValue.Equals(other.TextureValue));
+                return textureEquals
+                    && TextureOffsetValue.Equals(other.TextureOffsetValue)
+                    && TextureScaleValue.Equals(other.TextureScaleValue);
             case ShaderPropertyType.Color:
                 return strict ? ColorValue.Equals(other.ColorValue) : ColorValue == other.ColorValue;
             case ShaderPropertyType.Vector:

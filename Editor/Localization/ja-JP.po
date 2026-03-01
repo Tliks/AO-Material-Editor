@@ -1,0 +1,60 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ja-JP\n"
+
+msgid "HelpBox:NoAvatarRoot"
+msgstr "このコンポーネントはアバターの配下に配置してください。"
+
+msgid "HelpBox:NotEffective"
+msgstr "このコンポーネントは現在無効です。\nコンポーネントのチェックボックスが有効であり、EditorOnly ではないことを確認してください。"
+
+msgid "Label:TargetSettings"
+msgstr "適用するマテリアル"
+
+msgid "Label:Edit"
+msgstr "編集画面"
+
+msgid "HelpBox:NoMaterialSelected"
+msgstr "マテリアルが選択されていません。"
+
+msgid "Label:CurrentOverridesCount"
+msgstr "現在の編集内容: {0}"
+
+msgid "Label:Select"
+msgstr "選択"
+
+msgid "Label:SelectMaterial"
+msgstr "マテリアルを選択"
+
+msgid "Label:ApplyMode"
+msgstr "選択方法"
+
+msgid "Enum:ApplyMode:Basic"
+msgstr "通常"
+
+msgid "Enum:ApplyMode:Advanced"
+msgstr "高度"
+
+msgid "Enum:ApplyMode:All"
+msgstr "全て"
+
+msgid "Label:Material"
+msgstr "マテリアル"
+
+msgid "Label:AdvancedTargets"
+msgstr "適用するマテリアル"
+
+msgid "Label:ExcludeTargets"
+msgstr "除外対象"
+
+msgid "Label:ExcludeObjectReferences"
+msgstr "除外対象 (GameObject)"
+
+msgid "List:Add"
+msgstr "追加"
+
+msgid "List:Delete"
+msgstr "削除"

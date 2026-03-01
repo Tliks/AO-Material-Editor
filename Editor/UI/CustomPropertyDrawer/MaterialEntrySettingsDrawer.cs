@@ -8,7 +8,7 @@ internal class MaterialEntrySettingsDrawer : PropertyDrawer
         var mode = property.FindPropertyRelative(nameof(MaterialEntrySettings.Mode));
         var rect = position;
         rect.height = EditorGUI.GetPropertyHeight(mode, GUIContent.none, true);
-        EditorGUI.PropertyField(rect, mode, true);
+        LocalizedToolbar.Field(rect, mode, LocalizedUI.GetEnumOptionKeys(typeof(MaterialEntrySettings.ApplyMode)), "Label:ApplyMode");
         rect.y += rect.height + EditorGUIUtility.standardVerticalSpacing;
 
         switch ((MaterialEntrySettings.ApplyMode)mode.enumValueIndex)
@@ -16,21 +16,20 @@ internal class MaterialEntrySettingsDrawer : PropertyDrawer
             case MaterialEntrySettings.ApplyMode.Basic:
                 var basicMaterial = property.FindPropertyRelative(nameof(MaterialEntrySettings.BasicMaterial));
                 rect.height = EditorGUI.GetPropertyHeight(basicMaterial, GUIContent.none, true);
-                EditorGUI.PropertyField(rect, basicMaterial, true);
+                LocalizedUI.PropertyField(rect, basicMaterial, "Label:Material", true);
                 break;
             case MaterialEntrySettings.ApplyMode.Advanced:
                 var advancedTargets = property.FindPropertyRelative(nameof(MaterialEntrySettings.AdvancedTargets));
-                rect.height = EditorGUI.GetPropertyHeight(advancedTargets, GUIContent.none, true);
-                EditorGUI.PropertyField(rect, advancedTargets, true);
+                rect = GUIHelper.List(rect, advancedTargets, true, "Label:AdvancedTargets".LG(), prop => prop.CopyFrom(new MaterialTargetScope()));
                 break;
             case MaterialEntrySettings.ApplyMode.All:
                 var excludeTargets = property.FindPropertyRelative(nameof(MaterialEntrySettings.ExcludeTargets));
                 var excludeObjectReferences = property.FindPropertyRelative(nameof(MaterialEntrySettings.ExcludeObjectReferences));
                 rect.height = EditorGUI.GetPropertyHeight(excludeTargets, GUIContent.none, true);
-                EditorGUI.PropertyField(rect, excludeTargets, true);
+                LocalizedUI.PropertyField(rect, excludeTargets, "Label:ExcludeTargets", true);
                 rect.y += rect.height + EditorGUIUtility.standardVerticalSpacing;
                 rect.height = EditorGUI.GetPropertyHeight(excludeObjectReferences, GUIContent.none, true);
-                EditorGUI.PropertyField(rect, excludeObjectReferences, true);
+                LocalizedUI.PropertyField(rect, excludeObjectReferences, "Label:ExcludeObjectReferences", true);
                 break;
         }
     }
@@ -50,7 +49,7 @@ internal class MaterialEntrySettingsDrawer : PropertyDrawer
                 break;
             case MaterialEntrySettings.ApplyMode.Advanced:
                 var advancedTargets = property.FindPropertyRelative(nameof(MaterialEntrySettings.AdvancedTargets));
-                height += EditorGUI.GetPropertyHeight(advancedTargets, GUIContent.none, true);
+                height += GUIHelper.GetListHeight(advancedTargets);
                 break;
             case MaterialEntrySettings.ApplyMode.All:
                 var excludeTargets = property.FindPropertyRelative(nameof(MaterialEntrySettings.ExcludeTargets));

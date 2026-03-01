@@ -1,9 +1,17 @@
 using System.Reflection;
 
-namespace Aoyon.MaterialEditor;
+namespace Aoyon.MaterialEditor.UI;
 
-internal static class GUIHelper
+internal static partial class GUIHelper
 {
+    public static void DrawLine(Rect rectAbove, float lineHeight = 1f, float lineSpacing = 2f, Color? color = null)
+    {
+        var c = color ?? Color.white;
+        var lineRect = new Rect(rectAbove.x, rectAbove.yMax + lineSpacing, rectAbove.width, lineHeight);
+        EditorGUI.DrawRect(lineRect, c);
+        GUILayout.Space(lineHeight + lineSpacing);
+    }
+
     private static Action<Rect, Color>? drawMarginLineForRectDelegate = null;
     private static Action<Rect, Color>? DrawMarginLineForRectDelegate => drawMarginLineForRectDelegate ??= CreateDrawMarginLineForRectDelegate();
 

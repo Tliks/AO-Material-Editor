@@ -10,16 +10,15 @@ internal class MaterialSelectorDrawer : PropertyDrawer
         EditorGUI.BeginProperty(position, label, property);
 
         float spacing = 4f;
-        // "Select" のラベルに合わせて幅を自動調整（ローカライズにも対応）
-        string selectorLabel = "Select"; // ここを必要に応じてローカライズ
+        var selectorLabel = "Label:Select".LS();
         var selectorContent = new GUIContent(selectorLabel);
-        float selectorWidth = GUI.skin.button.CalcSize(selectorContent).x + 16f; // パディング分加算
+        float selectorWidth = GUI.skin.button.CalcSize(selectorContent).x + 16f;
 
         var objectFieldRect = new Rect(position.x, position.y, position.width - selectorWidth - spacing, position.height);
         var selectorRect = new Rect(position.x + position.width - selectorWidth, position.y, selectorWidth, position.height);
 
         property.objectReferenceValue = EditorGUI.ObjectField(objectFieldRect, label, property.objectReferenceValue, typeof(Material), true);
-        if (GUI.Button(selectorRect, selectorContent, EditorStyles.popup))
+        if (GUI.Button(selectorRect, selectorContent, StyleHelper.CenteredPopupStyle))
         {
             var dropdown = new MaterialAdvancedDropdown(GetMaterials(property), 
                 (material) => OnSelected(property, material), 
