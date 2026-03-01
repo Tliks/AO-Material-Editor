@@ -1,0 +1,17 @@
+{
+  "name": "aoyon.material-editor",
+  "version": "0.1.0",
+  "displayName": "AO Material Editor",
+  "description": "Modular Material Modification",
+  "unity": "2022.3",
+  "author": {
+    "name": "Ao_425",
+    "url": "https://github.com/Tliks"
+  },
+  "license": "MIT",
+  "url": "https://github.com/Tliks",
+  "vpmDependencies": {
+    "nadena.dev.ndmf": ">=1.8.0",
+    "nadena.dev.modular-avatar": ">=1.11.0"
+  }
+}
