@@ -9,19 +9,16 @@ internal class MaterialSelectorDrawer : PropertyDrawer
     {
         EditorGUI.BeginProperty(position, label, property);
 
-        float spacing = 4f;
-        var selectorLabel = "Label:Select".LS();
-        var selectorContent = new GUIContent(selectorLabel);
-        float selectorWidth = GUI.skin.button.CalcSize(selectorContent).x + 16f;
+        var selectorContent = "Label:Select".LG();
+        var selectorWidth = GUI.skin.button.CalcSize(selectorContent).x + 16f;
 
-        var objectFieldRect = new Rect(position.x, position.y, position.width - selectorWidth - spacing, position.height);
-        var selectorRect = new Rect(position.x + position.width - selectorWidth, position.y, selectorWidth, position.height);
+        GUIHelper.SplitRectHorizontallyForRight(position, selectorWidth, out var objectFieldRect, out var selectorRect);
 
         property.objectReferenceValue = EditorGUI.ObjectField(objectFieldRect, label, property.objectReferenceValue, typeof(Material), true);
         if (GUI.Button(selectorRect, selectorContent, StyleHelper.CenteredPopupStyle))
         {
             var dropdown = new MaterialAdvancedDropdown(GetMaterials(property), 
-                (material) => OnSelected(property, material), 
+                (material, index) => OnSelected(property, material, index), 
                 new AdvancedDropdownState());
             dropdown.Show(position);
         }
@@ -45,7 +42,7 @@ internal class MaterialSelectorDrawer : PropertyDrawer
             .ToList();
     }
 
-    private static void OnSelected(SerializedProperty property, Material material)
+    private static void OnSelected(SerializedProperty property, Material material, int index)
     {
         property.objectReferenceValue = material;
         property.serializedObject.ApplyModifiedProperties();

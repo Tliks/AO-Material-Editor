@@ -1,17 +1,9 @@
 using System.Reflection;
-using UnityEditor;
 
 namespace Aoyon.MaterialEditor;
 
 internal static class SerializedPropertyExtensions
 {
-    public static SerializedProperty FPR(this SerializedProperty property, string name) =>
-        property.FindPropertyRelative(name);
-
-    /// <summary>
-    /// オブジェクトのシリアライズ可能なフィールド値を SerializedProperty にコピーする。
-    /// createDefault で作ったインスタンスをそのまま要素に反映できる。
-    /// </summary>
     public static void CopyFrom(this SerializedProperty prop, object source)
     {
         if (source == null) return;

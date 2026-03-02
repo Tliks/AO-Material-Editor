@@ -22,8 +22,7 @@ internal class MaterialEntrySettings : IEquatable<MaterialEntrySettings>
     public List<MaterialTargetScope> AdvancedTargets = new();
 
     // All
-    public List<MaterialTargetScope> ExcludeTargets = new();
-    public List<AvatarObjectReference> ExcludeObjectReferences = new(); // children renders with all slots
+    public AllMaterialTargetScope AllMaterialTargetScope = new();
 
     public MaterialEntrySettings Clone()
     {
@@ -32,8 +31,7 @@ internal class MaterialEntrySettings : IEquatable<MaterialEntrySettings>
             Mode = Mode,
             BasicMaterial = BasicMaterial,
             AdvancedTargets = new List<MaterialTargetScope>(AdvancedTargets.Select(t => t.Clone())),
-            ExcludeTargets = new List<MaterialTargetScope>(ExcludeTargets.Select(t => t.Clone())),
-            ExcludeObjectReferences = new List<AvatarObjectReference>(ExcludeObjectReferences.Select(r => r.Clone())),
+            AllMaterialTargetScope = AllMaterialTargetScope.Clone(),
         };
     }
 
@@ -43,14 +41,7 @@ internal class MaterialEntrySettings : IEquatable<MaterialEntrySettings>
         {
             advancedTarget.ResolveReferences(container);
         }
-        foreach (var excludeTarget in ExcludeTargets)
-        {
-            excludeTarget.ResolveReferences(container);
-        }
-        foreach (var excludeObjectReference in ExcludeObjectReferences)
-        {
-            excludeObjectReference.Get(container);
-        }
+        AllMaterialTargetScope.ResolveReferences(container);
     }
 
     public bool Equals(MaterialEntrySettings? other)
@@ -70,8 +61,7 @@ internal class MaterialEntrySettings : IEquatable<MaterialEntrySettings>
         }
         else if (Mode == ApplyMode.All)
         {
-            return ExcludeTargets.SequenceEqual(other.ExcludeTargets)
-             && ExcludeObjectReferences.SequenceEqual(other.ExcludeObjectReferences);
+            return AllMaterialTargetScope.Equals(other.AllMaterialTargetScope);
         }
 
         return false;
@@ -96,14 +86,7 @@ internal class MaterialEntrySettings : IEquatable<MaterialEntrySettings>
         }
         else if (Mode == ApplyMode.All)
         {
-            foreach (var excludeTarget in ExcludeTargets)
-            {
-                hash.Add(excludeTarget);
-            }
-            foreach (var excludeObjectReference in ExcludeObjectReferences)
-            {
-                hash.Add(excludeObjectReference);
-            }
+            hash.Add(AllMaterialTargetScope);
         }
 
         return hash.ToHashCode();

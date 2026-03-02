@@ -1,22 +1,16 @@
 namespace Aoyon.MaterialEditor.UI;
 
-// https://github.com/lilxyzw/lilycalInventory/blob/52763ab539d59609e63d6974493948ab0614f7c2/Editor/Helper/GUIHelper.cs
+// based on https://github.com/lilxyzw/lilycalInventory/blob/52763ab539d59609e63d6974493948ab0614f7c2/Editor/Helper/GUIHelper.cs
 internal static partial class GUIHelper
 {
-    private static readonly float GUI_SPACE = EditorGUIUtility.standardVerticalSpacing;
-    internal static readonly float propertyHeight = EditorGUIUtility.singleLineHeight;
-
     // 汎用的なFoldout
-    private static bool Foldout(Rect position, SerializedProperty property, bool drawFoldout, GUIContent content)
+    public static bool Foldout(Rect position, SerializedProperty property, GUIContent content, bool drawFoldout = true, bool toggleOnLabelClick = true, Func<Rect, SerializedProperty, Rect>? getClickableRect = null)
     {
         var label = EditorGUI.BeginProperty(position, content, property);
         if(drawFoldout)
         {
-            // Foldoutを描画する場合は左にずらして位置調整
-            var rect = new Rect(position);
-            if(EditorGUIUtility.hierarchyMode) rect.xMin -=  EditorStyles.foldout.padding.left - EditorStyles.label.padding.left;
-            if(Event.current.type == EventType.Repaint) EditorStyles.foldoutHeader.Draw(rect, false, false, property.isExpanded, false);
-            PropertyFoldout(position, property, label);
+            var clickableRect = getClickableRect != null ? getClickableRect(position, property) : position;
+            PropertyFoldout(clickableRect, property, label);
         }
         else
         {
@@ -29,13 +23,13 @@ internal static partial class GUIHelper
     }
 
     // EditorGUILayout用
-    private static bool Foldout(SerializedProperty prop, bool drawFoldout, GUIContent content)
+    public static bool Foldout(SerializedProperty prop, GUIContent content, bool drawFoldout = true, bool toggleOnLabelClick = true, Func<Rect, SerializedProperty, Rect>? getClickableRect = null)
     {
-        return Foldout(EditorGUILayout.GetControlRect(), prop, drawFoldout, content);
+        return Foldout(EditorGUILayout.GetControlRect(), prop, content, drawFoldout, toggleOnLabelClick, getClickableRect);
     }
 
     // Foldoutの三角形の部分だけ
-    internal static bool FoldoutOnly(Rect position, SerializedProperty property)
+    public static bool FoldoutOnly(Rect position, SerializedProperty property)
     {
         position.width = 12;
         position.height = propertyHeight;
@@ -49,7 +43,7 @@ internal static partial class GUIHelper
 
     private static bool PropertyFoldout(Rect position, SerializedProperty property, GUIContent label)
     {
-        var isExpanded = EditorGUI.Foldout(position, property.isExpanded, label);
+        var isExpanded = EditorGUI.Foldout(position, property.isExpanded, label, true);
         if(property.isExpanded != isExpanded)
         {
             // altキーが押されている場合は再帰的に開く

@@ -16,8 +16,11 @@ internal sealed class PluginDefinition : Plugin<PluginDefinition>
         var sequence = InPhase(BuildPhase.Resolving);
         sequence.Run(ResolveReferencesPass.Instance);
 
+        // 外部に参照されていたマテリアルを割り当てるプラグインの後
         sequence = InPhase(BuildPhase.Transforming)
-            .AfterPlugin("nadena.dev.modular-avatar");
+            .AfterPlugin("nadena.dev.modular-avatar")
+            .AfterPlugin("net.narazaka.vrchat.avatar-menu-creater-for-ma")
+            .AfterPlugin("jp.lilxyzw.lilycalinventory");
         sequence.Run(MaterialEditorBuild.Instance)
             .PreviewingWith(new MaterialEditorPreview());
     }

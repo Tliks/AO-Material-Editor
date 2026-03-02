@@ -56,14 +56,8 @@ internal static class MaterialEditorProcessor
                 }
                 case MaterialEntrySettings.ApplyMode.All:
                 {
-                    targetMaterials.UnionWith(allAssignments);
-
-                    foreach (var scope in entrySettings.ExcludeTargets)
-                        foreach (var materialSlot in ResolveScope(scope))
-                            targetMaterials.Remove(materialSlot);
-                    foreach (var objectReference in entrySettings.ExcludeObjectReferences)
-                        foreach (var materialSlot in ResolveObjectReference(objectReference))
-                            targetMaterials.Remove(materialSlot);
+                    foreach (var materialSlot in ResolveAllMaterialTargetScope(entrySettings.AllMaterialTargetScope))
+                        targetMaterials.Add(materialSlot);
                     break;
                 }
             }
@@ -82,27 +76,23 @@ internal static class MaterialEditorProcessor
                             yield return materialSlot;
                     break;
                 case MaterialTargetScope.ScopeType.Slot:
-                    var targetRenderer = ResolveRendererReference(scope.RendererReference);
-                    if (targetRenderer == null) yield break;
-
-                    if (scope.MaterialIndex == -1)
-                    {
-                        foreach (var materialSlot in allAssignments)
-                            if (rendererCompare(materialSlot.SlotId.Renderer, targetRenderer) is true)
-                                yield return materialSlot;
-                    }
-                    else if (scope.MaterialIndex >= 0)
-                    {
-                        // all materialsに含まれるかどうかの確認が必要
-                        foreach (var materialSlot in allAssignments)
-                        {
-                            var slotId = materialSlot.SlotId;
-                            if (rendererCompare(slotId.Renderer, targetRenderer) is true && slotId.MaterialIndex == scope.MaterialIndex)
-                                yield return materialSlot;
-                        }
-                    }
+                    foreach (var materialSlot in ResolveMaterialSlotReference(scope.MaterialSlotReference))
+                        yield return materialSlot;
                     break;
             }
+        }
+
+        IEnumerable<MaterialAssignment> ResolveAllMaterialTargetScope(AllMaterialTargetScope scope)
+        {
+            targetMaterials.UnionWith(allAssignments);
+
+            foreach (var excludeTargetScope in scope.ExcludeTargets)
+                foreach (var materialSlot in ResolveScope(excludeTargetScope))
+                    targetMaterials.Remove(materialSlot);
+            foreach (var excludeObjectReference in scope.ExcludeObjectReferences)
+                foreach (var materialSlot in ResolveObjectReference(excludeObjectReference))
+                    targetMaterials.Remove(materialSlot);
+            return targetMaterials;
         }
 
         IEnumerable<MaterialAssignment> ResolveObjectReference(AvatarObjectReference objectReference)
@@ -117,16 +107,39 @@ internal static class MaterialEditorProcessor
                     yield return materialSlot;
         }
 
-        Renderer? ResolveRendererReference(RendererReference rendererReference)
+        IEnumerable<MaterialAssignment> ResolveMaterialSlotReference(MaterialSlotReference reference)
         {
-            var gameObject = rendererReference.ObjectReference.Get(component);
+            var targetRenderer = ResolveRendererReference(reference.RendererReference);
+            if (targetRenderer == null) yield break;
+
+            if (reference.MaterialIndex == -1)
+            {
+                foreach (var materialSlot in allAssignments)
+                    if (rendererCompare(materialSlot.SlotId.Renderer, targetRenderer) is true)
+                        yield return materialSlot;
+            }
+            else if (reference.MaterialIndex >= 0)
+            {
+                // all materialsに含まれるかどうかの確認が必要
+                foreach (var materialSlot in allAssignments)
+                {
+                    var slotId = materialSlot.SlotId;
+                    if (rendererCompare(slotId.Renderer, targetRenderer) is true && slotId.MaterialIndex == reference.MaterialIndex)
+                        yield return materialSlot;
+                }
+            }
+        }
+
+        Renderer? ResolveRendererReference(AvatarObjectReference rendererReference)
+        {
+            var gameObject = rendererReference.Get(component);
             if (gameObject == null) return null;
+
             using var _1 = ListPool<Renderer>.Get(out var renderers);
             observeContext.GetComponents<Renderer>(gameObject, renderers);
             if (renderers.Count == 0) return null;
-            var index = rendererReference.RendererIndex;
-            if (index < 0 || index >= renderers.Count) return null;
-            return renderers[index];
+
+            return renderers[0];
         }
     }
 
@@ -159,7 +172,6 @@ internal static class MaterialEditorProcessor
         }
         return plans;
     }
-    
 
     public static Dictionary<MaterialAssignment, Material> CloneAndApplyOverrides(
         IReadOnlyDictionary<MaterialAssignment, MaterialOverrideSettings> plans,
@@ -190,6 +202,4 @@ internal static class MaterialEditorProcessor
             });
         }
     }
-
-    
 }

@@ -16,23 +16,21 @@ internal class MaterialTargetScope : IEquatable<MaterialTargetScope>
     public Material? Material = null;
 
     // Slot
-    public RendererReference RendererReference = new();
-    public int MaterialIndex = -1; // -1 means all slots
-
+    public MaterialSlotReference MaterialSlotReference = new();
+    
     public MaterialTargetScope Clone()
     {
         return new MaterialTargetScope
         {
             Type = Type,
             Material = Material,
-            RendererReference = RendererReference.Clone(),
-            MaterialIndex = MaterialIndex,
+            MaterialSlotReference = MaterialSlotReference.Clone(),
         };
     }
 
     public void ResolveReferences(Component container)
     {
-        RendererReference.ResolveReferences(container);
+        MaterialSlotReference.ResolveReferences(container);
     }
 
     public bool Equals(MaterialTargetScope other)
@@ -48,7 +46,7 @@ internal class MaterialTargetScope : IEquatable<MaterialTargetScope>
         }
         else if (Type == ScopeType.Slot)
         {
-            return RendererReference.Equals(other.RendererReference) && MaterialIndex == other.MaterialIndex;
+            return MaterialSlotReference.Equals(other.MaterialSlotReference);
         }
 
         return false;
@@ -64,8 +62,7 @@ internal class MaterialTargetScope : IEquatable<MaterialTargetScope>
                 hash.Add(Material);
                 break;
             case ScopeType.Slot:
-                hash.Add(RendererReference);
-                hash.Add(MaterialIndex);
+                hash.Add(MaterialSlotReference);
                 break;
         }
         return hash.ToHashCode();

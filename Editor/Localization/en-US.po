@@ -5,50 +5,89 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Language: en-US\n"
 
-msgid "Editor:NoAvatarRoot"
-msgstr "Please place this component under an Avatar."
+msgid "HelpBox:NoAvatarRoot"
+msgstr "Please attach this component under the avatar root."
 
-msgid "Editor:NotEffective"
-msgstr "This component is currently inactive. Ensure the component is enabled and not under EditorOnly."
+msgid "HelpBox:NotEffective"
+msgstr "This component is currently disabled.\nMake sure the component's checkbox is enabled and that it is not set to EditorOnly."
 
-msgid "Editor:TargetSettings"
-msgstr "Target Settings"
+msgid "Label:TargetSettings"
+msgstr "Target materials"
 
-msgid "Editor:Edit"
-msgstr "Edit"
+msgid "Label:EditorGUI"
+msgstr "Editor"
 
-msgid "Editor:NoMaterialSelected"
+msgid "HelpBox:NoMaterialSelected"
 msgstr "No material is selected."
 
-msgid "Editor:CurrentOverridesCount"
-msgstr "Current overrides: {0}"
+msgid "Label:CurrentOverridesCount"
+msgstr "Current changes: {0}"
 
-msgid "Editor:UndoSyncFromRecording"
-msgstr "Sync Component from Recording Material"
-
-msgid "Editor:Select"
+msgid "Label:Select"
 msgstr "Select"
 
-msgid "Editor:SelectMaterial"
-msgstr "Select Material"
+msgid "Label:SelectMaterial"
+msgstr "Select material"
 
-msgid "Editor:VectorValue"
-msgstr "Vector"
+msgid "Label:ApplyMode"
+msgstr "Selection Mode"
 
-msgid "Editor:RecordingMaterialName"
-msgstr "Recording Material"
+msgid "Enum:ApplyMode:Basic"
+msgstr "Basic"
 
-msgid "Editor:PluginDisplayName"
-msgstr "AO Material Editor"
+msgid "Enum:ApplyMode:Advanced"
+msgstr "Advanced"
 
-msgid "Editor:ResolveReferencesDisplayName"
-msgstr "Resolve References"
+msgid "Enum:ApplyMode:All"
+msgstr "All"
 
-msgid "Editor:ComponentMenuPath"
-msgstr "AO Material Editor/AO Material Editor"
+msgid "HelpBox:AdvancedModeInfo"
+msgstr "In this mode, the current changes can be batch applied to multiple materials.\nYou can also specify which slots to apply the changes to for each material slot."
 
-msgid "Label:Add"
+msgid "HelpBox:AllModeInfo"
+msgstr "In this mode, the current changes will be batch applied to all materials."
+
+msgid "Label:Material"
+msgstr "Material"
+
+msgid "Label:ExcludeTargets"
+msgstr "Excluded materials"
+
+msgid "Label:ExcludeObjectReferences"
+msgstr "Materials under GameObjects"
+
+msgid "List:Add"
 msgstr "Add"
 
-msgid "Label:Delete"
-msgstr "Delete"
+msgid "List:Delete"
+msgstr "Remove"
+
+msgid "Enum:ScopeType:Asset"
+msgstr "Asset"
+
+msgid "Enum:ScopeType:Slot"
+msgstr "Slot"
+
+msgid "HelpBox:EditorInfo"
+msgstr "Here you can edit materials non-destructively from the regular UI.\nYour changes are recorded automatically and saved to the component."
+
+msgid "Label:OverrideUtility"
+msgstr "Other actions"
+
+msgid "Label:Edit"
+msgstr "Edit"
+
+msgid "Label:Shader"
+msgstr "Shader"
+
+msgid "Label:RenderQueue"
+msgstr "Render Queue"
+
+msgid "Label:PropertyOverrides"
+msgstr "Property overrides"
+
+msgid "Label:MaterialProperty:TextureOffsetValue"
+msgstr "Offset"
+
+msgid "Label:MaterialProperty:TextureScaleValue"
+msgstr "Scale"

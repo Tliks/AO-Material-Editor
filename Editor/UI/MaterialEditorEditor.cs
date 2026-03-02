@@ -1,4 +1,5 @@
 using Aoyon.MaterialEditor.Processor;
+using NUnit.Framework.Interfaces;
 using UnityEngine.Pool;
 
 namespace Aoyon.MaterialEditor.UI;
@@ -70,7 +71,7 @@ internal class MaterialEditorEditor : Editor
         DrawInformationGUI();
         EntrySettingsGUI();
         EditorGUILayout.Space(); 
-        MaterialAndOverrideGUI();
+        EditorGUI();
 
         serializedObject.ApplyModifiedProperties();
     }
@@ -95,14 +96,16 @@ internal class MaterialEditorEditor : Editor
         EditorGUILayout.PropertyField(_entrySettings);
     }
 
-    private void MaterialAndOverrideGUI()
+    private void EditorGUI()
     {
-        EditorGUILayout.LabelField("# " + "Label:Edit".LS(), EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("# " + "Label:EditorGUI".LS(), EditorStyles.boldLabel);
         if (_recordingSourceMaterial != null && _materialEditor != null)
         {
             _materialEditor.DrawHeader();
             if (_materialEditor.isVisible) {
+                EditorGUILayout.HelpBox("HelpBox:EditorInfo".LS(), MessageType.Info);
                 OverridesGUI();
+                OverrideUtilityGUI();
                 _materialEditor.OnInspectorGUI();
             }
         }
@@ -117,32 +120,14 @@ internal class MaterialEditorEditor : Editor
     private void OverridesGUI()
     {
         var count = _target.OverrideSettings.CountOverrides();
-        var lineRect = EditorGUILayout.GetControlRect();
-        const float arrowWidth = 12f;
-        var arrowRect = new Rect(lineRect.x, lineRect.y, arrowWidth, lineRect.height);
-        var labelRect = new Rect(lineRect.x + arrowWidth, lineRect.y, lineRect.width - arrowWidth, lineRect.height);
-
-        _showOverrides = EditorGUI.Foldout(arrowRect, _showOverrides, GUIContent.none, true);
-
-        // Make the label a bit larger and bold, and center it
-        var labelStyle = new GUIStyle(EditorStyles.boldLabel)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = EditorStyles.boldLabel.fontSize
-        };
-
-        if (GUI.Button(labelRect, string.Format("Label:CurrentOverridesCount".LS(), count), labelStyle))
-            _showOverrides = !_showOverrides;
-
-        GUIHelper.DrawLine(lineRect);
-
+        _showOverrides = EditorGUILayout.Foldout(_showOverrides, string.Format("Label:CurrentOverridesCount".LS(), count), true);
         if (_showOverrides)
         {
             using var indent = new EditorGUI.IndentLevelScope();
             EditorGUILayout.PropertyField(_overrideSettings);
         }
     }
-
+    
     private HashSet<Material> UpdateTargetMaterials()
     {
         _targetMaterials = MaterialEditorProcessor.SelectTargetAssignments(_allAssignments, _target)
@@ -275,6 +260,102 @@ internal class MaterialEditorEditor : Editor
 
         Undo.RecordObject(_target, "Sync AO Material Editor from Recording Material");
         _target.OverrideSettings = cloned;
+    }
+
+    // OverrideUtilityGUI
+    private bool _showOverrideUtility = false;
+    // private Texture? _sourceTexture = null;
+    // private Texture? _destinationTexture = null;
+    // private Material? _originalMaterial = null;
+    // private Material? _overrideMaterial = null;
+    // private Material? _variantMaterial = null;
+    private void OverrideUtilityGUI()
+    {
+        _showOverrideUtility = EditorGUILayout.Foldout(_showOverrideUtility, "Label:OverrideUtility".LS(), true);
+        if (!_showOverrideUtility) return;
+
+        using var indent = new EditorGUI.IndentLevelScope();
+
+        EditorGUILayout.HelpBox("未実装！", MessageType.Warning);
+
+        // EditorGUILayout.LabelField("Replace Texture", EditorStyles.boldLabel);
+        // _sourceTexture = EditorGUILayout.ObjectField("Source Texture", _sourceTexture, typeof(Texture), false, GUILayout.Height(18f)) as Texture;
+        // _destinationTexture = EditorGUILayout.ObjectField("Destination Texture", _destinationTexture, typeof(Texture), false, GUILayout.Height(18f)) as Texture;
+        // if (GUILayout.Button("Add diff to this component"))
+        // {
+        //     ProcessReplaceTexture();
+        // }
+
+        // EditorGUILayout.Space();
+
+        // EditorGUILayout.LabelField("Get Material Diff", EditorStyles.boldLabel);
+        // _originalMaterial ??= _targetMaterial.objectReferenceValue as Material;
+        // _originalMaterial = MaterialSelector.DrawLayout(_originalMaterial, new GUIContent("Original Material"), _target.gameObject, m => _originalMaterial = m);
+        // _overrideMaterial = MaterialSelector.DrawLayout(_overrideMaterial, new GUIContent("Override Material"), _target.gameObject, m => _overrideMaterial = m);
+        
+        // using (new EditorGUILayout.HorizontalScope())
+        // {
+        //     if (GUILayout.Button("Add diff"))
+        //     {
+        //         ProcessMaterialDiff(true);
+        //     }
+        //     if (GUILayout.Button("Add diff (Exclude Texture)"))
+        //     {
+        //         ProcessMaterialDiff(false);
+        //     }
+        // }
+
+        // EditorGUILayout.Space();
+
+        // EditorGUILayout.LabelField("Get Material Variant Diff", EditorStyles.boldLabel);
+        // _variantMaterial = MaterialSelector.DrawLayout(_variantMaterial, new GUIContent("Material Variant"), _target.gameObject, m => _variantMaterial = m);
+        
+        // using (new EditorGUILayout.HorizontalScope())
+        // {
+        //     if (GUILayout.Button("Add diff"))
+        //     {
+        //         ProcessMaterialVariantDiff(true);
+        //     }
+        //     if (GUILayout.Button("Add diff (Exclude Texture)"))
+        //     {
+        //         ProcessMaterialVariantDiff(false);
+        //     }
+        // }
+
+        // return;
+
+        // void ProcessReplaceTexture()
+        // {
+        //     if (_sourceTexture == null || _destinationTexture == null) { TTLog.Info("MaterialModifier:info:TargetNotSet"); return; }
+
+        //     _recordingMaterial.ReplaceTexture(_destinationTexture, _sourceTexture);
+        //     ApplyRecordingMaterialDiffToComponent();
+
+        //     _sourceTexture = null;
+        //     _destinationTexture = null;
+        // }
+
+        // void ProcessMaterialDiff(bool includeTexture)
+        // {
+        //     if (_originalMaterial == null || _overrideMaterial == null) { TTLog.Info("MaterialModifier:info:TargetNotSet"); return; }
+
+        //     MaterialModifier.ApplyMaterialDiff(_originalMaterial, _overrideMaterial, _recordingMaterial, includeTexture);
+        //     ApplyRecordingMaterialDiffToComponent();
+
+        //     _originalMaterial = null;
+        //     _overrideMaterial = null;
+        // }
+
+        // void ProcessMaterialVariantDiff(bool includeTexture)
+        // {
+        //     if (_variantMaterial == null) { TTLog.Info("MaterialModifier:info:TargetNotSet"); return; }
+
+        //     var overrideProperties = GetVariantOverrideProperties(_variantMaterial, includeTexture).ToList();
+        //     MaterialModifier.ConfigureMaterial(_recordingMaterial, false, null, false, 0, overrideProperties);
+        //     ApplyRecordingMaterialDiffToComponent();
+
+        //     _variantMaterial = null;
+        // }
     }
 }
 

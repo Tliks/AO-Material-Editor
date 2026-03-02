@@ -5,7 +5,7 @@ using UnityEditorInternal;
 
 namespace Aoyon.MaterialEditor.UI;
 
-// https://github.com/lilxyzw/lilycalInventory/blob/52763ab539d59609e63d6974493948ab0614f7c2/Editor/Helper/GUIHelper.ReorderableList.cs
+// based on https://github.com/lilxyzw/lilycalInventory/blob/52763ab539d59609e63d6974493948ab0614f7c2/Editor/Helper/GUIHelper.ReorderableList.cs
 internal static partial class GUIHelper
 {
     internal static Rect List(Rect position, SerializedProperty property, bool drawFoldout, GUIContent content, Action<SerializedProperty> initializeFunction = null)
@@ -20,15 +20,17 @@ internal static partial class GUIHelper
 
     private static Rect InternalList(Rect position, SerializedProperty property, bool drawFoldout, GUIContent content, Action<SerializedProperty> initializeFunction)
     {
-        // Foldoutの表示
-        if(!Foldout(position.SingleLine(), property, drawFoldout, content)) return position.NewLine();
+        var foldoutRect = position.SetSingleHeight();
+        // ReorderableList 用の foldout は、右端の IntField/ボタン領域をクリック対象から除外する
+        var isExpanded = Foldout(foldoutRect, property, content, drawFoldout, true, GetListHeaderClickableRect);
+        DrawArraySizeOnLine(foldoutRect, property);
         position.NewLine();
+        if (!isExpanded) return position;
 
-        // Listの表示
         var reorderableList = PropertyHandlerWrap.GetOrSet(property, initializeFunction);
-        position.height = reorderableList.GetHeight();
+        position.height = reorderableList.GetHeight() - propertyHeight; // フッターをずらした分リスト自体の高さは小さくなっている
         reorderableList.DoList(position);
-        position.y = position.yMax;
+        position.NewLineWithSingleHeight();
         return position;
     }
 
@@ -44,25 +46,45 @@ internal static partial class GUIHelper
 
     private static void InternalList(SerializedProperty property, bool drawFoldout, GUIContent content, Action<SerializedProperty> initializeFunction)
     {
-        if(Foldout(property, drawFoldout, content))
+        var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+        var isExpanded = Foldout(rect, property, content, drawFoldout, true, GetListHeaderClickableRect);
+        DrawArraySizeOnLine(rect, property);
+
+        if (isExpanded)
             PropertyHandlerWrap.GetOrSet(property, initializeFunction).DoLayoutList();
+    }
+
+    private static Rect GetListHeaderClickableRect(Rect position, SerializedProperty property)
+    {
+        CalcFooterSize("List:Add".LG(), "List:Delete".LG(), ReorderableList.defaultBehaviours.preButton, position, out var rectNum, out _, out var rectAdd, out _);
+        if (property.isExpanded)
+        {
+            return new Rect(position.x, position.y, rectAdd.x - EditorGUIUtility.standardVerticalSpacing - position.x, position.height);
+        }
+        else
+        {
+            return new Rect(position.x, position.y, rectNum.x - EditorGUIUtility.standardVerticalSpacing - position.x, position.height);
+        }
     }
 
     internal static float GetListHeight(SerializedProperty property, bool drawFoldout = true)
     {
-        if(drawFoldout && !property.isExpanded) return propertyHeight;
+        var foldoutHeight = drawFoldout ? propertyHeight : 0f;
+
+        float listHeight;
         var list = PropertyHandlerWrap.GetOrSet(property);
-        if(list == null) return EditorGUI.GetPropertyHeight(property);
-        return list.GetHeight() + propertyHeight;
+        if (list == null) listHeight = EditorGUI.GetPropertyHeight(property);
+        else listHeight = property.isExpanded
+            ? list.GetHeight() - propertyHeight // フッターをずらした分リスト自体の高さは小さくなっている
+            : 0f;
+        
+        return listHeight + foldoutHeight;
     }
 
     internal static float GetListHeight(SerializedProperty parent, string propertyName, bool drawFoldout = true)
     {
-        using var property = parent.FPR(propertyName);
-        if(drawFoldout && !property.isExpanded) return propertyHeight;
-        var list = PropertyHandlerWrap.GetOrSet(property);
-        if(list == null) return EditorGUI.GetPropertyHeight(property);
-        return list.GetHeight() + propertyHeight;
+        using var property = parent.FindPropertyRelative(propertyName);
+        return GetListHeight(property, drawFoldout);
     }
 
     private static ReorderableList CreateReorderableList(SerializedProperty property, Action<SerializedProperty> initializeFunction = null)
@@ -119,10 +141,10 @@ internal static partial class GUIHelper
             list.serializedProperty.minArraySize > list.serializedProperty.serializedObject.maxArraySizeForMultiEditing &&
             list.serializedProperty.serializedObject.isEditingMultipleObjects;
 
-        var rectNum = new Rect(rect.xMax - EditorGUIUtility.fieldWidth + EditorGUIUtility.standardVerticalSpacing * 3, rect.y, EditorGUIUtility.fieldWidth, rect.height);
-        var rectRem = new Rect(rectNum.x - 40 - EditorGUIUtility.standardVerticalSpacing, rect.y, 40, rect.height);
-        var rectAdd = new Rect(rectRem.x - 40 - EditorGUIUtility.standardVerticalSpacing, rect.y, 40, rect.height);
-        var rectBack = new Rect(rectAdd.x, rect.y, rect.xMax - rectAdd.x, EditorGUIUtility.singleLineHeight);
+        var addContent = "List:Add".LG();
+        var deleteContent = "List:Delete".LG();
+        var buttonStyle = ReorderableList.defaultBehaviours.preButton;
+        CalcFooterSize(addContent, deleteContent, buttonStyle, rect, out var rectNum, out var rectRem, out var rectAdd, out var rectBack);
 
         // Foldoutのラベルと重なることを防ぐために上からRectを描画
         EditorGUI.DrawRect(rectBack, EditorGUIUtility.isProSkin ? new Color(0.219f,0.219f,0.219f,1) : new Color(0.784f,0.784f,0.784f,1));
@@ -139,7 +161,7 @@ internal static partial class GUIHelper
             using(new EditorGUI.DisabledScope(cantAdd))
             {
                 EditorGUI.DrawRect(rectAdd, new Color(0,0,0,0.1f));
-                if(GUI.Button(rectAdd, Localization.G("List:Add"), ReorderableList.defaultBehaviours.preButton))
+                if(GUI.Button(rectAdd, addContent, buttonStyle))
                 {
                     if(list.onAddDropdownCallback != null) list.onAddDropdownCallback(rectAdd, list);
                     else if(list.onAddCallback != null) list.onAddCallback(list);
@@ -156,7 +178,7 @@ internal static partial class GUIHelper
             using(new EditorGUI.DisabledScope(cantRemove))
             {
                 EditorGUI.DrawRect(rectRem, new Color(0,0,0,0.1f));
-                if(GUI.Button(rectRem, Localization.G("List:Delete"), ReorderableList.defaultBehaviours.preButton) || GUI.enabled && (bool)m_scheduleRemove?.GetValue(list))
+                if(GUI.Button(rectRem, deleteContent, buttonStyle) || GUI.enabled && (bool)m_scheduleRemove?.GetValue(list))
                 {
                     if(list.onRemoveCallback == null) ReorderableList.defaultBehaviours.DoRemoveButton(list);
                     else list.onRemoveCallback(list);
@@ -169,6 +191,56 @@ internal static partial class GUIHelper
         }
 
         m_scheduleRemove?.SetValue(list, false);
+    }
+
+    private static void CalcFooterSize(GUIContent addContent, GUIContent deleteContent, GUIStyle buttonStyle, Rect rect, out Rect rectNum, out Rect rectRem, out Rect rectAdd, out Rect rectBack)
+    {
+        var addSize     = buttonStyle.CalcSize(addContent);
+        var deleteSize  = buttonStyle.CalcSize(deleteContent);
+
+        var buttonSize = Mathf.Max(addSize.x, deleteSize.x) + 16f;
+        
+        var spacing = EditorGUIUtility.standardVerticalSpacing;
+
+        float numWidth = EditorGUIUtility.fieldWidth;
+        rectNum = new Rect(
+            rect.xMax - numWidth,
+            rect.y,
+            numWidth,
+            rect.height
+        );
+
+        rectRem = new Rect(
+            rectNum.x - spacing - buttonSize,
+            rect.y,
+            buttonSize,
+            rect.height
+        );
+
+        rectAdd = new Rect(
+            rectRem.x - spacing - buttonSize,
+            rect.y,
+            buttonSize,
+            rect.height
+        );
+
+        rectBack = new Rect(
+            rectAdd.x,
+            rect.y,
+            rectNum.xMax - rectAdd.x,
+            EditorGUIUtility.singleLineHeight
+        );
+    }
+
+    private static void DrawArraySizeOnLine(Rect rect, SerializedProperty property)
+    {
+        if(property == null || !property.isArray || property.hasMultipleDifferentValues) return;
+
+        var rectNum = new Rect(rect.xMax - EditorGUIUtility.fieldWidth + EditorGUIUtility.standardVerticalSpacing * 3, rect.y, EditorGUIUtility.fieldWidth, rect.height);
+
+        EditorGUI.BeginChangeCheck();
+        var size = EditorGUI.IntField(rectNum, property.arraySize);
+        if(EditorGUI.EndChangeCheck()) property.arraySize = size;
     }
 
     private class ReorderableListWrapper

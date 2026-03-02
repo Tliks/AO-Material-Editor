@@ -9,18 +9,17 @@ internal class MaterialPropertyDrawer : PropertyDrawer
     {
         EditorGUI.BeginProperty(position, label, property);
 
+        position.SetSingleHeight();
+
         var propertyName = property.FindPropertyRelative(nameof(MaterialProperty.PropertyName));
         var propertyType = property.FindPropertyRelative(nameof(MaterialProperty.PropertyType));
-        var spacing = EditorGUIUtility.standardVerticalSpacing;
-        var rect = position;
 
-        rect.height = EditorGUI.GetPropertyHeight(propertyName, GUIContent.none, true);
-        EditorGUI.PropertyField(rect, propertyName, true);
-        rect.y += rect.height + spacing;
-        rect.height = EditorGUI.GetPropertyHeight(propertyType, GUIContent.none, true);
-        EditorGUI.PropertyField(rect, propertyType, true);
-        rect.y += rect.height + spacing;
+        EditorGUI.PropertyField(position, propertyName, GUIContent.none);
+        position.NewLine();
 
+        GUIHelper.SplitRectHorizontally(position, 0.3f, out var typeRect, out var valueRect);
+
+        EditorGUI.PropertyField(typeRect, propertyType, GUIContent.none);
         var type = (ShaderPropertyType)propertyType.enumValueIndex;
         switch (type)
         {
@@ -28,38 +27,35 @@ internal class MaterialPropertyDrawer : PropertyDrawer
                 var textureValue = property.FindPropertyRelative(nameof(MaterialProperty.TextureValue));
                 var textureOffsetValue = property.FindPropertyRelative(nameof(MaterialProperty.TextureOffsetValue));
                 var textureScaleValue = property.FindPropertyRelative(nameof(MaterialProperty.TextureScaleValue));
-                rect.height = EditorGUI.GetPropertyHeight(textureValue, GUIContent.none, true);
-                EditorGUI.PropertyField(rect, textureValue, true);
-                rect.y += rect.height + spacing;
-                rect.height = EditorGUI.GetPropertyHeight(textureOffsetValue, GUIContent.none, true);
-                EditorGUI.PropertyField(rect, textureOffsetValue, true);
-                rect.y += rect.height + spacing;
-                rect.height = EditorGUI.GetPropertyHeight(textureScaleValue, GUIContent.none, true);
-                EditorGUI.PropertyField(rect, textureScaleValue, true);
+                EditorGUI.PropertyField(valueRect, textureValue, GUIContent.none);
+                position.NewLine();
+                var offsetScaleLabel = new GUIContent($"{"Label:MaterialProperty:TextureOffsetValue".LS()}・{"Label:MaterialProperty:TextureScaleValue".LS()}");
+                var offsetScaleLabelWidth = GUI.skin.label.CalcSize(offsetScaleLabel).x;
+                GUIHelper.SplitRectHorizontallyForLeft(position, offsetScaleLabelWidth, out var labelRect, out var fieldRect);
+                EditorGUI.LabelField(labelRect, offsetScaleLabel);
+                GUIHelper.SplitRectHorizontally(fieldRect, 0.5f, out var offsetRect, out var scaleRect);
+                EditorGUI.PropertyField(offsetRect, textureOffsetValue, GUIContent.none);
+                EditorGUI.PropertyField(scaleRect, textureScaleValue, GUIContent.none);
                 break;
             case ShaderPropertyType.Color:
                 var colorValue = property.FindPropertyRelative(nameof(MaterialProperty.ColorValue));
-                rect.height = EditorGUI.GetPropertyHeight(colorValue, GUIContent.none, true);
-                EditorGUI.PropertyField(rect, colorValue, true);
+                EditorGUI.PropertyField(valueRect, colorValue, GUIContent.none);
                 break;
             case ShaderPropertyType.Vector:
                 var vectorValue = property.FindPropertyRelative(nameof(MaterialProperty.VectorValue));
-                rect.height = EditorGUIUtility.singleLineHeight;
                 EditorGUI.BeginChangeCheck();
-                Vector4 newValue = EditorGUI.Vector4Field(rect, "VectorValue", vectorValue.vector4Value);
+                var newValue = EditorGUI.Vector4Field(valueRect, GUIContent.none, vectorValue.vector4Value);
                 if (EditorGUI.EndChangeCheck())
                     vectorValue.vector4Value = newValue;
                 break;
             case ShaderPropertyType.Int:
                 var intValue = property.FindPropertyRelative(nameof(MaterialProperty.IntValue));
-                rect.height = EditorGUI.GetPropertyHeight(intValue, GUIContent.none, true);
-                EditorGUI.PropertyField(rect, intValue, true);
+                EditorGUI.PropertyField(valueRect, intValue, GUIContent.none);
                 break;
             case ShaderPropertyType.Float:
             case ShaderPropertyType.Range:
                 var floatValue = property.FindPropertyRelative(nameof(MaterialProperty.FloatValue));
-                rect.height = EditorGUI.GetPropertyHeight(floatValue, GUIContent.none, true);
-                EditorGUI.PropertyField(rect, floatValue, true);
+                EditorGUI.PropertyField(valueRect, floatValue, GUIContent.none);
                 break;
         }
 
@@ -68,30 +64,22 @@ internal class MaterialPropertyDrawer : PropertyDrawer
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
-        var spacing = EditorGUIUtility.standardVerticalSpacing;
-        var propertyName = property.FindPropertyRelative(nameof(MaterialProperty.PropertyName));
+        var height = 0f;
+        height += GUIHelper.propertyHeight + GUIHelper.GUI_SPACE;
+
         var propertyType = property.FindPropertyRelative(nameof(MaterialProperty.PropertyType));
-        var height = EditorGUI.GetPropertyHeight(propertyName, GUIContent.none, true) + spacing
-            + EditorGUI.GetPropertyHeight(propertyType, GUIContent.none, true) + spacing;
         switch ((ShaderPropertyType)propertyType.enumValueIndex)
         {
             case ShaderPropertyType.Texture:
-                var textureValue = property.FindPropertyRelative(nameof(MaterialProperty.TextureValue));
-                var textureOffsetValue = property.FindPropertyRelative(nameof(MaterialProperty.TextureOffsetValue));
-                var textureScaleValue = property.FindPropertyRelative(nameof(MaterialProperty.TextureScaleValue));
-                height += EditorGUI.GetPropertyHeight(textureValue, GUIContent.none, true) + spacing
-                    + EditorGUI.GetPropertyHeight(textureOffsetValue, GUIContent.none, true) + spacing
-                    + EditorGUI.GetPropertyHeight(textureScaleValue, GUIContent.none, true);
+                height += GUIHelper.propertyHeight + GUIHelper.GUI_SPACE;
+                height += GUIHelper.propertyHeight;
                 break;
             case ShaderPropertyType.Color:
-                var colorValue = property.FindPropertyRelative(nameof(MaterialProperty.ColorValue));
-                height += EditorGUI.GetPropertyHeight(colorValue, GUIContent.none, true);
-                break;
             case ShaderPropertyType.Vector:
             case ShaderPropertyType.Int:
             case ShaderPropertyType.Float:
             case ShaderPropertyType.Range:
-                height += EditorGUIUtility.singleLineHeight;
+                height += GUIHelper.propertyHeight;
                 break;
         }
         return height;

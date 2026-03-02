@@ -13,7 +13,7 @@ internal class MaterialEditorPreview : IRenderFilter
 
         try
         {
-            foreach (var root in context.GetAvatarRoots())
+            foreach (var root in context.GetAvatarRoots().Distinct())
             {
                 if (!context.ActiveInHierarchy(root)) continue;
 
