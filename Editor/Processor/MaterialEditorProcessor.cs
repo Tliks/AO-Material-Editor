@@ -156,17 +156,20 @@ internal static class MaterialEditorProcessor
             var targetAssignments = SelectTargetAssignments(allAssignments, component, materialCompare, rendererCompare, observeContext);
             if (targetAssignments.Count == 0) continue;
 
-            var overrideSettings = observeContext.Observe(component, c => c.OverrideSettings.Clone(), (a, b) => a.Equals(b));
+            var observed = observeContext.Observe(component, c => c.OverrideSettings.Clone(), (a, b) => a.Equals(b));
 
             foreach (var assignment in targetAssignments)
             {
                 if (!plans.TryGetValue(assignment, out var existingSettings))
                 {
-                    plans[assignment] = overrideSettings;
+                    // Extractした設定はクローンされているが、それをNDMFが持っている
+                    // この関数内のマージで値を変えてしまうので、NDMF側に波及してループに陥らないように複製
+                    plans[assignment] = observed.Clone();
                 }
                 else
                 {
-                    MaterialOverrideSettings.MergeInto(overrideSettings, existingSettings);
+                    // observed(source)はread only
+                    MaterialOverrideSettings.MergeInto(observed, existingSettings);
                 }
             }
         }
