@@ -46,7 +46,6 @@ internal class MaterialTargeting
     }
 }
 
-
 internal interface IMaterialTargeting
 {
     IEnumerable<MaterialAssignment> GetAssignments(IReadOnlyList<Renderer> renderers);

@@ -3,7 +3,6 @@ namespace Aoyon.MaterialEditor.UI;
 [CustomPropertyDrawer(typeof(MaterialEntrySettings))]
 internal class MaterialEntrySettingsDrawer : PropertyDrawer
 {
-    private const float HELP_BOX_HEIGHT = 36f;
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
         position.SetSingleHeight();

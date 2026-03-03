@@ -69,7 +69,7 @@ msgid "Enum:ScopeType:Slot"
 msgstr "スロット"
 
 msgid "HelpBox:EditorInfo"
-msgstr "ここではマテリアルを通常のUIから、非破壊的に編集できます。\n編集内容は自動で記録され、コンポーネントに保存されます。"
+msgstr "ここでは通常のUIから、マテリアルを非破壊的に編集できます。\n編集内容は自動で記録され、コンポーネントに保存されます。"
 
 msgid "Label:OverrideUtility"
 msgstr "その他の操作"

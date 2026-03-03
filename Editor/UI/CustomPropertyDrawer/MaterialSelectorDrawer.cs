@@ -9,6 +9,8 @@ internal class MaterialSelectorDrawer : PropertyDrawer
     {
         EditorGUI.BeginProperty(position, label, property);
 
+        position.SetSingleHeight();
+
         var selectorContent = "Label:Select".LG();
         var selectorWidth = GUI.skin.button.CalcSize(selectorContent).x + 16f;
 

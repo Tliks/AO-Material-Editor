@@ -114,7 +114,7 @@ internal class MaterialEditorPreview : IRenderFilter
             // proxyのmaterial参照は重要ではなく、sharedMaterialsの置き換えはSlotIDで十分
             // proxyの参照は不確実なので、original rendererのSlotIDを用いる
             var replacements = new Dictionary<MaterialSlotId, Material>();
-            var proxyReplacements = MaterialEditorProcessor.CloneAndApplyOverrides(proxyOverridePlans, m => Utils.CloneMaterial(m));
+            var proxyReplacements = MaterialEditorProcessor.CloneAndApplyOverrides(proxyOverridePlans, m => Utils.CloneAndRegister(m));
             foreach (var (proxyAssignment, material) in proxyReplacements)
             {
                 var originalRenderer = proxyToOriginal[proxyAssignment.SlotId.Renderer];

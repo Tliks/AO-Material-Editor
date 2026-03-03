@@ -53,10 +53,6 @@ internal static class Localization
         }
         return new GUIContent(localized);
     }
-    public static GUIContent G(SerializedProperty property)
-    {
-        return new(S($"property.{property.name}"));
-    }
 
     public static void LocalizeUIElements(VisualElement element) => NdmfLocalizer.LocalizeUIElements(element);
 

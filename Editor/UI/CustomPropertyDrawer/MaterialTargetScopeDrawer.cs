@@ -7,12 +7,11 @@ internal class MaterialTargetScopeDrawer : PropertyDrawer
     {
         EditorGUI.BeginProperty(position, label, property);
 
-        var rect = position;
-        rect.height = EditorGUIUtility.singleLineHeight;
+        position.SetSingleHeight();
 
         var type = property.FindPropertyRelative(nameof(MaterialTargetScope.Type));
 
-        GUIHelper.SplitRectHorizontally(rect, 0.18f, 60f, out var typeRect, out var valueRect);
+        GUIHelper.SplitRectHorizontally(position, 0.18f, 60f, out var typeRect, out var valueRect);
 
         LocalizedPopup.Field(typeRect, type, null, LocalizedUI.GetEnumOptionKeys(typeof(MaterialTargetScope.ScopeType)));
 
@@ -33,6 +32,6 @@ internal class MaterialTargetScopeDrawer : PropertyDrawer
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
-        return EditorGUIUtility.singleLineHeight;
+        return GUIHelper.propertyHeight;
     }
 }

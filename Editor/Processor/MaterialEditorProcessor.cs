@@ -27,6 +27,7 @@ internal static class MaterialEditorProcessor
         rendererCompare ??= (a, b) => a == b;
         observeContext ??= new NonObserveContext();
 
+        // read only
         var entrySettings = observeContext.Observe(component, c => c.EntrySettings.Clone(), (a, b) => a.Equals(b));
 
         var targetMaterials = new HashSet<MaterialAssignment>();
@@ -151,12 +152,14 @@ internal static class MaterialEditorProcessor
     {
         var plans = new Dictionary<MaterialAssignment, MaterialOverrideSettings>();
         observeContext ??= new NonObserveContext();
+        var emptySettings = MaterialOverrideSettings.Empty;
         foreach (var component in components)
         {
             var targetAssignments = SelectTargetAssignments(allAssignments, component, materialCompare, rendererCompare, observeContext);
             if (targetAssignments.Count == 0) continue;
 
             var observed = observeContext.Observe(component, c => c.OverrideSettings.Clone(), (a, b) => a.Equals(b));
+            if (observed.Equals(emptySettings)) continue;
 
             foreach (var assignment in targetAssignments)
             {
@@ -197,12 +200,13 @@ internal static class MaterialEditorProcessor
 
         Material GetOrCreate(Material material, MaterialOverrideSettings settings)
         {
-            return editedMaterials.GetOrAdd((material, settings), _ =>
+            if (!editedMaterials.TryGetValue((material, settings), out var edited))
             {
-                var edited = clone(material);
+                edited = clone(material);
                 MaterialUtility.ApplyOverrideSettings(edited, settings);
-                return edited;
-            });
+                editedMaterials[(material, settings)] = edited;
+            }
+            return edited;
         }
     }
 }

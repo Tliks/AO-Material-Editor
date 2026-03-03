@@ -12,6 +12,8 @@ internal class MaterialOverrideSettings : IEquatable<MaterialOverrideSettings>
     public int RenderQueueValue = 2000;
 
     public List<MaterialProperty> PropertyOverrides = new();
+
+    public static MaterialOverrideSettings Empty => new();
     
     public static void MergeInto(MaterialOverrideSettings source, MaterialOverrideSettings target)
     {
