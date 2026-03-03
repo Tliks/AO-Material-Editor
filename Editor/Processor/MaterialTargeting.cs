@@ -15,7 +15,7 @@ internal class MaterialTargeting
         _materialTargetings = materialTargetings;
     }
 
-    public IEnumerable<MaterialAssignment> GetAssignments(IReadOnlyList<Renderer> renderers)
+    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers)
     {
         foreach (var materialTargeting in _materialTargetings)
         {
@@ -48,14 +48,14 @@ internal class MaterialTargeting
 
 internal interface IMaterialTargeting
 {
-    IEnumerable<MaterialAssignment> GetAssignments(IReadOnlyList<Renderer> renderers);
+    IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers);
     IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer);
     void ApplyReplacements(IReadOnlyDictionary<MaterialAssignment, Material> replacements);
 }
 
 internal class DefaultMaterialTargeting : IMaterialTargeting
 {
-    public IEnumerable<MaterialAssignment> GetAssignments(IReadOnlyList<Renderer> renderers)
+    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers)
     {
         foreach (var renderer in renderers)
         {
@@ -116,7 +116,7 @@ internal class AnimatorMaterialTargeting : IMaterialTargeting
         _animationIndex = animationIndex;
     }
 
-    public IEnumerable<MaterialAssignment> GetAssignments(IReadOnlyList<Renderer> renderers)
+    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers)
     {
         return GetMaterialsImpl(renderers.ToHashSet());
     }

@@ -17,7 +17,8 @@ internal class MaterialEditorPreview : IRenderFilter
             {
                 if (!context.ActiveInHierarchy(root)) continue;
 
-                var renderers = context.GetComponentsInChildren<Renderer>(root, true);
+                var renderers = context.GetComponentsInChildren<Renderer>(root, true)
+                    .Where(r => r is SkinnedMeshRenderer or MeshRenderer);
                 // sharedmaterialsはNDMF側で監視してる…と思うのでcontextを介さない
                 var allAssignments = new DefaultMaterialTargeting().GetAssignments(renderers).ToHashSet(); 
 

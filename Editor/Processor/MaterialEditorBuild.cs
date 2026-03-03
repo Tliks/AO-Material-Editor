@@ -21,7 +21,8 @@ internal class MaterialEditorBuild : Pass<MaterialEditorBuild>
             new AnimatorMaterialTargeting(root, animationIndex)
         );
 
-        var renderers = root.GetComponentsInChildren<Renderer>(true);
+        var renderers = root.GetComponentsInChildren<Renderer>(true)
+            .Where(r => r is SkinnedMeshRenderer or MeshRenderer);
         var allAssignments = materialTargeting.GetAssignments(renderers).ToHashSet();
 
         var overridePlans = MaterialEditorProcessor.BuildOverridePlans(components, 
