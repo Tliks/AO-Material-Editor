@@ -23,7 +23,7 @@ internal static partial class GUIHelper
         var foldoutRect = position.SetSingleHeight();
         // ReorderableList 用の foldout は、右端の IntField/ボタン領域をクリック対象から除外する
         var isExpanded = Foldout(foldoutRect, property, content, drawFoldout, true, GetListHeaderClickableRect);
-        DrawArraySizeOnLine(foldoutRect, property);
+        if (!isExpanded) DrawArraySizeOnLine(foldoutRect, property);
         position.NewLine();
         if (!isExpanded) return position;
 
@@ -48,10 +48,11 @@ internal static partial class GUIHelper
     {
         var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
         var isExpanded = Foldout(rect, property, content, drawFoldout, true, GetListHeaderClickableRect);
-        DrawArraySizeOnLine(rect, property);
 
         if (isExpanded)
             PropertyHandlerWrap.GetOrSet(property, initializeFunction).DoLayoutList();
+        else
+            DrawArraySizeOnLine(rect, property);
     }
 
     private static Rect GetListHeaderClickableRect(Rect position, SerializedProperty property)
