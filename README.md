@@ -3,7 +3,7 @@ AO Material Editor
 
 Modular Material Modification Component
 
-[Add to VCC or ALCOM](https://tliks.github.io/vpm-repos/)
+[Add to VCC or ALCOM](https://tliks.github.io/vpm-repos)
 
 Add Component via `AO Material Editor/AO Material Editor`
 
