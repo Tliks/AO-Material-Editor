@@ -41,6 +41,7 @@ internal class MaterialEditorEditor : Editor
         _recordingSourceMaterial = AutoSelectRecordingSourceMaterial();
         if (_recordingSourceMaterial != null) { 
             _recordingMaterial = new Material(_recordingSourceMaterial) { name = RecordingMaterialName };
+            SyncRecordingMaterialFromComponent();
         }
         else {
             _recordingMaterial = new Material(Shader.Find("Standard")) { name = RecordingMaterialName };
