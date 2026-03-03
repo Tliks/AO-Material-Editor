@@ -128,7 +128,6 @@ internal class AnimatorMaterialTargeting : IMaterialTargeting
 
     private IEnumerable<MaterialAssignment> GetMaterialsImpl(HashSet<Renderer> renderers)
     {
-        var result = new List<MaterialAssignment>();
         foreach (var (binding, obj) in _animationIndex.GetPPtrReferencedObjectsWithBinding)
         {
             var material = obj as Material;
@@ -150,9 +149,8 @@ internal class AnimatorMaterialTargeting : IMaterialTargeting
 
             if (!renderers.Contains(renderer)) continue;
 
-            result.Add(new MaterialAssignment(new(renderer, index), material));
+            yield return new MaterialAssignment(new(renderer, index), material);
         }
-        return result;
     }
 
     public void ApplyReplacements(IReadOnlyDictionary<MaterialAssignment, Material> replacements)
