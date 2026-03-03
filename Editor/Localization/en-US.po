@@ -12,7 +12,7 @@ msgid "HelpBox:NotEffective"
 msgstr "This component is currently disabled.\nMake sure the component's checkbox is enabled and that it is not set to EditorOnly."
 
 msgid "Label:TargetSettings"
-msgstr "Target materials"
+msgstr "Target Materials"
 
 msgid "Label:EditorGUI"
 msgstr "Editor"
