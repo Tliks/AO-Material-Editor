@@ -28,11 +28,7 @@ internal class MaterialSelectorDrawer : PropertyDrawer
         var root = Utils.FindAvatarInParents(gameObject);
         if (root == null) return new List<Material>();
 
-        return root.GetComponentsInChildren<Renderer>(true)
-            .SelectMany(x => x.sharedMaterials)
-            .Where(x => x != null)
-            .Distinct()
-            .ToList();
+        return Utils.GetTargetMaterials(root);
     }
 
     private static void OnSelected(SerializedProperty property, Material material, int index)

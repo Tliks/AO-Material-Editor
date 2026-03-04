@@ -1,3 +1,4 @@
+using Aoyon.MaterialEditor.Processor;
 using nadena.dev.ndmf;
 using nadena.dev.ndmf.runtime;
 
@@ -21,5 +22,22 @@ internal static class Utils
         var newMaterial = new Material(material) { name = $"{material.name}{suffix}" };
         ObjectRegistry.RegisterReplacedObject(material, newMaterial);
         return newMaterial;
+    }
+
+    public static List<Material> GetTargetMaterials(GameObject gameObject)
+    {
+        return MaterialEditorProcessor.GetTargetRenderers(gameObject)
+            .SelectMany(x => x.sharedMaterials)
+            .SkipDestroyed()
+            .Distinct()
+            .ToList();
+    }
+
+    public static List<Material> GetMaterials(Renderer renderer)
+    {
+        return renderer.sharedMaterials
+            .SkipDestroyed()
+            .Distinct()
+            .ToList();
     }
 }

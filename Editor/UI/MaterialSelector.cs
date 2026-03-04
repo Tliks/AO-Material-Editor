@@ -4,11 +4,30 @@ namespace Aoyon.MaterialEditor.UI;
 
 internal class MaterialSelector
 {
+    private readonly static GUIStyle _style = StyleHelper.CenteredPopupStyle;
+    
+    public static void Draw(Func<List<Material>> getMaterials, 
+        Action<Material, int> onSelected, 
+        Func<Material, int, string>? labelSelector = null)
+    {
+        var label = GetContent();
+        var rect = GUILayoutUtility.GetRect(label, _style, GUILayout.Width(GetSize(label).x));
+        if (GUI.Button(rect, label, _style))
+        {
+            var dropdown = new MaterialAdvancedDropdown(
+                getMaterials(),
+                onSelected,
+                new(),
+                labelSelector);
+            dropdown.Show(rect);
+        }
+    }
+
     public static void Draw(Rect position, Func<List<Material>> getMaterials, 
         Action<Material, int> onSelected, 
         Func<Material, int, string>? labelSelector = null)
     {
-        if (GUI.Button(position, GetContent(), StyleHelper.CenteredPopupStyle))
+        if (GUI.Button(position, GetContent(), _style))
         {
             var dropdown = new MaterialAdvancedDropdown(
                 getMaterials(),
@@ -21,12 +40,17 @@ internal class MaterialSelector
 
     public static Vector2 GetSize()
     {
+        return GetSize(GetContent());
+    }
+
+    public static Vector2 GetSize(GUIContent content)
+    {
         return new Vector2(
-            GUI.skin.button.CalcSize(GetContent()).x + 16f,
+            GUI.skin.button.CalcSize(content).x + 16f,
             GUIHelper.propertyHeight
         );
     }
-    
+ 
     private static GUIContent GetContent()
     {
         return "Label:Select".LG();

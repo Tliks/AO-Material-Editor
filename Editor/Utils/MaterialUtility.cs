@@ -158,10 +158,10 @@ internal static class MaterialUtility
 
     // 古いシェーダーに存在してかつ新しいシェーダーに存在しないプロパティが残るのであまり良くない
     // シェーダー未参照のプロパティの削除はここで行うにはコストがかなり高い
-    public static void CopyAllProperties(Material source, Material target)
+    public static void CopyAllSettings(Material source, Material target, bool includeTextures = true)
     {
         // sourceの状態にする為に、target => sourceの差分を取得し、それをtargetに適用することで疑似的にプロパティの一致を行う
-        var overrides = GetOverrides(target, source, false, true);
+        var overrides = GetOverrides(target, source, false, true, includeTextures: includeTextures);
         ApplyOverrideSettings(target, overrides);
     }
 }

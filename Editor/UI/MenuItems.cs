@@ -1,5 +1,3 @@
-using Aoyon.MaterialEditor.Processor;
-
 namespace Aoyon.MaterialEditor.UI;
 
 internal static class MenuItems
@@ -13,11 +11,7 @@ internal static class MenuItems
         var selected = Selection.activeGameObject;
         if (selected == null) throw new Exception("No selected game object");
 
-        var materials = MaterialEditorProcessor.GetTargetRenderers(selected)
-            .SelectMany(r => r.sharedMaterials)
-            .SkipDestroyed()
-            .Distinct()
-            .ToList();
+        var materials = Utils.GetTargetMaterials(selected);
         if (materials.Count == 0) throw new Exception("No materials found");
 
         var root = new GameObject("AO Material Editor");

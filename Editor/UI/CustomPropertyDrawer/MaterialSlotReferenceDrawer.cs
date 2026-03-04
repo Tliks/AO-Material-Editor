@@ -72,7 +72,7 @@ internal class MaterialSlotReferenceDrawer : PropertyDrawer
 
     private static List<Material> GetMaterials(Renderer renderer)
     {
-        var materials = renderer.sharedMaterials.SkipDestroyed().ToList();
+        var materials = Utils.GetMaterials(renderer);
         materials.Insert(0, _allMaterials);
         return materials;
     }

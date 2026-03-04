@@ -220,7 +220,7 @@ internal class MaterialEditorEditor : Editor
 
         // sourceの状態に初期化
         // ここではシェーダー未参照のプロパティは削除されないけど…多分大丈夫でしょう…
-        MaterialUtility.CopyAllProperties(_recordingSourceMaterial, _recordingMaterial);
+        MaterialUtility.CopyAllSettings(_recordingSourceMaterial, _recordingMaterial);
         // overrideを反映
         MaterialUtility.ApplyOverrideSettings(_recordingMaterial, _target.OverrideSettings);
     }
