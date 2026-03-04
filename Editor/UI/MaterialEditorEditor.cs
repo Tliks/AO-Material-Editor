@@ -125,6 +125,11 @@ internal class MaterialEditorEditor : Editor
         {
             using var indent = new EditorGUI.IndentLevelScope();
             EditorGUILayout.PropertyField(_overrideSettings);
+            if (GUILayout.Button("Label:ResetAll".LS()))
+            {
+                Undo.RecordObject(_target, "Reset AO Material Editor Overrides");
+                _target.OverrideSettings = MaterialOverrideSettings.Empty;
+            }
         }
     }
     

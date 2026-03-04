@@ -91,3 +91,6 @@ msgstr "Offset"
 
 msgid "Label:MaterialProperty:TextureScaleValue"
 msgstr "Scale"
+
+msgid "Label:ResetAll"
+msgstr "Reset"

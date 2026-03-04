@@ -91,3 +91,6 @@ msgstr "オフセット"
 
 msgid "Label:MaterialProperty:TextureScaleValue"
 msgstr "スケール"
+
+msgid "Label:ResetAll"
+msgstr "リセット"
