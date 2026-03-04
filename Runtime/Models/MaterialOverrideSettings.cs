@@ -50,13 +50,16 @@ internal class MaterialOverrideSettings : IEquatable<MaterialOverrideSettings>
         target.PropertyOverrides = result;
     }
 
-    public int CountOverrides()
+    public int OverrideCount
     {
-        var count = 0;
-        if (OverrideShader && TargetShader != null) count++;
-        if (OverrideRenderQueue) count++;
-        count += PropertyOverrides.Count;
-        return count;
+        get
+        {
+            var count = 0;
+            if (OverrideShader && TargetShader != null) count++;
+            if (OverrideRenderQueue) count++;
+            count += PropertyOverrides.Count;
+            return count;
+        }
     }
 
     public MaterialOverrideSettings Clone()

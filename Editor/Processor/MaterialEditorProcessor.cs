@@ -17,6 +17,15 @@ internal static class MaterialEditorProcessor
         return true;
     }
 
+    public static List<Renderer> GetTargetRenderers(GameObject gameObject, IObserveContext? observeContext = null)
+    {
+        observeContext ??= new NonObserveContext();
+        var renderers = new List<Renderer>();
+        observeContext.GetComponentsInChildren<Renderer>(gameObject, true, renderers);
+        renderers.RemoveAll(r => r is not (SkinnedMeshRenderer or MeshRenderer));
+        return renderers;
+    }
+
     public static HashSet<MaterialAssignment> SelectTargetAssignments(
         HashSet<MaterialAssignment> allAssignments, MaterialEditorComponent component, 
         Func<Material, Material, bool>? materialCompare = null, 

@@ -2,6 +2,37 @@ using UnityEditor.IMGUI.Controls;
 
 namespace Aoyon.MaterialEditor.UI;
 
+internal class MaterialSelector
+{
+    public static void Draw(Rect position, Func<List<Material>> getMaterials, 
+        Action<Material, int> onSelected, 
+        Func<Material, int, string>? labelSelector = null)
+    {
+        if (GUI.Button(position, GetContent(), StyleHelper.CenteredPopupStyle))
+        {
+            var dropdown = new MaterialAdvancedDropdown(
+                getMaterials(),
+                onSelected,
+                new(),
+                labelSelector);
+            dropdown.Show(position);
+        }
+    }
+
+    public static Vector2 GetSize()
+    {
+        return new Vector2(
+            GUI.skin.button.CalcSize(GetContent()).x + 16f,
+            GUIHelper.propertyHeight
+        );
+    }
+    
+    private static GUIContent GetContent()
+    {
+        return "Label:Select".LG();
+    }
+}
+
 internal class MaterialAdvancedDropdown : AdvancedDropdown
 {
     private readonly List<Material> _materials;

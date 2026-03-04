@@ -30,9 +30,7 @@ internal class MaterialSlotReferenceDrawer : PropertyDrawer
     private static readonly Material _allMaterials = new(Shader.Find("Standard")) { name = "All Materials" };
     private void DrawMaterialSlot(Rect position, SerializedProperty rendererReference, SerializedProperty materialIndex)
     {
-        var selectorContent = "Label:Select".LG();
-        var selectorWidth = GUI.skin.button.CalcSize(selectorContent).x + 16f;
-
+        var selectorWidth = MaterialSelector.GetSize().x;
         GUIHelper.SplitRectHorizontallyForRight(position, selectorWidth, out var materialRect, out var selectorRect);
 
         Renderer? renderer = null;
@@ -65,15 +63,10 @@ internal class MaterialSlotReferenceDrawer : PropertyDrawer
 
         using (new EditorGUI.DisabledGroupScope(renderer == null))
         {
-            if (GUI.Button(selectorRect, selectorContent, StyleHelper.CenteredPopupStyle))
-            {
-                var dropdown = new MaterialAdvancedDropdown(
-                    GetMaterials(renderer!),
-                    (material, index) => OnSelected(materialIndex, material, index),
-                    new(),
-                    (mat, index) => mat.name + " : " + (index-1));
-                dropdown.Show(position);
-            }
+            MaterialSelector.Draw(selectorRect, 
+                () => GetMaterials(renderer!), 
+                (m, i) => OnSelected(materialIndex, m, i),
+                (m, i) => m.name + " : " + (i-1));
         }
     }
 

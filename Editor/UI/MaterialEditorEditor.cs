@@ -119,7 +119,7 @@ internal class MaterialEditorEditor : Editor
     private bool _showOverrides = false;
     private void OverridesGUI()
     {
-        var count = _target.OverrideSettings.CountOverrides();
+        var count = _target.OverrideSettings.OverrideCount;
         _showOverrides = EditorGUILayout.Foldout(_showOverrides, string.Format("Label:CurrentOverridesCount".LS(), count), true);
         if (_showOverrides)
         {

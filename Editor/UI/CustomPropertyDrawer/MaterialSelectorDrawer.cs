@@ -1,5 +1,3 @@
-using UnityEditor.IMGUI.Controls;
-
 namespace Aoyon.MaterialEditor.UI;
 
 [CustomPropertyDrawer(typeof(MaterialSelectorAttribute))]
@@ -11,19 +9,12 @@ internal class MaterialSelectorDrawer : PropertyDrawer
 
         position.SetSingleHeight();
 
-        var selectorContent = "Label:Select".LG();
-        var selectorWidth = GUI.skin.button.CalcSize(selectorContent).x + 16f;
+        var selectorWidth = MaterialSelector.GetSize().x;
 
         GUIHelper.SplitRectHorizontallyForRight(position, selectorWidth, out var objectFieldRect, out var selectorRect);
 
         property.objectReferenceValue = EditorGUI.ObjectField(objectFieldRect, label, property.objectReferenceValue, typeof(Material), true);
-        if (GUI.Button(selectorRect, selectorContent, StyleHelper.CenteredPopupStyle))
-        {
-            var dropdown = new MaterialAdvancedDropdown(GetMaterials(property), 
-                (material, index) => OnSelected(property, material, index), 
-                new AdvancedDropdownState());
-            dropdown.Show(position);
-        }
+        MaterialSelector.Draw(selectorRect, () => GetMaterials(property), (m, i) => OnSelected(property, m, i));
 
         EditorGUI.EndProperty();
     }
