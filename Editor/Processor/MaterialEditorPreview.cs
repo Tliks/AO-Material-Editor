@@ -23,9 +23,14 @@ internal class MaterialEditorPreview : IRenderFilter
 
                 // 負荷軽減のため、IsEffectiveはGetTargetGroupsで監視せず、Instantiateで監視する。
                 var allComponents = context.GetComponentsInChildren<MaterialEditorComponent>(root, true);
+
+                // IsEffectiveは監視しないが、一切のオーバライドが存在しない初期状態のコンポーネントは除外するようにする
+                // MenuItemから生成される初期のコンポーネント群を除外したい
+                var editedComponents = allComponents
+                    .Where(c => context.Observe(c, c => c.OverrideSettings.OverrideCount > 0, (a, b) => a == b));
                 
                 var componentTargets = new Dictionary<MaterialEditorComponent, HashSet<MaterialAssignment>>();
-                foreach (var component in allComponents)
+                foreach (var component in editedComponents)
                 {
                     // OriginalRendererなのでObjectRegistryは見なくていい
                     var targetAssignments = MaterialEditorProcessor.SelectTargetAssignments(allAssignments, component, 
