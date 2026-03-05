@@ -45,7 +45,7 @@ msgid "HelpBox:AdvancedModeInfo"
 msgstr "このモードでは、現在の編集内容を複数のマテリアルに一括で適用できます。\nまた、マテリアルスロット単位で適用する先を指定することも出来ます。"
 
 msgid "HelpBox:AllModeInfo"
-msgstr "このモードでは、現在の編集内容を全てのマテリアルに一括で適用できます。"
+msgstr "このモードでは、現在の編集内容を全てのマテリアルに一括で適用できます。\n質感や設定を統一したい場合に便利です。"
 
 msgid "Label:Material"
 msgstr "マテリアル"

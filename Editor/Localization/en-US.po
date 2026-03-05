@@ -45,7 +45,7 @@ msgid "HelpBox:AdvancedModeInfo"
 msgstr "In this mode, the current changes can be batch applied to multiple materials.\nYou can also specify which slots to apply the changes to for each material slot."
 
 msgid "HelpBox:AllModeInfo"
-msgstr "In this mode, the current changes will be batch applied to all materials."
+msgstr "In this mode, the current changes can be batch applied to every material.\nThis is useful when you want to unify look and settings."
 
 msgid "Label:Material"
 msgstr "Material"

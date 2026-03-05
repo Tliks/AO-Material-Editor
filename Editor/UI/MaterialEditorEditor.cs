@@ -106,7 +106,7 @@ internal class MaterialEditorEditor : Editor
             if (_materialEditor.isVisible) {
                 EditorGUILayout.HelpBox("HelpBox:EditorInfo".LS(), MessageType.Info);
                 OverridesGUI();
-                OverrideUtilityGUI();
+                // OverrideUtilityGUI();
                 _materialEditor.OnInspectorGUI();
             }
         }

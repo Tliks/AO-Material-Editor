@@ -6,7 +6,7 @@ internal static class MenuItems
 {
     // GameObject
 
-    private const string GeneratePath = "GameObject/AO Material Editor/Generate";
+    private const string GeneratePath = "GameObject/AO Material Editor";
     private const int GeneratePriority = 100;
 
     [MenuItem(GeneratePath, false, GeneratePriority)]
@@ -34,6 +34,7 @@ internal static class MenuItems
         Undo.RegisterCreatedObjectUndo(root, "Create AO Material Editor");
 
         EditorGUIUtility.PingObject(root);
+        GUIHelper.SetHierarchyExpanded(root, true);
     }
 
     // Tools
