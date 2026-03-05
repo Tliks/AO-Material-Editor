@@ -1,3 +1,5 @@
+using UnityEditorInternal;
+
 namespace Aoyon.MaterialEditor.UI;
 
 internal static class MenuItems
@@ -49,5 +51,6 @@ internal static class MenuItems
     private static void ToggleMaterialEditorPatcher()
     {
         MaterialEditorSettings.EnableMaterialEditorPatcher = !MaterialEditorSettings.EnableMaterialEditorPatcher;
+        InternalEditorUtility.RepaintAllViews();
     }
 }
