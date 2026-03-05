@@ -49,12 +49,13 @@ internal class MaterialEditorEditor : Editor
         _materialEditor = (UnityEditor.MaterialEditor)CreateEditor(_recordingMaterial, typeof(UnityEditor.MaterialEditor));
 
         ObjectChangeEvents.changesPublished += OnObjectChanged;
-        MaterialEditoEditorContext.StartRecording(_recordingMaterial, new(_target.OverrideSettings.PropertyOverrides.Select(p => p.PropertyName)));
+        var properties = _target.OverrideSettings.PropertyOverrides.Select(p => p.PropertyName).ToHashSet();
+        MaterialEditoEditorContext.StartRecording(_target, _recordingMaterial, properties, _materialEditor);
     }
 
     private void OnDisable()
     {
-        MaterialEditoEditorContext.StopRecording(_recordingMaterial);
+        MaterialEditoEditorContext.StopRecording(_recordingMaterial, _target);
 
         if (_recordingMaterial != null) { DestroyImmediate(_recordingMaterial); }
         if (_materialEditor != null) { DestroyImmediate(_materialEditor); }
@@ -185,7 +186,8 @@ internal class MaterialEditorEditor : Editor
                         // マテリアルを直接編集するのでUndoに通知されない
                         // これにより、コンポーネントRecoridng Material間の無限ループは起きない
                         SyncRecordingMaterialFromComponent();
-                        MaterialEditoEditorContext.UpdateRecording(_recordingMaterial, new(_target.OverrideSettings.PropertyOverrides.Select(p => p.PropertyName)));
+                        var properties = _target.OverrideSettings.PropertyOverrides.Select(p => p.PropertyName).ToHashSet();
+                        MaterialEditoEditorContext.UpdateRecording(_target, properties);
                     }
                 }
             }
@@ -366,20 +368,34 @@ internal class MaterialEditorEditor : Editor
 
 internal static class MaterialEditoEditorContext
 {
-    public static readonly Dictionary<Material, HashSet<string>> OverrideProperties = new();
+    public static readonly Dictionary<Material, MaterialEditorComponent> RecordingToComponent = new();
+    public static readonly Dictionary<MaterialEditorComponent, HashSet<string>> ComponentToOverrideProperties = new();
+    public static readonly Dictionary<MaterialEditorComponent, UnityEditor.MaterialEditor?> ComponentToMaterialEditor = new();
 
-    public static void StartRecording(Material recordingMaterial, HashSet<string> overrideProperties)
+    public static bool IsRecording => RecordingToComponent.Count > 0;
+
+    public static void StartRecording(
+        MaterialEditorComponent component,
+        Material recordingMaterial,
+        HashSet<string> overrideProperties,
+        UnityEditor.MaterialEditor materialEditor)
     {
-        OverrideProperties[recordingMaterial] = overrideProperties;
+        RecordingToComponent[recordingMaterial] = component;
+        ComponentToOverrideProperties[component] = overrideProperties;
+        ComponentToMaterialEditor[component] = materialEditor;
     }
 
-    public static void UpdateRecording(Material recordingMaterial, HashSet<string> overrideProperties)
+    public static void UpdateRecording(
+        MaterialEditorComponent component,
+        HashSet<string> overrideProperties)
     {
-        OverrideProperties[recordingMaterial] = overrideProperties;
+        ComponentToOverrideProperties[component] = overrideProperties;
     }
 
-    public static void StopRecording(Material recordingMaterial)
+    public static void StopRecording(Material recordingMaterial, MaterialEditorComponent component)
     {
-        OverrideProperties.Remove(recordingMaterial);
+        RecordingToComponent.Remove(recordingMaterial);
+        ComponentToOverrideProperties.Remove(component);
+        ComponentToMaterialEditor.Remove(component);
     }
 }
