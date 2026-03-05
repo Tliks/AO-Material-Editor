@@ -9,12 +9,19 @@ internal class MaterialOverrideSettings : IEquatable<MaterialOverrideSettings>
     public Shader? TargetShader = null;
 
     public bool OverrideRenderQueue = false;
-    public int RenderQueueValue = 2000;
+    public int RenderQueueValue = -1; // CustomRenderQueue, -1 means from shader
 
     public List<MaterialProperty> PropertyOverrides = new();
 
     public static MaterialOverrideSettings Empty => new();
     
+    /// <summary>
+    /// sourceをtargetにマージする。
+    /// sourceが優先され、後ろにあるプロパティが優先される。
+    /// 同じプロパティ名は上書きし、新規要素を後ろに追加する。
+    /// </summary>
+    /// <param name="source"></param>
+    /// <param name="target"></param>
     public static void MergeInto(MaterialOverrideSettings source, MaterialOverrideSettings target)
     {
         if (source.OverrideShader && source.TargetShader != null)
@@ -28,25 +35,25 @@ internal class MaterialOverrideSettings : IEquatable<MaterialOverrideSettings>
             target.RenderQueueValue = source.RenderQueueValue;
         }
 
-        using var _1 = DictionaryPool<string, MaterialProperty>.Get(out var src);
-        foreach (var p in source.PropertyOverrides) src[p.PropertyName] = p;
-        using var _2 = DictionaryPool<string, MaterialProperty>.Get(out var tgt);
-        foreach (var p in target.PropertyOverrides) tgt[p.PropertyName] = p;
+        using var _1 = DictionaryPool<string, MaterialProperty>.Get(out var srcDict);
+        foreach (var p in source.PropertyOverrides) srcDict[p.PropertyName] = p;
+        using var _2 = HashSetPool<string>.Get(out var targetKeys);
 
-        using var _3 = HashSetPool<string>.Get(out var seen);
-        var result = new List<MaterialProperty>();
+        var result = new List<MaterialProperty>(target.PropertyOverrides.Count + source.PropertyOverrides.Count);
+
         foreach (var p in target.PropertyOverrides)
         {
-            var n = p.PropertyName;
-            if (seen.Add(n))
-                result.Add(src.TryGetValue(n, out var s) ? s : tgt[n]);
+            targetKeys.Add(p.PropertyName); 
+            result.Add(srcDict.TryGetValue(p.PropertyName, out var s) ? s : p);
         }
+
         foreach (var p in source.PropertyOverrides)
         {
-            var n = p.PropertyName;
-            if (seen.Add(n))
-                result.Add(src[n]);
+            if (targetKeys.Add(p.PropertyName)) {
+                result.Add(srcDict[p.PropertyName]);
+            }
         }
+
         target.PropertyOverrides = result;
     }
 
