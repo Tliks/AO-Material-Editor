@@ -173,10 +173,11 @@ internal static class MaterialEditorPatcher
             BUTTON_SIZE
         );
 
-        if (GUI.Button(buttonRect, RevertButtonContent, IconButtonStyle))
+        if (GUI.Button(buttonRect, RevertButtonContent, IconButtonStyle)) {
             RevertProperty(component, prop);
             if (MaterialEditoEditorContext.ComponentToMaterialEditor.TryGetValue(component, out var materialEditor) && materialEditor != null)
                 materialEditor.Repaint();
+        }
     }
 
     private static void RevertProperty(MaterialEditorComponent component, UnityEditor.MaterialProperty prop)
