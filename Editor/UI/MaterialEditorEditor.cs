@@ -40,7 +40,7 @@ internal class MaterialEditorEditor : Editor
 
         _recordingSourceMaterial = AutoSelectRecordingSourceMaterial();
         if (_recordingSourceMaterial != null) { 
-            _recordingMaterial = new Material(_recordingSourceMaterial) { name = RecordingMaterialName };
+            _recordingMaterial = new Material(_recordingSourceMaterial) { name = RecordingMaterialName, parent = null };
             SyncRecordingMaterialFromComponent();
         }
         else {

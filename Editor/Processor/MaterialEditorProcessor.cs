@@ -212,6 +212,7 @@ internal static class MaterialEditorProcessor
             if (!editedMaterials.TryGetValue((material, settings), out var edited))
             {
                 edited = clone(material);
+                edited.parent = null;
                 MaterialUtility.ApplyOverrideSettings(edited, settings);
                 editedMaterials[(material, settings)] = edited;
             }

@@ -40,4 +40,18 @@ internal static class Utils
             .Distinct()
             .ToList();
     }
+
+    public static bool SequenceEqualReference<T>(T?[] a, T?[] b) where T : class
+    {
+        if (ReferenceEquals(a, b)) return true;
+        
+        if (a.Length != b.Length) return false;
+
+        for (int i = 0; i < a.Length; i++)
+        {
+            if (!ReferenceEquals(a[i], b[i])) return false;
+        }
+
+        return true;
+    }
 }

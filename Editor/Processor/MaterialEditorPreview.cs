@@ -13,13 +13,14 @@ internal class MaterialEditorPreview : IRenderFilter
 
         try
         {
+            var observeContext = new NDMFObserveContext(context);
             foreach (var root in context.GetAvatarRoots().Distinct())
             {
                 if (!context.ActiveInHierarchy(root)) continue;
 
-                var renderers = MaterialEditorProcessor.GetTargetRenderers(root, new NDMFObserveContext(context));
-                // sharedmaterialsはNDMF側で監視してる…と思うのでcontextを介さない
-                var allAssignments = new DefaultMaterialTargeting().GetAssignments(renderers).ToHashSet(); 
+                var renderers = MaterialEditorProcessor.GetTargetRenderers(root, observeContext);
+                // sharedmaterialsはNDMF側で監視されていない
+                var allAssignments = new DefaultMaterialTargeting().GetAssignments(renderers, observeContext).ToHashSet(); 
 
                 // 負荷軽減のため、IsEffectiveはGetTargetGroupsで監視せず、Instantiateで監視する。
                 var allComponents = context.GetComponentsInChildren<MaterialEditorComponent>(root, true);
@@ -34,7 +35,7 @@ internal class MaterialEditorPreview : IRenderFilter
                 {
                     // OriginalRendererなのでObjectRegistryは見なくていい
                     var targetAssignments = MaterialEditorProcessor.SelectTargetAssignments(allAssignments, component, 
-                        null, null, new NDMFObserveContext(context));
+                        null, null, observeContext);
                     if (targetAssignments.Count == 0) continue;
                     componentTargets[component] = targetAssignments;
                 }
