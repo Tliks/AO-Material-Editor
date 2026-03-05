@@ -2,6 +2,8 @@ namespace Aoyon.MaterialEditor.UI;
 
 internal static class MenuItems
 {
+    // GameObject
+
     private const string GeneratePath = "GameObject/AO Material Editor/Generate";
     private const int GeneratePriority = 100;
 
@@ -30,5 +32,22 @@ internal static class MenuItems
         Undo.RegisterCreatedObjectUndo(root, "Create AO Material Editor");
 
         EditorGUIUtility.PingObject(root);
+    }
+
+    // Tools
+
+    private const string EnableMaterialEditorPatcherPath = "Tools/AO Material Editor/Enable Material Editor Patcher";
+
+    [MenuItem(EnableMaterialEditorPatcherPath, true)]
+    private static bool ValidateEnableMaterialEditorPatcher()
+    {
+        Menu.SetChecked(EnableMaterialEditorPatcherPath, MaterialEditorSettings.EnableMaterialEditorPatcher);
+        return true;
+    }
+
+    [MenuItem(EnableMaterialEditorPatcherPath, false)]
+    private static void ToggleMaterialEditorPatcher()
+    {
+        MaterialEditorSettings.EnableMaterialEditorPatcher = !MaterialEditorSettings.EnableMaterialEditorPatcher;
     }
 }
