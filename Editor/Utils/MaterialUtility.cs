@@ -68,21 +68,64 @@ internal static class MaterialUtility
         }
     }
 
+    public static bool GetShaderOverride(Material original, Material overrided, [NotNullWhen(true)] out Shader? targetShader)
+    {
+        targetShader = null;
+
+        if (original.shader == overrided.shader) return false;
+
+        targetShader = overrided.shader;
+        return true;
+    }
+
+    private const string CustomRenderQueueProperty = "m_CustomRenderQueue";
+
+    public static int GetCustomRenderQueue(Material material)
+    {
+        using var so = new SerializedObject(material);
+        var customQueueProp = so.FindProperty(CustomRenderQueueProperty);
+        return customQueueProp.intValue;
+    }
+
+    public static void SetCustomRenderQueue(Material material, int renderQueue)
+    {
+        using var so = new SerializedObject(material);
+        var customQueueProp = so.FindProperty(CustomRenderQueueProperty);
+        customQueueProp.intValue = renderQueue;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+    
+    public static bool GetRenderQueueOverride(Material original, Material overrided, out int targetRenderQueue)
+    {
+        targetRenderQueue = default;
+
+        var originalRenderQueue = GetCustomRenderQueue(original);
+        var overridedRenderQueue = GetCustomRenderQueue(overrided);
+
+        if (originalRenderQueue != overridedRenderQueue)
+        {
+            targetRenderQueue = overridedRenderQueue;
+            return true;
+        }
+
+        return false;
+    }
+
     public static MaterialOverrideSettings GetOverrides(Material original, Material overrided, 
         bool strict, bool includeExtra, bool includeTextures = true)
     {
         var settings = new MaterialOverrideSettings();
 
-        if (original.shader != overrided.shader)
+        if (GetShaderOverride(original, overrided, out var targetShader))
         {
             settings.OverrideShader = true;
-            settings.TargetShader = overrided.shader;
+            settings.TargetShader = targetShader;
         }
 
-        if (original.renderQueue != overrided.renderQueue)
+        if (GetRenderQueueOverride(original, overrided, out var targetRenderQueue))
         {
             settings.OverrideRenderQueue = true;
-            settings.RenderQueueValue = overrided.renderQueue;
+            settings.RenderQueueValue = targetRenderQueue;
         }
 
         var propertyOverrides = GetPropertyOverrides(original, overrided, strict, includeExtra, includeTextures).ToList();
@@ -107,14 +150,14 @@ internal static class MaterialUtility
     {
         // Material.shaderを変更するとMaterial.renderQueueが変更先のShader.renderQueueに自動で置き換わる仕様がある
         // ここではShaderのみを変更するため、シェーダー変更前のRenderQueueを保持しておき、変更後に元に戻す
-        var savedRenderQueue = editableMaterial.renderQueue;
+        var savedRenderQueue = GetCustomRenderQueue(editableMaterial);
         editableMaterial.shader = targetShader;
-        editableMaterial.renderQueue = savedRenderQueue;
+        SetCustomRenderQueue(editableMaterial, savedRenderQueue);
     }
 
     public static void ApplyRenderQueue(Material editableMaterial, int renderQueueValue)
     {
-        editableMaterial.renderQueue = renderQueueValue;
+        SetCustomRenderQueue(editableMaterial, renderQueueValue);
     }
 
     public static void ApplyProperties(Material editableMaterial, List<MaterialProperty> properties)
@@ -160,8 +203,8 @@ internal static class MaterialUtility
     // シェーダー未参照のプロパティの削除はここで行うにはコストがかなり高い
     public static void CopyAllSettings(Material source, Material target, bool includeTextures = true)
     {
-        // sourceの状態にする為に、target => sourceの差分を取得し、それをtargetに適用することで疑似的にプロパティの一致を行う
-        var overrides = GetOverrides(target, source, false, true, includeTextures: includeTextures);
-        ApplyOverrideSettings(target, overrides);
+        ApplyShader(target, source.shader);
+        SetCustomRenderQueue(target, GetCustomRenderQueue(source));
+        CopyPropertiesForSameShader(source, target);
     }
 }

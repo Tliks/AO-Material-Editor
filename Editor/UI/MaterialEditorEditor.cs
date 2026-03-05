@@ -124,8 +124,11 @@ internal class MaterialEditorEditor : Editor
         _showOverrides = EditorGUILayout.Foldout(_showOverrides, string.Format("Label:CurrentOverridesCount".LS(), count), true);
         if (_showOverrides)
         {
-            using var indent = new EditorGUI.IndentLevelScope();
-            EditorGUILayout.PropertyField(_overrideSettings);
+            // 内部でEditorGUIを多用しているが、ここでIndentScopeを使いEditorGUILayoutで描画すると何故か崩れるのでEditorGUIに統一する
+            // Todo: EditorGUIとEditorGUILayoutが共存できないようなまともでない設計を解消する
+            var position = EditorGUILayout.GetControlRect(false, UnityEditor.EditorGUI.GetPropertyHeight(_overrideSettings));
+            position.Indent();
+            UnityEditor.EditorGUI.PropertyField(position, _overrideSettings);
             if (GUILayout.Button("Label:ResetAll".LS()))
             {
                 Undo.RecordObject(_target, "Reset AO Material Editor Overrides");
@@ -238,20 +241,32 @@ internal class MaterialEditorEditor : Editor
 
         serializedObject.ApplyModifiedProperties();
 
-        var cloned = _target.OverrideSettings.Clone();
-
+        var previous = _target.OverrideSettings;
+        var cloned = previous.Clone();
         var newOvrs = MaterialUtility.GetOverrides(_recordingSourceMaterial, _recordingMaterial, false, true);
 
-        // 前段階として、編集によって元の値に戻ったプロパティ(新しい差分に存在しないが、これまで存在していた差分)に対して
+        // 前段階として、編集によって元の値に戻った設定(新しい差分に存在しないが、これまで存在していた差分)に対して
         // これを維持するために、元の値を書き込む
         {
+            if (previous.OverrideShader && !newOvrs.OverrideShader)
+            {
+                cloned.OverrideShader = true;
+                cloned.TargetShader = _recordingSourceMaterial.shader;
+            }
+
+            if (previous.OverrideRenderQueue && !newOvrs.OverrideRenderQueue)
+            {
+                cloned.OverrideRenderQueue = true;
+                cloned.RenderQueueValue = _recordingSourceMaterial.renderQueue;
+            }
+
             using var _1 = DictionaryPool<string, MaterialProperty>.Get(out var newDict);
             foreach (var p in newOvrs.PropertyOverrides) newDict[p.PropertyName] = p;
             using var _2 = DictionaryPool<string, MaterialProperty>.Get(out var origDict);
             foreach (var p in MaterialUtility.GetProperties(_recordingSourceMaterial)) origDict[p.PropertyName] = p;
 
             var modified = new List<MaterialProperty>();
-            foreach (var p in cloned.PropertyOverrides)
+            foreach (var p in previous.PropertyOverrides)
             {
                 var name = p.PropertyName;
                 if (!newDict.ContainsKey(name) && origDict.TryGetValue(name, out var o))
@@ -262,7 +277,7 @@ internal class MaterialEditorEditor : Editor
             cloned.PropertyOverrides = modified;
         }
 
-        // 新しい差分をマージ(上書き, 追加, 重複削除)する
+        // 新しい差分をマージ(上書き, 追加)する
         MaterialOverrideSettings.MergeInto(newOvrs, cloned);
 
         Undo.RecordObject(_target, "Sync AO Material Editor from Recording Material");

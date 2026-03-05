@@ -39,6 +39,13 @@ internal static partial class GUIHelper
         position.width -= INDENT_WIDTH * count;
         return position;
     }
+    
+    internal static Rect Back(this ref Rect position, int count = 1)
+    {
+        position.x -= INDENT_WIDTH * count;
+        position.width += INDENT_WIDTH * count;
+        return position;
+    }
 
     internal static void SplitRectHorizontally(in Rect source, float leftRatio, out Rect left, out Rect right)
     {

@@ -17,25 +17,40 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         position.NewLine();
         if (overrideShader.isExpanded)
         {
-            using var indent = new EditorGUI.IndentLevelScope();
+            position.Indent();
             LocalizedUI.PropertyField(position, overrideShader, "Label:Edit");
             position.NewLine();
             LocalizedUI.PropertyField(position, targetShader, "Label:Shader");
             position.NewLine();
+            position.Back();
         }
 
         overrideRenderQueue.isExpanded = EditorGUI.Foldout(position, overrideRenderQueue.isExpanded, "Label:RenderQueue".LS(), true);
         position.NewLine();
         if (overrideRenderQueue.isExpanded)
         {
-            using var indent = new EditorGUI.IndentLevelScope();
+            position.Indent();
             LocalizedUI.PropertyField(position, overrideRenderQueue, "Label:Edit");
             position.NewLine();
-            LocalizedUI.PropertyField(position, renderQueueValue, "Label:RenderQueue");
+            DrawRenderQueueGUI(position, renderQueueValue);
             position.NewLine();
+            position.Back();
         }
 
         GUIHelper.List(position, propertyOverrides, true, "Label:PropertyOverrides".LG(), prop => prop.CopyFrom(new MaterialProperty()));
+    }
+
+    private static readonly GUIContent[] _renderQueuePresets = new GUIContent[] { new("From Shader"), new("Custom") };
+    private void DrawRenderQueueGUI(Rect position, SerializedProperty renderQueueValue)
+    {
+        var presetWidth = EditorStyles.popup.CalcSize(_renderQueuePresets[0]).x;
+        GUIHelper.SplitRectHorizontallyForRight(position, presetWidth, out var valueRect, out var presetRect);
+
+        LocalizedUI.PropertyField(valueRect, renderQueueValue, "Label:RenderQueue");
+
+        var index = renderQueueValue.intValue == -1 ? 0 : 1;
+        var newIndex = EditorGUI.Popup(presetRect, index, _renderQueuePresets);
+        if (newIndex != index) renderQueueValue.intValue = newIndex == 0 ? -1 : 2000;
     }
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
