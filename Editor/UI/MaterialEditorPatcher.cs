@@ -176,7 +176,7 @@ internal static class MaterialEditorPatcher
         if (GUI.Button(buttonRect, RevertButtonContent, IconButtonStyle)) {
             RevertProperty(component, prop);
             if (MaterialEditoEditorContext.ComponentToMaterialEditor.TryGetValue(component, out var materialEditor) && materialEditor != null)
-                materialEditor.Repaint();
+                EditorApplication.delayCall += () => materialEditor.Repaint();
         }
     }
 

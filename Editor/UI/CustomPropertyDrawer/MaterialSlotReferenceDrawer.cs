@@ -27,7 +27,8 @@ internal class MaterialSlotReferenceDrawer : PropertyDrawer
         return GUIHelper.propertyHeight;
     }
 
-    private static readonly Material _allMaterials = new(Shader.Find("Standard")) { name = "All Materials" };
+    private static Material? _allMaterials;
+    private static Material AllMaterials => _allMaterials != null ? _allMaterials : _allMaterials = new(Shader.Find("Standard")) { name = "All Materials" };
     private void DrawMaterialSlot(Rect position, SerializedProperty rendererReference, SerializedProperty materialIndex)
     {
         var selectorWidth = MaterialSelector.GetSize().x;
@@ -48,7 +49,7 @@ internal class MaterialSlotReferenceDrawer : PropertyDrawer
 
             if (materialIndexValue == -1)
             {
-                material = _allMaterials;
+                material = AllMaterials;
             }
             else if (materialIndexValue >= 0 && materialIndexValue < mats.Length)
             {
@@ -73,7 +74,7 @@ internal class MaterialSlotReferenceDrawer : PropertyDrawer
     private static List<Material> GetMaterials(Renderer renderer)
     {
         var materials = Utils.GetMaterials(renderer);
-        materials.Insert(0, _allMaterials);
+        materials.Insert(0, AllMaterials);
         return materials;
     }
 
