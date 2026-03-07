@@ -6,10 +6,10 @@ msgstr ""
 "Language: ja-JP\n"
 
 msgid "HelpBox:NoAvatarRoot"
-msgstr "このコンポーネントはアバターの配下に配置してください。"
+msgstr "このコンポーネントは現在無効化されています。\nアバターの配下に配置してください。"
 
 msgid "HelpBox:NotEffective"
-msgstr "このコンポーネントは現在無効です。\nコンポーネントのチェックボックスが有効であり、EditorOnly ではないことを確認してください。"
+msgstr "このコンポーネントは現在無効化されています。\nコンポーネントのチェックボックスが有効であり、EditorOnly ではないことを確認してください。"
 
 msgid "Label:TargetSettings"
 msgstr "適用するマテリアル"
@@ -94,3 +94,6 @@ msgstr "スケール"
 
 msgid "Label:ResetAll"
 msgstr "リセット"
+
+msgid "Label:RecordingSourceMaterial"
+msgstr "表示用のマテリアル"

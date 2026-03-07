@@ -33,7 +33,7 @@ internal class MaterialEditorEditor : Editor
         _overrideSettings = serializedObject.FindProperty(nameof(MaterialEditorComponent.OverrideSettings));
 
         _materialTargeting = new DefaultMaterialTargeting();
-        var renderers = _avatarRoot != null ? _avatarRoot.GetComponentsInChildren<Renderer>(true) : Array.Empty<Renderer>();
+        var renderers = _avatarRoot != null ? MaterialEditorProcessor.GetTargetRenderers(_avatarRoot) : new List<Renderer>();
         _allAssignments = _materialTargeting.GetAssignments(renderers).ToHashSet();
         _targetMaterials = UpdateTargetMaterials();
         _cachedEntrySettings = _target.EntrySettings.Clone();
@@ -70,9 +70,9 @@ internal class MaterialEditorEditor : Editor
         Localization.DrawLanguageSwitcher();
         EditorGUILayout.Space();
         DrawInformationGUI();
-        EntrySettingsGUI();
+        DrawEntrySettings();
         EditorGUILayout.Space(); 
-        EditorGUI();
+        DrawEditor();
 
         serializedObject.ApplyModifiedProperties();
     }
@@ -81,7 +81,7 @@ internal class MaterialEditorEditor : Editor
     {
         if (_avatarRoot == null)
         {
-            EditorGUILayout.HelpBox("HelpBox:NoAvatarRoot".LS(), MessageType.Error);
+            EditorGUILayout.HelpBox("HelpBox:NoAvatarRoot".LS(), MessageType.Warning);
         }
 
         var effective = MaterialEditorProcessor.IsEffective(_target);
@@ -91,13 +91,13 @@ internal class MaterialEditorEditor : Editor
         }
     }
 
-    private void EntrySettingsGUI()
+    private void DrawEntrySettings()
     {
         EditorGUILayout.LabelField("# " + "Label:TargetSettings".LS(), EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(_entrySettings);
     }
 
-    private void EditorGUI()
+    private void DrawEditor()
     {
         EditorGUILayout.LabelField("# " + "Label:EditorGUI".LS(), EditorStyles.boldLabel);
         if (_recordingSourceMaterial != null && _materialEditor != null)
@@ -105,20 +105,21 @@ internal class MaterialEditorEditor : Editor
             _materialEditor.DrawHeader();
             if (_materialEditor.isVisible) {
                 EditorGUILayout.HelpBox("HelpBox:EditorInfo".LS(), MessageType.Info);
-                OverridesGUI();
+                DrawOverrides();
                 // OverrideUtilityGUI();
+                DrawRecordingSourceMaterial();
                 _materialEditor.OnInspectorGUI();
             }
         }
         else 
         {
             EditorGUILayout.HelpBox("HelpBox:NoMaterialSelected".LS(), MessageType.Warning, true);
-            OverridesGUI();
+            DrawOverrides();
         }
     }
 
     private bool _showOverrides = false;
-    private void OverridesGUI()
+    private void DrawOverrides()
     {
         var count = _target.OverrideSettings.OverrideCount;
         _showOverrides = EditorGUILayout.Foldout(_showOverrides, string.Format("Label:CurrentOverridesCount".LS(), count), true);
@@ -126,9 +127,9 @@ internal class MaterialEditorEditor : Editor
         {
             // 内部でEditorGUIを多用しているが、ここでIndentScopeを使いEditorGUILayoutで描画すると何故か崩れるのでEditorGUIに統一する
             // Todo: EditorGUIとEditorGUILayoutが共存できないようなまともでない設計を解消する
-            var position = EditorGUILayout.GetControlRect(false, UnityEditor.EditorGUI.GetPropertyHeight(_overrideSettings));
+            var position = EditorGUILayout.GetControlRect(false, EditorGUI.GetPropertyHeight(_overrideSettings));
             position.Indent();
-            UnityEditor.EditorGUI.PropertyField(position, _overrideSettings);
+            EditorGUI.PropertyField(position, _overrideSettings);
             if (GUILayout.Button("Label:ResetAll".LS()))
             {
                 Undo.RecordObject(_target, "Reset AO Material Editor Overrides");
@@ -145,7 +146,17 @@ internal class MaterialEditorEditor : Editor
         return _targetMaterials;
     }
 
-    // 手動選択の設定(シリアライズはしない)を追加するべき…？
+    private void DrawRecordingSourceMaterial()
+    {
+        if (_targetMaterials.Count < 2) return;
+
+        using var _ = new EditorGUILayout.HorizontalScope();
+        using (new EditorGUI.DisabledGroupScope(true)) {
+            EditorGUILayout.ObjectField("Label:RecordingSourceMaterial".LS(), _recordingSourceMaterial, typeof(Material), false);
+        }
+        MaterialSelector.Draw(() => _targetMaterials.ToList(), (m, i) => { _recordingSourceMaterial = m; OnRecordingSourceMaterialChanged(); });
+    }
+
     private Material? AutoSelectRecordingSourceMaterial()
     {
         Material? newTarget;
@@ -257,7 +268,7 @@ internal class MaterialEditorEditor : Editor
             if (previous.OverrideRenderQueue && !newOvrs.OverrideRenderQueue)
             {
                 cloned.OverrideRenderQueue = true;
-                cloned.RenderQueueValue = _recordingSourceMaterial.renderQueue;
+                cloned.RenderQueueValue = MaterialUtility.GetCustomRenderQueue(_recordingSourceMaterial);
             }
 
             using var _1 = DictionaryPool<string, MaterialProperty>.Get(out var newDict);
@@ -291,7 +302,7 @@ internal class MaterialEditorEditor : Editor
     // private Material? _originalMaterial = null;
     // private Material? _overrideMaterial = null;
     // private Material? _variantMaterial = null;
-    private void OverrideUtilityGUI()
+    private void DrawOverrideUtility()
     {
         _showOverrideUtility = EditorGUILayout.Foldout(_showOverrideUtility, "Label:OverrideUtility".LS(), true);
         if (!_showOverrideUtility) return;

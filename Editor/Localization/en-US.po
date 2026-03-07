@@ -6,10 +6,10 @@ msgstr ""
 "Language: en-US\n"
 
 msgid "HelpBox:NoAvatarRoot"
-msgstr "Please attach this component under the avatar root."
+msgstr "This component is currently disabled.\nPlease place it under the avatar hierarchy."
 
 msgid "HelpBox:NotEffective"
-msgstr "This component is currently disabled.\nMake sure the component's checkbox is enabled and that it is not set to EditorOnly."
+msgstr "This component is currently disabled.\nEnsure the component's checkbox is enabled and it is not set to EditorOnly."
 
 msgid "Label:TargetSettings"
 msgstr "Target Materials"
@@ -94,3 +94,6 @@ msgstr "Scale"
 
 msgid "Label:ResetAll"
 msgstr "Reset"
+
+msgid "Label:RecordingSourceMaterial"
+msgstr "Material for display"

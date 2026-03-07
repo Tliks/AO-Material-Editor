@@ -9,6 +9,12 @@ internal static class MenuItems
     private const string GeneratePath = "GameObject/AO Material Editor";
     private const int GeneratePriority = 100;
 
+    [MenuItem(GeneratePath, true, GeneratePriority)]
+    private static bool ValidateGenerate()
+    {
+        return Selection.activeGameObject != null;
+    }
+
     [MenuItem(GeneratePath, false, GeneratePriority)]
     private static void Generate()
     {
@@ -18,7 +24,7 @@ internal static class MenuItems
         var materials = Utils.GetTargetMaterials(selected);
         if (materials.Count == 0) throw new Exception("No materials found");
 
-        var root = new GameObject("AO Material Editor");
+        var root = new GameObject("Material Editor");
         root.transform.SetParent(selected.transform, false);
 
         foreach (var material in materials)
