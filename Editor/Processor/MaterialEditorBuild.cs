@@ -10,10 +10,10 @@ internal class MaterialEditorBuild : Pass<MaterialEditorBuild>
     {
         var root = context.AvatarRootObject;
 
-        var components = root.GetComponentsInChildren<MaterialEditorComponent>(true)
-            .Where(c => MaterialEditorProcessor.IsEffective(c))
-            .ToList();
-        if (components.Count == 0) return;
+        var allComponents = root.GetComponentsInChildren<MaterialEditorComponent>(true);
+        if (allComponents.Length == 0) return;
+
+        var effectiveComponents = allComponents.Where(c => MaterialEditorProcessor.IsEffective(c));
 
         var animationIndex = context.Extension<AnimatorServicesContext>().AnimationIndex;
         var materialTargeting = new MaterialTargeting(
@@ -24,7 +24,7 @@ internal class MaterialEditorBuild : Pass<MaterialEditorBuild>
         var renderers = MaterialEditorProcessor.GetTargetRenderers(root);
         var allAssignments = materialTargeting.GetAssignments(renderers).ToHashSet();
 
-        var overridePlans = MaterialEditorProcessor.BuildOverridePlans(components, 
+        var overridePlans = MaterialEditorProcessor.BuildOverridePlans(effectiveComponents, 
             allAssignments, Utils.OriginalReferenceEquals);
 
         var replacements = MaterialEditorProcessor.CloneAndApplyOverrides(overridePlans, 
@@ -32,7 +32,7 @@ internal class MaterialEditorBuild : Pass<MaterialEditorBuild>
 
         materialTargeting.ApplyReplacements(replacements);
 
-        foreach (var component in components)
+        foreach (var component in allComponents)
         {
             Object.DestroyImmediate(component);
         }
