@@ -33,7 +33,7 @@ internal class MaterialEditorEditor : Editor
         _overrideSettings = serializedObject.FindProperty(nameof(MaterialEditorComponent.OverrideSettings));
 
         _materialTargeting = new DefaultMaterialTargeting();
-        var renderers = _avatarRoot != null ? _avatarRoot.GetComponentsInChildren<Renderer>(true) : Array.Empty<Renderer>();
+        var renderers = _avatarRoot != null ? MaterialEditorProcessor.GetTargetRenderers(_avatarRoot) : new List<Renderer>();
         _allAssignments = _materialTargeting.GetAssignments(renderers).ToHashSet();
         _targetMaterials = UpdateTargetMaterials();
         _cachedEntrySettings = _target.EntrySettings.Clone();
