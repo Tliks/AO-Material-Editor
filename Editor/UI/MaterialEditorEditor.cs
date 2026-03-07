@@ -257,7 +257,7 @@ internal class MaterialEditorEditor : Editor
             if (previous.OverrideRenderQueue && !newOvrs.OverrideRenderQueue)
             {
                 cloned.OverrideRenderQueue = true;
-                cloned.RenderQueueValue = _recordingSourceMaterial.renderQueue;
+                cloned.RenderQueueValue = MaterialUtility.GetCustomRenderQueue(_recordingSourceMaterial);
             }
 
             using var _1 = DictionaryPool<string, MaterialProperty>.Get(out var newDict);
