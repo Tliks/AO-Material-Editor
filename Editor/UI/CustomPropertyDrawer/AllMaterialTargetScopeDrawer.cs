@@ -18,7 +18,11 @@ internal class AllMaterialTargetScopeDrawer : PropertyDrawer
         position.NewLine();
         position.Indent();
 
-        position = GUIHelper.List(position, excludeTargets, true, "Label:Material".LG(), prop => prop.CopyFrom(new MaterialTargetScope()));
+        position = GUIHelper.List(position, excludeTargets, true, "Label:Material".LG(), prop => {
+            var beforeType = prop.FindPropertyRelative(nameof(MaterialTargetScope.Type)).enumValueIndex == 0 
+                ? MaterialTargetScope.ScopeType.Asset : MaterialTargetScope.ScopeType.Slot;
+            prop.CopyFrom(new MaterialTargetScope() { Type = beforeType });
+        });
         position = GUIHelper.List(position, excludeObjectReferences, true, "Label:ExcludeObjectReferences".LG(), prop => prop.CopyFrom(new AvatarObjectReference()));
     }
 
