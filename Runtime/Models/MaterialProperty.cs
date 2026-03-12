@@ -3,7 +3,7 @@ using UnityEngine.Rendering;
 namespace Aoyon.MaterialEditor;
 
 [Serializable]
-internal struct MaterialProperty
+internal struct MaterialProperty : IEquatable<MaterialProperty>
 {
     public string PropertyName;
     public ShaderPropertyType PropertyType;
