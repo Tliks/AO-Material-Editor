@@ -33,6 +33,9 @@ internal class MaterialEditorPreview : IRenderFilter
                 var componentTargets = new Dictionary<MaterialEditorComponent, HashSet<MaterialAssignment>>();
                 foreach (var component in editedComponents)
                 {
+                    // 順序の変更を見るためにPathを監視する
+                    context.ObservePath(component.transform);
+
                     // OriginalRendererなのでObjectRegistryは見なくていい
                     var targetAssignments = MaterialEditorProcessor.SelectTargetAssignments(allAssignments, component, 
                         null, null, observeContext);
