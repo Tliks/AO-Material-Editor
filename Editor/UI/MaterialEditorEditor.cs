@@ -22,6 +22,9 @@ internal class MaterialEditorEditor : Editor
     private UnityEditor.MaterialEditor _materialEditor = null!;
     private MaterialEntrySettings? _cachedEntrySettings;
 
+    private MaterialOverrideSettings _beforeOverrides = MaterialOverrideSettings.Empty;
+    private MaterialOverrideSettings _afterOverrides = MaterialOverrideSettings.Empty;
+
     private const string RecordingMaterialName = "Recording…";
 
     private void OnEnable()
@@ -41,6 +44,7 @@ internal class MaterialEditorEditor : Editor
         _recordingSourceMaterial = AutoSelectRecordingSourceMaterial();
         if (_recordingSourceMaterial != null) { 
             _recordingMaterial = new Material(_recordingSourceMaterial) { name = RecordingMaterialName, parent = null };
+            UpdateOtherOverrides();
             SyncRecordingMaterialFromComponent();
         }
         else {
@@ -51,6 +55,7 @@ internal class MaterialEditorEditor : Editor
         ObjectChangeEvents.changesPublished += OnObjectChanged;
         var properties = _target.OverrideSettings.PropertyOverrides.Select(p => p.PropertyName).ToHashSet();
         MaterialEditoEditorContext.StartRecording(_target, _recordingMaterial, properties, _materialEditor);
+        MaterialEditoEditorContext.OnUpdateRecording += OnUpdateRecording;
     }
 
     private void OnDisable()
@@ -61,6 +66,7 @@ internal class MaterialEditorEditor : Editor
         if (_materialEditor != null) { DestroyImmediate(_materialEditor); }
 
         ObjectChangeEvents.changesPublished -= OnObjectChanged;
+        MaterialEditoEditorContext.OnUpdateRecording -= OnUpdateRecording;
     }
 
     public override void OnInspectorGUI()
@@ -214,6 +220,7 @@ internal class MaterialEditorEditor : Editor
                     // これにより、次のフレームで数行上のSyncRecordingMaterialFromComponentが実行される
                     // 重複してパフォーマンス的にも無駄ではあるけど一応害はない
                     // Todo: もっと良い感じのロジックを考える、あると良いな
+                    if (!SanitizeRecordingMaterialAgainstAfter()) continue; // サニタイズに失敗した状態でコンポーネントを書き込むべきではない
                     SyncComponentFromRecordingMaterial();
                     return;
                 }
@@ -230,7 +237,55 @@ internal class MaterialEditorEditor : Editor
 
     private void OnRecordingSourceMaterialChanged()
     {
+        UpdateOtherOverrides();
         SyncRecordingMaterialFromComponent();
+    }
+
+    private void OnUpdateRecording(MaterialEditorComponent component)
+    {
+        if (component == _target) return;
+        OnOtherComponentChanged();
+    }
+
+    // hierarchy上でenabledやeditoronlyが変化したり、削除、移動された場合にも呼ばれるべきではある
+    // ObjectChangeEventStreamの拡張で対応可能だが、複雑なので、ここでは同時に開いている場合のみ追従するように
+    // Todo
+    private void OnOtherComponentChanged()
+    {
+        UpdateOtherOverrides();
+        SyncRecordingMaterialFromComponent();
+    }
+
+    private void UpdateOtherOverrides()
+    {
+        _beforeOverrides = MaterialOverrideSettings.Empty;
+        _afterOverrides = MaterialOverrideSettings.Empty;
+
+        if (_avatarRoot == null || _recordingSourceMaterial == null) return;
+
+        var allComponents = _avatarRoot.GetComponentsInChildren<MaterialEditorComponent>(true);
+        var myIndex = Array.IndexOf(allComponents, _target);
+        if (myIndex == -1) return;
+
+        for (int i = 0; i < allComponents.Length; i++)
+        {
+            if (i == myIndex) continue;
+            var component = allComponents[i];
+            if (!MaterialEditorProcessor.IsEffective(component)) continue;
+
+            var targetAssignments = MaterialEditorProcessor.SelectTargetAssignments(_allAssignments, component);
+            if (targetAssignments.Any(a => a.Material == _recordingSourceMaterial))
+            {
+                if (i < myIndex)
+                {
+                    MaterialOverrideSettings.MergeInto(component.OverrideSettings, _beforeOverrides);
+                }
+                else
+                {
+                    MaterialOverrideSettings.MergeInto(component.OverrideSettings, _afterOverrides);
+                }
+            }
+        }
     }
 
     private void SyncRecordingMaterialFromComponent()
@@ -240,59 +295,149 @@ internal class MaterialEditorEditor : Editor
         serializedObject.ApplyModifiedProperties();
 
         // sourceの状態に初期化
-        // ここではシェーダー未参照のプロパティは削除されないけど…多分大丈夫でしょう…
         MaterialUtility.CopyAllSettings(_recordingSourceMaterial, _recordingMaterial);
-        // overrideを反映
+        // 1. 自分より上のオーバーライドを反映
+        MaterialUtility.ApplyOverrideSettings(_recordingMaterial, _beforeOverrides);
+        // 2. 自分自身のオーバーライドを反映
         MaterialUtility.ApplyOverrideSettings(_recordingMaterial, _target.OverrideSettings);
+        // 3. 自分より下のオーバーライドを反映 (上書き)
+        MaterialUtility.ApplyOverrideSettings(_recordingMaterial, _afterOverrides);
+    }
+
+    private bool SanitizeRecordingMaterialAgainstAfter()
+    {
+        if (_recordingSourceMaterial == null) return true;
+
+        if (!_afterOverrides.OverrideShader && !_afterOverrides.OverrideRenderQueue && _afterOverrides.PropertyOverrides.Count == 0) return true;
+
+        var authoritative = new Material(_recordingSourceMaterial) { parent = null };
+        try
+        {
+            var sanitized = false;
+
+            serializedObject.ApplyModifiedProperties();
+
+            MaterialUtility.ApplyOverrideSettings(authoritative, _beforeOverrides);
+            MaterialUtility.ApplyOverrideSettings(authoritative, _target.OverrideSettings);
+            MaterialUtility.ApplyOverrideSettings(authoritative, _afterOverrides);
+
+            var currentDiff = MaterialUtility.GetOverrides(authoritative, _recordingMaterial, false, true);
+
+            // 固定されたシェーダーが変更された場合は、プロパティの空間が大規模に変わるので、同時に発生した変更を全て巻き戻す。
+            if (_afterOverrides.OverrideShader && currentDiff.OverrideShader)
+            {
+                MaterialUtility.CopyAllSettings(authoritative, _recordingMaterial);
+                Debug.LogWarning("SanitizeRecordingMaterialAgainstAfter: Shader is locked to " + authoritative.shader.name);
+                sanitized = true;
+            }
+            else
+            {
+                if (_afterOverrides.OverrideRenderQueue && currentDiff.OverrideRenderQueue)
+                {
+                    MaterialUtility.ApplyCustomRenderQueue(_recordingMaterial, MaterialUtility.GetCustomRenderQueue(authoritative));
+                    Debug.LogWarning("SanitizeRecordingMaterialAgainstAfter: RenderQueue is locked to " + MaterialUtility.GetCustomRenderQueue(authoritative));
+                    sanitized = true;
+                }
+
+                if (_afterOverrides.PropertyOverrides.Count > 0 && currentDiff.PropertyOverrides.Count > 0)
+                {
+                    using var _1 = HashSetPool<string>.Get(out var lockedProperties);
+                    foreach (var property in _afterOverrides.PropertyOverrides) lockedProperties.Add(property.PropertyName);
+                    using var _2 = DictionaryPool<string, MaterialProperty>.Get(out var authoritativeProperties);
+                    foreach (var property in MaterialUtility.GetProperties(authoritative)) authoritativeProperties[property.PropertyName] = property;
+
+                    foreach (var property in currentDiff.PropertyOverrides)
+                    {
+                        if (!lockedProperties.Contains(property.PropertyName)) continue;
+                        if (!authoritativeProperties.TryGetValue(property.PropertyName, out var authoritativeProperty)) continue;
+
+                        authoritativeProperty.TrySet(_recordingMaterial);
+                        Debug.LogWarning("SanitizeRecordingMaterialAgainstAfter: Property " + property.PropertyName + " is locked to " + authoritativeProperty.PropertyValue);
+                        sanitized = true;
+                    }
+                }
+            }
+
+            if (sanitized && _materialEditor != null)
+            {
+                _materialEditor.Repaint();
+            }
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError(e);
+            return false;
+        }
+        finally
+        {
+            DestroyImmediate(authoritative);
+        }
     }
 
     private void SyncComponentFromRecordingMaterial()
     {
         if (_recordingSourceMaterial == null) return;
 
-        serializedObject.ApplyModifiedProperties();
-
-        var previous = _target.OverrideSettings;
-        var cloned = previous.Clone();
-        var newOvrs = MaterialUtility.GetOverrides(_recordingSourceMaterial, _recordingMaterial, false, true);
-
-        // 前段階として、編集によって元の値に戻った設定(新しい差分に存在しないが、これまで存在していた差分)に対して
-        // これを維持するために、元の値を書き込む
+        var baseMaterial = new Material(_recordingSourceMaterial) { parent = null };
+        try
         {
-            if (previous.OverrideShader && !newOvrs.OverrideShader)
+            MaterialUtility.ApplyOverrideSettings(baseMaterial, _beforeOverrides);
+            MaterialUtility.ApplyOverrideSettings(baseMaterial, _afterOverrides);
+
+            serializedObject.ApplyModifiedProperties();
+
+            var previous = _target.OverrideSettings;
+            var cloned = previous.Clone();
+            var newOvrs = MaterialUtility.GetOverrides(baseMaterial, _recordingMaterial, false, true);
+
+            // 前段階として、編集によって元の値に戻った設定(新しい差分に存在しないが、これまで存在していた差分)に対して
+            // これを維持するために、元の値を書き込む
             {
-                cloned.OverrideShader = true;
-                cloned.TargetShader = _recordingSourceMaterial.shader;
+                if (previous.OverrideShader && !newOvrs.OverrideShader)
+                {
+                    cloned.OverrideShader = true;
+                    cloned.TargetShader = baseMaterial.shader;
+                }
+
+                if (previous.OverrideRenderQueue && !newOvrs.OverrideRenderQueue)
+                {
+                    cloned.OverrideRenderQueue = true;
+                    cloned.RenderQueueValue = MaterialUtility.GetCustomRenderQueue(baseMaterial);
+                }
+
+                using var _1 = DictionaryPool<string, MaterialProperty>.Get(out var newDict);
+                foreach (var p in newOvrs.PropertyOverrides) newDict[p.PropertyName] = p;
+                using var _2 = DictionaryPool<string, MaterialProperty>.Get(out var origDict);
+                foreach (var p in MaterialUtility.GetProperties(baseMaterial)) origDict[p.PropertyName] = p;
+
+                var modified = new List<MaterialProperty>();
+                foreach (var p in previous.PropertyOverrides)
+                {
+                    var name = p.PropertyName;
+                    if (!newDict.ContainsKey(name) && origDict.TryGetValue(name, out var o))
+                        modified.Add(o);
+                    else
+                        modified.Add(p);
+                }
+                cloned.PropertyOverrides = modified;
             }
 
-            if (previous.OverrideRenderQueue && !newOvrs.OverrideRenderQueue)
-            {
-                cloned.OverrideRenderQueue = true;
-                cloned.RenderQueueValue = MaterialUtility.GetCustomRenderQueue(_recordingSourceMaterial);
-            }
+            // 新しい差分をマージ(上書き, 追加)する
+            MaterialOverrideSettings.MergeInto(newOvrs, cloned);
 
-            using var _1 = DictionaryPool<string, MaterialProperty>.Get(out var newDict);
-            foreach (var p in newOvrs.PropertyOverrides) newDict[p.PropertyName] = p;
-            using var _2 = DictionaryPool<string, MaterialProperty>.Get(out var origDict);
-            foreach (var p in MaterialUtility.GetProperties(_recordingSourceMaterial)) origDict[p.PropertyName] = p;
-
-            var modified = new List<MaterialProperty>();
-            foreach (var p in previous.PropertyOverrides)
-            {
-                var name = p.PropertyName;
-                if (!newDict.ContainsKey(name) && origDict.TryGetValue(name, out var o))
-                    modified.Add(o);
-                else
-                    modified.Add(p);
-            }
-            cloned.PropertyOverrides = modified;
+            Undo.RecordObject(_target, "Sync AO Material Editor from Recording Material");
+            _target.OverrideSettings = cloned;
         }
-
-        // 新しい差分をマージ(上書き, 追加)する
-        MaterialOverrideSettings.MergeInto(newOvrs, cloned);
-
-        Undo.RecordObject(_target, "Sync AO Material Editor from Recording Material");
-        _target.OverrideSettings = cloned;
+        catch (Exception e)
+        {
+            Debug.LogError(e);
+        }
+        finally
+        {
+            DestroyImmediate(baseMaterial);
+        }
     }
 
     // OverrideUtilityGUI
@@ -400,6 +545,10 @@ internal static class MaterialEditoEditorContext
 
     public static bool IsRecording => RecordingToComponent.Count > 0;
 
+    public static event Action<MaterialEditorComponent>? OnStartRecording;
+    public static event Action<MaterialEditorComponent>? OnUpdateRecording;
+    public static event Action<MaterialEditorComponent>? OnStopRecording;
+
     public static void StartRecording(
         MaterialEditorComponent component,
         Material recordingMaterial,
@@ -409,6 +558,7 @@ internal static class MaterialEditoEditorContext
         RecordingToComponent[recordingMaterial] = component;
         ComponentToOverrideProperties[component] = overrideProperties;
         ComponentToMaterialEditor[component] = materialEditor;
+        OnStartRecording?.Invoke(component);
     }
 
     public static void UpdateRecording(
@@ -416,6 +566,7 @@ internal static class MaterialEditoEditorContext
         HashSet<string> overrideProperties)
     {
         ComponentToOverrideProperties[component] = overrideProperties;
+        OnUpdateRecording?.Invoke(component);
     }
 
     public static void StopRecording(Material recordingMaterial, MaterialEditorComponent component)
@@ -423,5 +574,6 @@ internal static class MaterialEditoEditorContext
         RecordingToComponent.Remove(recordingMaterial);
         ComponentToOverrideProperties.Remove(component);
         ComponentToMaterialEditor.Remove(component);
+        OnStopRecording?.Invoke(component);
     }
 }

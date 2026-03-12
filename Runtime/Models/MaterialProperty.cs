@@ -34,6 +34,18 @@ internal struct MaterialProperty : IEquatable<MaterialProperty>
         FloatValue = 0f;
     }
 
+    public readonly string PropertyValue =>
+        PropertyType switch
+        {
+            ShaderPropertyType.Texture => TextureValue != null ? TextureValue.name : "null",
+            ShaderPropertyType.Color => ColorValue.ToString(),
+            ShaderPropertyType.Vector => VectorValue.ToString(),
+            ShaderPropertyType.Int => IntValue.ToString(),
+            ShaderPropertyType.Float => FloatValue.ToString(),
+            ShaderPropertyType.Range => FloatValue.ToString(),
+            _ => throw new NotImplementedException(),
+        };
+
     public readonly bool TrySet(Material mat)
     {
         if (!Validate(mat, PropertyName, PropertyType)) return false;
