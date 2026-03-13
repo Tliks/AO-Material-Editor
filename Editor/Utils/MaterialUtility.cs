@@ -87,7 +87,7 @@ internal static class MaterialUtility
         return customQueueProp.intValue;
     }
 
-    public static void SetCustomRenderQueue(Material material, int renderQueue)
+    public static void ApplyCustomRenderQueue(Material material, int renderQueue)
     {
         using var so = new SerializedObject(material);
         var customQueueProp = so.FindProperty(CustomRenderQueueProperty);
@@ -152,12 +152,7 @@ internal static class MaterialUtility
         // ここではShaderのみを変更するため、シェーダー変更前のRenderQueueを保持しておき、変更後に元に戻す
         var savedRenderQueue = GetCustomRenderQueue(editableMaterial);
         editableMaterial.shader = targetShader;
-        SetCustomRenderQueue(editableMaterial, savedRenderQueue);
-    }
-
-    public static void ApplyRenderQueue(Material editableMaterial, int renderQueueValue)
-    {
-        SetCustomRenderQueue(editableMaterial, renderQueueValue);
+        ApplyCustomRenderQueue(editableMaterial, savedRenderQueue);
     }
 
     public static void ApplyProperties(Material editableMaterial, List<MaterialProperty> properties)
@@ -175,7 +170,7 @@ internal static class MaterialUtility
             var targetShader = overrideSettings.TargetShader;
             if (targetShader == null)
             {
-                Debug.LogError("TargetShader is null");
+                LocalizedLog.Error("Log:TargetShaderIsNull");
             }
             else
             {
@@ -185,7 +180,7 @@ internal static class MaterialUtility
 
         if (overrideSettings.OverrideRenderQueue)
         {
-            ApplyRenderQueue(editableMaterial, overrideSettings.RenderQueueValue);
+            ApplyCustomRenderQueue(editableMaterial, overrideSettings.RenderQueueValue);
         }
 
         ApplyProperties(editableMaterial, overrideSettings.PropertyOverrides);
@@ -204,7 +199,7 @@ internal static class MaterialUtility
     public static void CopyAllSettings(Material source, Material target, bool includeTextures = true)
     {
         ApplyShader(target, source.shader);
-        SetCustomRenderQueue(target, GetCustomRenderQueue(source));
+        ApplyCustomRenderQueue(target, GetCustomRenderQueue(source));
         CopyPropertiesForSameShader(source, target);
     }
 }

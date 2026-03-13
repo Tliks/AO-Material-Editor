@@ -23,7 +23,7 @@ internal class MaterialEntrySettingsDrawer : PropertyDrawer
                 EditorGUI.HelpBox(position, "HelpBox:AdvancedModeInfo".LS(), MessageType.Info);
                 position.NewLineWithSingleHeight();
                 var advancedTargets = property.FindPropertyRelative(nameof(MaterialEntrySettings.AdvancedTargets));
-                GUIHelper.List(position, advancedTargets, true, "Label:Material".LG(), prop => prop.CopyFrom(new MaterialTargetScope()));
+                MaterialTargetScopeCollectionUI.Draw(position, advancedTargets, "Label:Material".LG());
                 break;
             case MaterialEntrySettings.ApplyMode.All:
                 position.height = EditorStyles.helpBox.CalcHeight("HelpBox:AllModeInfo".LG(), position.width);;
@@ -54,7 +54,7 @@ internal class MaterialEntrySettingsDrawer : PropertyDrawer
             case MaterialEntrySettings.ApplyMode.Advanced:
                 height += EditorStyles.helpBox.CalcHeight("HelpBox:AdvancedModeInfo".LG(), viewWidth) + GUIHelper.GUI_SPACE;
                 var advancedTargets = property.FindPropertyRelative(nameof(MaterialEntrySettings.AdvancedTargets));
-                height += GUIHelper.GetListHeight(advancedTargets);
+                height += MaterialTargetScopeCollectionUI.GetHeight(advancedTargets, GUIContent.none);
                 break;
             case MaterialEntrySettings.ApplyMode.All:
                 height += EditorStyles.helpBox.CalcHeight("HelpBox:AllModeInfo".LG(), viewWidth) + GUIHelper.GUI_SPACE;

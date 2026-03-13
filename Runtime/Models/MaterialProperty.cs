@@ -3,7 +3,7 @@ using UnityEngine.Rendering;
 namespace Aoyon.MaterialEditor;
 
 [Serializable]
-internal struct MaterialProperty
+internal struct MaterialProperty : IEquatable<MaterialProperty>
 {
     public string PropertyName;
     public ShaderPropertyType PropertyType;
@@ -33,6 +33,18 @@ internal struct MaterialProperty
         IntValue = 0;
         FloatValue = 0f;
     }
+
+    public readonly string PropertyValue =>
+        PropertyType switch
+        {
+            ShaderPropertyType.Texture => TextureValue != null ? TextureValue.name : "null",
+            ShaderPropertyType.Color => ColorValue.ToString(),
+            ShaderPropertyType.Vector => VectorValue.ToString(),
+            ShaderPropertyType.Int => IntValue.ToString(),
+            ShaderPropertyType.Float => FloatValue.ToString(),
+            ShaderPropertyType.Range => FloatValue.ToString(),
+            _ => throw new NotImplementedException(),
+        };
 
     public readonly bool TrySet(Material mat)
     {
