@@ -112,3 +112,6 @@ msgstr "[AO Material Editor] Due to the component below on the hierarchy, the pr
 
 msgid "Log:TargetShaderIsNull"
 msgstr "[AO Material Editor] Target shader is not specified."
+
+msgid "label.dragAndDrop"
+msgstr "Bulk add by drag and drop"

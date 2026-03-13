@@ -1,5 +1,3 @@
-using nadena.dev.modular_avatar.core;
-
 namespace Aoyon.MaterialEditor.UI;
 
 [CustomPropertyDrawer(typeof(AllMaterialTargetScope))]
@@ -17,13 +15,12 @@ internal class AllMaterialTargetScopeDrawer : PropertyDrawer
 
         position.NewLine();
         position.Indent();
-
-        position = GUIHelper.List(position, excludeTargets, true, "Label:Material".LG(), prop => {
-            var beforeType = prop.FindPropertyRelative(nameof(MaterialTargetScope.Type)).enumValueIndex == 0 
-                ? MaterialTargetScope.ScopeType.Asset : MaterialTargetScope.ScopeType.Slot;
-            prop.CopyFrom(new MaterialTargetScope() { Type = beforeType });
-        });
-        position = GUIHelper.List(position, excludeObjectReferences, true, "Label:ExcludeObjectReferences".LG(), prop => prop.CopyFrom(new AvatarObjectReference()));
+        
+        position.height = MaterialTargetScopeCollectionUI.GetHeight(excludeTargets, GUIContent.none);
+        MaterialTargetScopeCollectionUI.Draw(position, excludeTargets, "Label:Material".LG());
+        position.NewLine();
+        position.height = AvatarObjectReferenceCollectionUI.GetHeight(excludeObjectReferences, GUIContent.none);
+        AvatarObjectReferenceCollectionUI.Draw(position, excludeObjectReferences, "Label:ExcludeObjectReferences".LG());
     }
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
@@ -37,9 +34,9 @@ internal class AllMaterialTargetScopeDrawer : PropertyDrawer
             var excludeTargets = property.FindPropertyRelative(nameof(AllMaterialTargetScope.ExcludeTargets));
             var excludeObjectReferences = property.FindPropertyRelative(nameof(AllMaterialTargetScope.ExcludeObjectReferences));
 
-            height += GUIHelper.GetListHeight(excludeTargets, true);
+            height += MaterialTargetScopeCollectionUI.GetHeight(excludeTargets, GUIContent.none);
             height += GUIHelper.GUI_SPACE;
-            height += GUIHelper.GetListHeight(excludeObjectReferences, true);
+            height += AvatarObjectReferenceCollectionUI.GetHeight(excludeObjectReferences, GUIContent.none);
         }
 
         return height;

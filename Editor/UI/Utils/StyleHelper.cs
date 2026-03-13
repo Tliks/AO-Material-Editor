@@ -7,4 +7,10 @@ internal static class StyleHelper
     {
         alignment = TextAnchor.MiddleCenter
     };
+
+    private static GUIStyle? _dropStyle;
+    public static GUIStyle DropStyle => _dropStyle ??= new GUIStyle(EditorStyles.helpBox)
+    {
+        alignment = TextAnchor.MiddleCenter
+    };
 }

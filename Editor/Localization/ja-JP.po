@@ -113,3 +113,6 @@ msgstr "[AO Material Editor] Hierarchy上で下にあるコンポーネントに
 
 msgid "Log:TargetShaderIsNull"
 msgstr "[AO Material Editor] 変更先のシェーダーが指定されていません。"
+
+msgid "label.dragAndDrop"
+msgstr "ドラッグ&ドロップで一括追加"
