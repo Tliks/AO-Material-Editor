@@ -6,10 +6,10 @@ msgstr ""
 "Language: en-US\n"
 
 msgid "HelpBox:NoAvatarRoot"
-msgstr "This component is currently disabled.\nPlease place it under the avatar hierarchy."
+msgstr "This component is currently disabled.\nIt is only active when placed under the avatar hierarchy."
 
 msgid "HelpBox:NotEffective"
-msgstr "This component is currently disabled.\nEnsure the component's checkbox is enabled and it is not set to EditorOnly."
+msgstr "This component is currently disabled.\nIt is not applied when the component's checkbox is off or when it is set to EditorOnly."
 
 msgid "Label:TargetSettings"
 msgstr "Target Materials"
@@ -24,7 +24,7 @@ msgid "Label:CurrentOverridesCount"
 msgstr "Overrides: {0} places"
 
 msgid "HelpBox:OverridesInfo"
-msgstr "The overridden content is saved and displayed.\nWhen you edit the material in the upper editor screen, it is automatically reflected here, so you usually do not need to edit here."
+msgstr "Your current edits are shown here.\nChanges made in the material editor above are reflected here automatically, so you usually do not need to edit this directly."
 
 msgid "Label:Select"
 msgstr "Select"
@@ -45,10 +45,10 @@ msgid "Enum:ApplyMode:All"
 msgstr "All"
 
 msgid "HelpBox:AdvancedModeInfo"
-msgstr "In this mode, the current changes can be batch applied to multiple materials.\nThis is useful when you want to unify look and settings.\nYou can also specify which slots to apply the changes to for each material slot."
+msgstr "Your current edits can be batch applied to multiple materials.\nThis is useful when you want to unify look and settings.\nIn addition to the usual material-level selection, you can also choose targets per material slot."
 
 msgid "HelpBox:AllModeInfo"
-msgstr "In this mode, the current changes can be batch applied to every material.\nThis is useful when you want to unify look and settings."
+msgstr "Your current edits can be batch applied to all materials.\nThis is useful when you want to unify look and settings."
 
 msgid "Label:Material"
 msgstr "Material"
@@ -72,7 +72,7 @@ msgid "Enum:ScopeType:Slot"
 msgstr "Slot"
 
 msgid "HelpBox:EditorInfo"
-msgstr "Here you can edit materials non-destructively from the regular UI.\nYour changes are recorded automatically and saved to the component."
+msgstr "You can edit materials non-destructively using the same UI you normally use for material editing.\nYour changes are recorded automatically and saved to the component."
 
 msgid "Label:OverrideUtility"
 msgstr "Other actions"

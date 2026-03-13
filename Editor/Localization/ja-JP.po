@@ -6,10 +6,10 @@ msgstr ""
 "Language: ja-JP\n"
 
 msgid "HelpBox:NoAvatarRoot"
-msgstr "このコンポーネントは現在無効化されています。\nアバターの配下に配置してください。"
+msgstr "このコンポーネントは現在無効化されています。\nアバター配下にある場合のみ有効です。"
 
 msgid "HelpBox:NotEffective"
-msgstr "このコンポーネントは現在無効化されています。\nコンポーネントのチェックボックスが有効であり、EditorOnly ではないことを確認してください。"
+msgstr "このコンポーネントは現在無効化されています。\nコンポーネントのチェックボックスがオフ、または EditorOnly の場合は適用されません。"
 
 msgid "Label:TargetSettings"
 msgstr "適用するマテリアル"
@@ -24,7 +24,7 @@ msgid "Label:CurrentOverridesCount"
 msgstr "編集内容: {0}箇所"
 
 msgid "HelpBox:OverridesInfo"
-msgstr "編集された内容が保存、表示されています。\n上部のマテリアルの編集画面から編集すると、自動的にここに反映されるため、通常はここを編集する必要はありません。"
+msgstr "現在の編集内容がここに表示されます。\n上部のマテリアル編集で自動反映されるため、通常はここを直接編集する必要はありません。"
 
 msgid "Label:Select"
 msgstr "選択"
@@ -45,10 +45,10 @@ msgid "Enum:ApplyMode:All"
 msgstr "全て"
 
 msgid "HelpBox:AdvancedModeInfo"
-msgstr "このモードでは、現在の編集内容を複数のマテリアルに一括で適用できます。\n質感や設定を統一したい場合に便利です。\nまた、マテリアルスロット単位で適用する先を指定することも出来ます。"
+msgstr "現在の編集内容を複数のマテリアルへ一括適用できます。\n質感や設定を揃えたいときに便利です。\n通常のマテリアル単位に加え、マテリアルスロット単位でも適用先を指定できます。"
 
 msgid "HelpBox:AllModeInfo"
-msgstr "このモードでは、現在の編集内容を全てのマテリアルに一括で適用できます。\n質感や設定を統一したい場合に便利です。"
+msgstr "現在の編集内容をすべてのマテリアルへ一括適用できます。\n質感や設定を揃えたいときに便利です。"
 
 msgid "Label:Material"
 msgstr "マテリアル"
@@ -72,7 +72,7 @@ msgid "Enum:ScopeType:Slot"
 msgstr "スロット"
 
 msgid "HelpBox:EditorInfo"
-msgstr "ここでは通常のUIから、マテリアルを非破壊的に編集できます。\n編集内容は自動で記録され、コンポーネントに保存されます。"
+msgstr "普段のマテリアル編集と同じUIで非破壊編集できます。\n編集内容は自動記録され、このコンポーネントに保存されます。"
 
 msgid "Label:OverrideUtility"
 msgstr "その他の操作"
