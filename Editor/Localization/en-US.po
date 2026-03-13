@@ -21,7 +21,10 @@ msgid "HelpBox:NoMaterialSelected"
 msgstr "No material is selected."
 
 msgid "Label:CurrentOverridesCount"
-msgstr "Current changes: {0}"
+msgstr "Overrides: {0} places"
+
+msgid "HelpBox:OverridesInfo"
+msgstr "The overridden content is saved and displayed.\nWhen you edit the material in the upper editor screen, it is automatically reflected here, so you usually do not need to edit here."
 
 msgid "Label:Select"
 msgstr "Select"
@@ -42,7 +45,7 @@ msgid "Enum:ApplyMode:All"
 msgstr "All"
 
 msgid "HelpBox:AdvancedModeInfo"
-msgstr "In this mode, the current changes can be batch applied to multiple materials.\nYou can also specify which slots to apply the changes to for each material slot."
+msgstr "In this mode, the current changes can be batch applied to multiple materials.\nThis is useful when you want to unify look and settings.\nYou can also specify which slots to apply the changes to for each material slot."
 
 msgid "HelpBox:AllModeInfo"
 msgstr "In this mode, the current changes can be batch applied to every material.\nThis is useful when you want to unify look and settings."
@@ -97,3 +100,15 @@ msgstr "Reset"
 
 msgid "Label:RecordingSourceMaterial"
 msgstr "Material for display"
+
+msgid "Log:ShaderIsLocked"
+msgstr "[AO Material Editor] Due to the component below on the hierarchy, the shader is set to {0}, so this component cannot change the shader."
+
+msgid "Log:RenderQueueIsLocked"
+msgstr "[AO Material Editor] Due to the component below on the hierarchy, the render queue is set to {0}, so this component cannot change the render queue."
+
+msgid "Log:PropertyIsLocked"
+msgstr "[AO Material Editor] Due to the component below on the hierarchy, the property {0} is set to {1}, so this component cannot change the property."
+
+msgid "Log:TargetShaderIsNull"
+msgstr "[AO Material Editor] Target shader is not specified."

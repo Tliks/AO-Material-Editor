@@ -76,6 +76,7 @@ internal class MaterialEditorEditor : Editor
         Localization.DrawLanguageSwitcher();
         EditorGUILayout.Space();
         DrawInformationGUI();
+        EditorGUILayout.Space();
         DrawEntrySettings();
         EditorGUILayout.Space(); 
         DrawEditor();
@@ -111,7 +112,6 @@ internal class MaterialEditorEditor : Editor
             _materialEditor.DrawHeader();
             if (_materialEditor.isVisible) {
                 EditorGUILayout.HelpBox("HelpBox:EditorInfo".LS(), MessageType.Info);
-                DrawOverrides();
                 // OverrideUtilityGUI();
                 DrawRecordingSourceMaterial();
                 _materialEditor.OnInspectorGUI();
@@ -120,8 +120,8 @@ internal class MaterialEditorEditor : Editor
         else 
         {
             EditorGUILayout.HelpBox("HelpBox:NoMaterialSelected".LS(), MessageType.Warning, true);
-            DrawOverrides();
         }
+        DrawOverrides();
     }
 
     private bool _showOverrides = false;
@@ -131,6 +131,7 @@ internal class MaterialEditorEditor : Editor
         _showOverrides = EditorGUILayout.Foldout(_showOverrides, string.Format("Label:CurrentOverridesCount".LS(), count), true);
         if (_showOverrides)
         {
+            EditorGUILayout.HelpBox("HelpBox:OverridesInfo".LS(), MessageType.Info);
             // 内部でEditorGUIを多用しているが、ここでIndentScopeを使いEditorGUILayoutで描画すると何故か崩れるのでEditorGUIに統一する
             // Todo: EditorGUIとEditorGUILayoutが共存できないようなまともでない設計を解消する
             var position = EditorGUILayout.GetControlRect(false, EditorGUI.GetPropertyHeight(_overrideSettings));
@@ -220,8 +221,9 @@ internal class MaterialEditorEditor : Editor
                     // これにより、次のフレームで数行上のSyncRecordingMaterialFromComponentが実行される
                     // 重複してパフォーマンス的にも無駄ではあるけど一応害はない
                     // Todo: もっと良い感じのロジックを考える、あると良いな
-                    if (!SanitizeRecordingMaterialAgainstAfter()) continue; // サニタイズに失敗した状態でコンポーネントを書き込むべきではない
-                    SyncComponentFromRecordingMaterial();
+                    if (SanitizeRecordingMaterialAgainstAfter()) { // サニタイズに失敗した状態でコンポーネントに書き込むべきではない
+                        SyncComponentFromRecordingMaterial();
+                    }
                     return;
                 }
             }
@@ -327,7 +329,7 @@ internal class MaterialEditorEditor : Editor
             if (_afterOverrides.OverrideShader && currentDiff.OverrideShader)
             {
                 MaterialUtility.CopyAllSettings(authoritative, _recordingMaterial);
-                Debug.LogWarning("SanitizeRecordingMaterialAgainstAfter: Shader is locked to " + authoritative.shader.name);
+                LocalizedLog.Warning("Log:ShaderIsLocked", authoritative.shader.name);
                 sanitized = true;
             }
             else
@@ -335,7 +337,7 @@ internal class MaterialEditorEditor : Editor
                 if (_afterOverrides.OverrideRenderQueue && currentDiff.OverrideRenderQueue)
                 {
                     MaterialUtility.ApplyCustomRenderQueue(_recordingMaterial, MaterialUtility.GetCustomRenderQueue(authoritative));
-                    Debug.LogWarning("SanitizeRecordingMaterialAgainstAfter: RenderQueue is locked to " + MaterialUtility.GetCustomRenderQueue(authoritative));
+                    LocalizedLog.Warning("Log:RenderQueueIsLocked", MaterialUtility.GetCustomRenderQueue(authoritative));
                     sanitized = true;
                 }
 
@@ -352,7 +354,7 @@ internal class MaterialEditorEditor : Editor
                         if (!authoritativeProperties.TryGetValue(property.PropertyName, out var authoritativeProperty)) continue;
 
                         authoritativeProperty.TrySet(_recordingMaterial);
-                        Debug.LogWarning("SanitizeRecordingMaterialAgainstAfter: Property " + property.PropertyName + " is locked to " + authoritativeProperty.PropertyValue);
+                        LocalizedLog.Warning("Log:PropertyIsLocked", property.PropertyName, authoritativeProperty.PropertyValue);
                         sanitized = true;
                     }
                 }
