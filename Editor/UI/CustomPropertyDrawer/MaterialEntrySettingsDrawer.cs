@@ -19,16 +19,12 @@ internal class MaterialEntrySettingsDrawer : PropertyDrawer
                 LocalizedUI.PropertyField(position, basicMaterial, "Label:Material");
                 break;
             case MaterialEntrySettings.ApplyMode.Advanced:
-                position.height = EditorStyles.helpBox.CalcHeight("HelpBox:AdvancedModeInfo".LG(), position.width);;
-                EditorGUI.HelpBox(position, "HelpBox:AdvancedModeInfo".LS(), MessageType.Info);
-                position.NewLineWithSingleHeight();
+                position = GUIHelper.HelpBox(position, "HelpBox:AdvancedModeInfo", MessageType.Info);
                 var advancedTargets = property.FindPropertyRelative(nameof(MaterialEntrySettings.AdvancedTargets));
                 MaterialTargetScopeCollectionUI.Draw(position, advancedTargets, "Label:Material".LG());
                 break;
             case MaterialEntrySettings.ApplyMode.All:
-                position.height = EditorStyles.helpBox.CalcHeight("HelpBox:AllModeInfo".LG(), position.width);;
-                EditorGUI.HelpBox(position, "HelpBox:AllModeInfo".LS(), MessageType.Info);
-                position.NewLineWithSingleHeight();
+                position = GUIHelper.HelpBox(position, "HelpBox:AllModeInfo", MessageType.Info);
                 var allMaterialTargetScope = property.FindPropertyRelative(nameof(MaterialEntrySettings.AllMaterialTargetScope));
                 EditorGUI.PropertyField(position, allMaterialTargetScope);
                 break;
@@ -44,7 +40,6 @@ internal class MaterialEntrySettingsDrawer : PropertyDrawer
 
         height += GUIHelper.GUI_SPACE;
 
-        var viewWidth = EditorGUIUtility.currentViewWidth - 20f;
         switch ((MaterialEntrySettings.ApplyMode)mode.enumValueIndex)
         {
             case MaterialEntrySettings.ApplyMode.Basic:
@@ -52,12 +47,12 @@ internal class MaterialEntrySettingsDrawer : PropertyDrawer
                 height += EditorGUI.GetPropertyHeight(basicMaterial, GUIContent.none);
                 break;
             case MaterialEntrySettings.ApplyMode.Advanced:
-                height += EditorStyles.helpBox.CalcHeight("HelpBox:AdvancedModeInfo".LG(), viewWidth) + GUIHelper.GUI_SPACE;
+                height += GUIHelper.GetHelpBoxHeight("HelpBox:AdvancedModeInfo", MessageType.Info);
                 var advancedTargets = property.FindPropertyRelative(nameof(MaterialEntrySettings.AdvancedTargets));
                 height += MaterialTargetScopeCollectionUI.GetHeight(advancedTargets, GUIContent.none);
                 break;
             case MaterialEntrySettings.ApplyMode.All:
-                height += EditorStyles.helpBox.CalcHeight("HelpBox:AllModeInfo".LG(), viewWidth) + GUIHelper.GUI_SPACE;
+                height += GUIHelper.GetHelpBoxHeight("HelpBox:AllModeInfo", MessageType.Info);
                 var allMaterialTargetScope = property.FindPropertyRelative(nameof(MaterialEntrySettings.AllMaterialTargetScope));
                 height += EditorGUI.GetPropertyHeight(allMaterialTargetScope, GUIContent.none);
                 break;
