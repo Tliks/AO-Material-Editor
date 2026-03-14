@@ -22,24 +22,24 @@ internal static class LocalizedUI
 
 internal static class LocalizedPopup
 {
-    public static int Draw(int selectedIndex, string? labelKey, IEnumerable<string> optionKeys, params GUILayoutOption[] layoutOptions)
+    public static int Draw(int selectedIndex, string? labelKey, IEnumerable<string> optionKeys, GUIStyle? style = null, params GUILayoutOption[] layoutOptions)
     {
         var label = labelKey != null ? labelKey.LG() : GUIContent.none;
         var contents = optionKeys.Select(k => k.LG()).ToArray();
-        return EditorGUILayout.Popup(label, selectedIndex, contents, layoutOptions);
+        return EditorGUILayout.Popup(label, selectedIndex, contents, style, layoutOptions);
     }
 
-    public static int Draw(Rect position, int selectedIndex, string? labelKey, IEnumerable<string> optionKeys)
+    public static int Draw(Rect position, int selectedIndex, string? labelKey, IEnumerable<string> optionKeys, GUIStyle? style = null)
     {
         var label = labelKey != null ? labelKey.LG() : GUIContent.none;
         var contents = optionKeys.Select(k => k.LG()).ToArray();
-        return EditorGUI.Popup(position, label, selectedIndex, contents);
+        return EditorGUI.Popup(position, label, selectedIndex, contents, style);
     }
 
-    public static void Field(SerializedProperty enumProperty, string? labelKey, IEnumerable<string> optionKeys, Action<int>? onValueChanged = null, params GUILayoutOption[] layoutOptions)
+    public static void Field(SerializedProperty enumProperty, string? labelKey, IEnumerable<string> optionKeys, GUIStyle? style = null, Action<int>? onValueChanged = null, params GUILayoutOption[] layoutOptions)
     {
         var currentIndex = enumProperty.enumValueIndex;
-        var newIndex = Draw(currentIndex, labelKey, optionKeys, layoutOptions);
+        var newIndex = Draw(currentIndex, labelKey, optionKeys, style, layoutOptions);
         if (newIndex != currentIndex)
         {
             enumProperty.enumValueIndex = newIndex;
@@ -47,10 +47,10 @@ internal static class LocalizedPopup
         }
     }
 
-    public static void Field(Rect position, SerializedProperty enumProperty, string? labelKey, IEnumerable<string> optionKeys, Action<int>? onValueChanged = null)
+    public static void Field(Rect position, SerializedProperty enumProperty, string? labelKey, IEnumerable<string> optionKeys, GUIStyle? style = null, Action<int>? onValueChanged = null)
     {
         var currentIndex = enumProperty.enumValueIndex;
-        var newIndex = Draw(position, currentIndex, labelKey, optionKeys);
+        var newIndex = Draw(position, currentIndex, labelKey, optionKeys, style);
         if (newIndex != currentIndex)
         {
             enumProperty.enumValueIndex = newIndex;

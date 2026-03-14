@@ -3,6 +3,13 @@ namespace Aoyon.MaterialEditor.UI;
 [CustomPropertyDrawer(typeof(MaterialTargetScope))]
 internal class MaterialTargetScopeDrawer : PropertyDrawer
 {
+    private static readonly GUIStyle _typeStyle = StyleHelper.CenteredPopupStyle;
+    private static float? _typeWidth;
+    private static float TypeWidth =>
+        _typeWidth ??= LocalizedUI.GetEnumOptionKeys(typeof(MaterialTargetScope.ScopeType))
+            .Select(k => _typeStyle.CalcSize(k.LG()).x)
+            .Max() + 8f;
+
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
         EditorGUI.BeginProperty(position, label, property);
@@ -11,9 +18,9 @@ internal class MaterialTargetScopeDrawer : PropertyDrawer
 
         var type = property.FindPropertyRelative(nameof(MaterialTargetScope.Type));
 
-        GUIHelper.SplitRectHorizontally(position, 0.18f, 60f, out var typeRect, out var valueRect);
+        GUIHelper.SplitRectHorizontallyForLeft(position, TypeWidth, out var typeRect, out var valueRect);
 
-        LocalizedPopup.Field(typeRect, type, null, LocalizedUI.GetEnumOptionKeys(typeof(MaterialTargetScope.ScopeType)));
+        LocalizedPopup.Field(typeRect, type, null, LocalizedUI.GetEnumOptionKeys(typeof(MaterialTargetScope.ScopeType)), _typeStyle);
 
         switch ((MaterialTargetScope.ScopeType)type.enumValueIndex)
         {
