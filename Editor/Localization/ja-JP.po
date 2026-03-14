@@ -6,7 +6,7 @@ msgstr ""
 "Language: ja-JP\n"
 
 msgid "HelpBox:NoAvatarRoot"
-msgstr "このコンポーネントは現在無効化されています。\nアバター配下にある場合のみ有効です。"
+msgstr "このコンポーネントは現在無効化されています。\nアバター以下にある場合のみ有効です。"
 
 msgid "HelpBox:NotEffective"
 msgstr "このコンポーネントは現在無効化されています。\nコンポーネントのチェックボックスがオフ、または EditorOnly の場合は適用されません。"
@@ -24,7 +24,7 @@ msgid "Label:CurrentOverridesCount"
 msgstr "編集内容: {0}箇所"
 
 msgid "HelpBox:OverridesInfo"
-msgstr "現在の編集内容がここに表示されます。\n上部のマテリアル編集で自動反映されるため、通常はここを直接編集する必要はありません。"
+msgstr "保存された編集内容がここに表示されます。\n上部のマテリアル編集で自動反映されるため、通常はここを直接編集する必要はありません。\nプレビュー時やビルド時に、この編集内容がマテリアルに適用されます。"
 
 msgid "Label:Select"
 msgstr "選択"
@@ -45,10 +45,10 @@ msgid "Enum:ApplyMode:All"
 msgstr "全て"
 
 msgid "HelpBox:AdvancedModeInfo"
-msgstr "現在の編集内容を複数のマテリアルへ一括適用できます。\n質感や設定を揃えたいときに便利です。\n通常のマテリアル単位に加え、マテリアルスロット単位でも適用先を指定できます。"
+msgstr "編集内容を複数のマテリアルへ一括適用できます。\n質感や設定を揃えたいときに便利です。\n通常のマテリアル単位に加え、マテリアルスロット単位でも指定できます。"
 
 msgid "HelpBox:AllModeInfo"
-msgstr "現在の編集内容をすべてのマテリアルへ一括適用できます。\n質感や設定を揃えたいときに便利です。"
+msgstr "編集内容をすべてのマテリアルへ一括適用できます。\n質感や設定を揃えたいときに便利です。"
 
 msgid "Label:Material"
 msgstr "マテリアル"
@@ -72,11 +72,10 @@ msgid "Enum:ScopeType:Slot"
 msgstr "スロット"
 
 msgid "HelpBox:EditorInfo"
-msgstr "普段のマテリアル編集と同じUIで非破壊編集できます。\n編集内容は自動記録され、このコンポーネントに保存されます。"
+msgstr "ここではマテリアルを非破壊的に編集できます。\n編集内容は自動記録され、このコンポーネントに保存されます。"
 
 msgid "Label:OverrideUtility"
 msgstr "その他の操作"
-
 
 msgid "Label:Edit"
 msgstr "編集する"
@@ -103,13 +102,13 @@ msgid "Label:RecordingSourceMaterial"
 msgstr "表示用のマテリアル"
 
 msgid "Log:ShaderIsLocked"
-msgstr "[AO Material Editor] Hierarchy上で下にあるコンポーネントにより、シェーダーが{0}に設定されているため、このコンポーネントではシェーダーを変更できません。"
+msgstr "[AO Material Editor] Hierarchy上でより下にあるコンポーネントにより、シェーダーが{0}に設定されているため、このコンポーネントではシェーダーを変更できません。"
 
 msgid "Log:RenderQueueIsLocked"
-msgstr "[AO Material Editor] Hierarchy上で下にあるコンポーネントにより、レンダーキューが{0}に設定されているため、このコンポーネントではレンダーキューを変更できません。"
+msgstr "[AO Material Editor] Hierarchy上でより下にあるコンポーネントにより、レンダーキューが{0}に設定されているため、このコンポーネントではレンダーキューを変更できません。"
 
 msgid "Log:PropertyIsLocked"
-msgstr "[AO Material Editor] Hierarchy上で下にあるコンポーネントにより、プロパティ{0}が{1}に設定されているため、このコンポーネントではこのプロパティを変更できません。"
+msgstr "[AO Material Editor] Hierarchy上でより下にあるコンポーネントにより、プロパティ{0}が{1}に設定されているため、このコンポーネントではこのプロパティを変更できません。"
 
 msgid "Log:TargetShaderIsNull"
 msgstr "[AO Material Editor] 変更先のシェーダーが指定されていません。"
