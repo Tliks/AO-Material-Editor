@@ -46,7 +46,7 @@ internal class MaterialSelector
     public static Vector2 GetSize(GUIContent content)
     {
         return new Vector2(
-            GUI.skin.button.CalcSize(content).x + 16f,
+            _style.CalcSize(content).x + 8f,
             GUIHelper.propertyHeight
         );
     }

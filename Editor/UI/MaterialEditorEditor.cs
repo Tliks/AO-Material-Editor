@@ -80,6 +80,7 @@ internal class MaterialEditorEditor : Editor
         DrawEntrySettings();
         EditorGUILayout.Space(); 
         DrawEditor();
+        DrawOverrides();
 
         serializedObject.ApplyModifiedProperties();
     }
@@ -121,7 +122,6 @@ internal class MaterialEditorEditor : Editor
         {
             EditorGUILayout.HelpBox("HelpBox:NoMaterialSelected".LS(), MessageType.Warning, true);
         }
-        DrawOverrides();
     }
 
     private bool _showOverrides = false;

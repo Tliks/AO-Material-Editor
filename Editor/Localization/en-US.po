@@ -21,10 +21,10 @@ msgid "HelpBox:NoMaterialSelected"
 msgstr "No material is selected."
 
 msgid "Label:CurrentOverridesCount"
-msgstr "Overrides: {0} places"
+msgstr "Edits: {0} entries"
 
 msgid "HelpBox:OverridesInfo"
-msgstr "Your current edits are shown here.\nChanges made in the material editor above are reflected here automatically, so you usually do not need to edit this directly."
+msgstr "Saved edits are shown here.\nChanges made in the material editor above are reflected here automatically, so you usually do not need to edit this directly.\nThese edits are applied to the material during preview and build."
 
 msgid "Label:Select"
 msgstr "Select"
@@ -33,10 +33,10 @@ msgid "Label:SelectMaterial"
 msgstr "Select material"
 
 msgid "Label:ApplyMode"
-msgstr "Selection Mode"
+msgstr "Selection Method"
 
 msgid "Enum:ApplyMode:Basic"
-msgstr "Basic"
+msgstr "Normal"
 
 msgid "Enum:ApplyMode:Advanced"
 msgstr "Advanced"
@@ -45,10 +45,10 @@ msgid "Enum:ApplyMode:All"
 msgstr "All"
 
 msgid "HelpBox:AdvancedModeInfo"
-msgstr "Your current edits can be batch applied to multiple materials.\nThis is useful when you want to unify look and settings.\nIn addition to the usual material-level selection, you can also choose targets per material slot."
+msgstr "These edits can be applied to multiple materials at once.\nThis is useful when you want to match their appearance and settings.\nIn addition to selecting by material, you can also specify targets by material slot."
 
 msgid "HelpBox:AllModeInfo"
-msgstr "Your current edits can be batch applied to all materials.\nThis is useful when you want to unify look and settings."
+msgstr "These edits can be applied to all materials at once.\nThis is useful when you want to match their appearance and settings."
 
 msgid "Label:Material"
 msgstr "Material"
@@ -72,10 +72,10 @@ msgid "Enum:ScopeType:Slot"
 msgstr "Slot"
 
 msgid "HelpBox:EditorInfo"
-msgstr "You can edit materials non-destructively using the same UI you normally use for material editing.\nYour changes are recorded automatically and saved to the component."
+msgstr "You can edit materials non-destructively here.\nYour edits are recorded automatically and saved to this component."
 
 msgid "Label:OverrideUtility"
-msgstr "Other actions"
+msgstr "Other Actions"
 
 msgid "Label:Edit"
 msgstr "Edit"
@@ -87,7 +87,7 @@ msgid "Label:RenderQueue"
 msgstr "Render Queue"
 
 msgid "Label:PropertyOverrides"
-msgstr "Property overrides"
+msgstr "Properties"
 
 msgid "Label:MaterialProperty:TextureOffsetValue"
 msgstr "Offset"
@@ -99,16 +99,16 @@ msgid "Label:ResetAll"
 msgstr "Reset"
 
 msgid "Label:RecordingSourceMaterial"
-msgstr "Material for display"
+msgstr "Display Material"
 
 msgid "Log:ShaderIsLocked"
-msgstr "[AO Material Editor] Due to the component below on the hierarchy, the shader is set to {0}, so this component cannot change the shader."
+msgstr "[AO Material Editor] This component cannot change the shader because a component lower in the hierarchy has set it to {0}."
 
 msgid "Log:RenderQueueIsLocked"
-msgstr "[AO Material Editor] Due to the component below on the hierarchy, the render queue is set to {0}, so this component cannot change the render queue."
+msgstr "[AO Material Editor] This component cannot change the render queue because a component lower in the hierarchy has set it to {0}."
 
 msgid "Log:PropertyIsLocked"
-msgstr "[AO Material Editor] Due to the component below on the hierarchy, the property {0} is set to {1}, so this component cannot change the property."
+msgstr "[AO Material Editor] This component cannot change property {0} because a component lower in the hierarchy has set it to {1}."
 
 msgid "Log:TargetShaderIsNull"
 msgstr "[AO Material Editor] Target shader is not specified."
