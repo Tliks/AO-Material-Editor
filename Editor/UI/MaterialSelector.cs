@@ -43,7 +43,7 @@ internal class MaterialSelector
         return GetSize(GetContent());
     }
 
-    public static Vector2 GetSize(GUIContent content)
+    private static Vector2 GetSize(GUIContent content)
     {
         return new Vector2(
             _style.CalcSize(content).x + 8f,
