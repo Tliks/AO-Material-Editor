@@ -5,7 +5,7 @@ internal class MaterialSelectorDrawer : PropertyDrawer
 {
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
-        EditorGUI.BeginProperty(position, label, property);
+        using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, property);
 
         position.SetSingleHeight();
 
@@ -15,8 +15,6 @@ internal class MaterialSelectorDrawer : PropertyDrawer
 
         property.objectReferenceValue = EditorGUI.ObjectField(objectFieldRect, label, property.objectReferenceValue, typeof(Material), true);
         MaterialSelector.Draw(selectorRect, () => GetMaterials(property), (m, i) => OnSelected(property, m, i));
-
-        EditorGUI.EndProperty();
     }
 
     private static List<Material> GetMaterials(SerializedProperty property)

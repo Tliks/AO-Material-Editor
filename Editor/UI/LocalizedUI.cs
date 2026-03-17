@@ -38,6 +38,8 @@ internal static class LocalizedPopup
 
     public static void Field(SerializedProperty enumProperty, string? labelKey, IEnumerable<string> optionKeys, GUIStyle? style = null, Action<int>? onValueChanged = null, params GUILayoutOption[] layoutOptions)
     {
+        // Todo: BeginProperty
+        
         var currentIndex = enumProperty.enumValueIndex;
         var newIndex = Draw(currentIndex, labelKey, optionKeys, style, layoutOptions);
         if (newIndex != currentIndex)
@@ -49,6 +51,8 @@ internal static class LocalizedPopup
 
     public static void Field(Rect position, SerializedProperty enumProperty, string? labelKey, IEnumerable<string> optionKeys, GUIStyle? style = null, Action<int>? onValueChanged = null)
     {
+        using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, enumProperty);
+        
         var currentIndex = enumProperty.enumValueIndex;
         var newIndex = Draw(position, currentIndex, labelKey, optionKeys, style);
         if (newIndex != currentIndex)
@@ -87,6 +91,8 @@ internal static class LocalizedToolbar
 
     public static void Field(Rect position, SerializedProperty enumProperty, IEnumerable<string> optionKeys, string? labelKey = null, Action<int>? onValueChanged = null)
     {
+        using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, enumProperty);
+        
         var currentIndex = enumProperty.enumValueIndex;
         var newIndex = Draw(position, currentIndex, optionKeys, labelKey);
         if (newIndex != currentIndex)
@@ -98,6 +104,8 @@ internal static class LocalizedToolbar
 
     public static void Field(SerializedProperty enumProperty, IEnumerable<string> optionKeys, string? labelKey = null, Action<int>? onValueChanged = null, params GUILayoutOption[] layoutOptions)
     {
+        // Todo: BeginProperty
+
         var currentIndex = enumProperty.enumValueIndex;
         var newIndex = Draw(currentIndex, optionKeys, labelKey, layoutOptions);
         if (newIndex != currentIndex)

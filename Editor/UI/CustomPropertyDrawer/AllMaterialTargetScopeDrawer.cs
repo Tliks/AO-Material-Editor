@@ -5,7 +5,7 @@ internal class AllMaterialTargetScopeDrawer : PropertyDrawer
 {
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
-        EditorGUI.BeginProperty(position, label, property);
+        // using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, property);
         
         var isExpanded = GUIHelper.Foldout(position, property, "Label:ExcludeTargets".LG());
         if (!isExpanded) return;

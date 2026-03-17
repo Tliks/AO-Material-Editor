@@ -5,11 +5,18 @@ internal class MaterialEntrySettingsDrawer : PropertyDrawer
 {
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
+        // using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, property);
+
         position.SetSingleHeight();
+        
+        using (new EditorGUI.PropertyScope(position, label, property))
+        {
+            EditorGUI.LabelField(position, label, EditorStyles.boldLabel);
+            position.NewLine();
+        }
 
         var mode = property.FindPropertyRelative(nameof(MaterialEntrySettings.Mode));
         LocalizedToolbar.Field(position, mode, LocalizedUI.GetEnumOptionKeys(typeof(MaterialEntrySettings.ApplyMode)), "Label:ApplyMode");
-
         position.NewLine();
 
         switch ((MaterialEntrySettings.ApplyMode)mode.enumValueIndex)
@@ -34,6 +41,8 @@ internal class MaterialEntrySettingsDrawer : PropertyDrawer
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
         var height = 0f;
+
+        height += GUIHelper.propertyHeight;
 
         var mode = property.FindPropertyRelative(nameof(MaterialEntrySettings.Mode));
         height += EditorGUI.GetPropertyHeight(mode, GUIContent.none);

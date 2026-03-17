@@ -101,8 +101,7 @@ internal class MaterialEditorEditor : Editor
 
     private void DrawEntrySettings()
     {
-        EditorGUILayout.LabelField("# " + "Label:TargetSettings".LS(), EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(_entrySettings);
+        EditorGUILayout.PropertyField(_entrySettings, "Label:TargetSettings".LG());
     }
 
     private void DrawEditor()
@@ -124,19 +123,12 @@ internal class MaterialEditorEditor : Editor
         }
     }
 
-    private bool _showOverrides = false;
     private void DrawOverrides()
     {
         var count = _target.OverrideSettings.OverrideCount;
-        _showOverrides = EditorGUILayout.Foldout(_showOverrides, string.Format("Label:CurrentOverridesCount".LS(), count), true);
-        if (_showOverrides)
+        LocalizedUI.PropertyField(_overrideSettings, string.Format("Label:CurrentOverridesCount".LS(), count));
+        if (_overrideSettings.isExpanded)
         {
-            EditorGUILayout.HelpBox("HelpBox:OverridesInfo".LS(), MessageType.Info);
-            // 内部でEditorGUIを多用しているが、ここでIndentScopeを使いEditorGUILayoutで描画すると何故か崩れるのでEditorGUIに統一する
-            // Todo: EditorGUIとEditorGUILayoutが共存できないようなまともでない設計を解消する
-            var position = EditorGUILayout.GetControlRect(false, EditorGUI.GetPropertyHeight(_overrideSettings));
-            position.Indent();
-            EditorGUI.PropertyField(position, _overrideSettings);
             if (GUILayout.Button("Label:ResetAll".LS()))
             {
                 Undo.RecordObject(_target, "Reset AO Material Editor Overrides");

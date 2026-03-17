@@ -5,17 +5,27 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
 {
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
+        // using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, property);
+
         position.SetSingleHeight();
 
+        var isExpanded = GUIHelper.Foldout(position, property, label);
+        if (!isExpanded) return;
+
+        position.NewLine();
+        position.Indent();
+
+        position = GUIHelper.HelpBox(position, "HelpBox:OverridesInfo", MessageType.Info);
+        
         var overrideShader = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideShader));
         var targetShader = property.FindPropertyRelative(nameof(MaterialOverrideSettings.TargetShader));
         var overrideRenderQueue = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideRenderQueue));
         var renderQueueValue = property.FindPropertyRelative(nameof(MaterialOverrideSettings.RenderQueueValue));
         var propertyOverrides = property.FindPropertyRelative(nameof(MaterialOverrideSettings.PropertyOverrides));
 
-        overrideShader.isExpanded = EditorGUI.Foldout(position, overrideShader.isExpanded, "Label:Shader".LS(), true);
+        var isExpandedShader = GUIHelper.Foldout(position, overrideShader, "Label:Shader".LG());
         position.NewLine();
-        if (overrideShader.isExpanded)
+        if (isExpandedShader)
         {
             position.Indent();
             LocalizedUI.PropertyField(position, overrideShader, "Label:Edit");
@@ -25,9 +35,9 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
             position.Back();
         }
 
-        overrideRenderQueue.isExpanded = EditorGUI.Foldout(position, overrideRenderQueue.isExpanded, "Label:RenderQueue".LS(), true);
+        var isExpandedRenderQueue = GUIHelper.Foldout(position, overrideRenderQueue, "Label:RenderQueue".LG());
         position.NewLine();
-        if (overrideRenderQueue.isExpanded)
+        if (isExpandedRenderQueue)
         {
             position.Indent();
             LocalizedUI.PropertyField(position, overrideRenderQueue, "Label:Edit");
@@ -55,11 +65,17 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
+        var height = 0f;
+        height += GUIHelper.propertyHeight;
+
+        if (!property.isExpanded) return height;
+
+        height += GUIHelper.GetHelpBoxHeight("HelpBox:OverridesInfo", MessageType.Info);
+
         var overrideShader = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideShader));
         var overrideRenderQueue = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideRenderQueue));
         var propertyOverrides = property.FindPropertyRelative(nameof(MaterialOverrideSettings.PropertyOverrides));
 
-        var height = 0f;
         height += GUIHelper.propertyHeight + GUIHelper.GUI_SPACE;
         if (overrideShader.isExpanded)
         {
