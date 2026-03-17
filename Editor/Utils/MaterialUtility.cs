@@ -52,7 +52,7 @@ internal static class MaterialUtility
         }
     }
 
-    public static IEnumerable<MaterialProperty> GetVariantPropertyOverrides(Material variant)
+    public static IEnumerable<MaterialProperty> GetVariantPropertyOverrides(Material variant, bool includeTextures = true)
     {
         if (!variant.isVariant) yield break;
 
@@ -62,6 +62,7 @@ internal static class MaterialUtility
         for (var i = 0; i < propertyCount; i++)
         {
             if (!variant.IsPropertyOverriden(shader.GetPropertyNameId(i))) continue;
+            if (!includeTextures && shader.GetPropertyType(i) == ShaderPropertyType.Texture) continue;
             if (!MaterialProperty.TryGet(variant, i, out var property)) continue;
             if (!seenNames.Add(property.PropertyName)) continue;
             yield return property;
@@ -134,13 +135,13 @@ internal static class MaterialUtility
         return settings;
     }
 
-    public static MaterialOverrideSettings GetVariantOverrides(Material variant)
+    public static MaterialOverrideSettings GetVariantOverrides(Material variant, bool includeTextures = true)
     {
         var settings = new MaterialOverrideSettings();
 
         if (!variant.isVariant) return settings;
 
-        var propertyOverrides = GetVariantPropertyOverrides(variant).ToList();
+        var propertyOverrides = GetVariantPropertyOverrides(variant, includeTextures).ToList();
         settings.PropertyOverrides = propertyOverrides;
 
         return settings;
