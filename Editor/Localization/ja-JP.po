@@ -110,6 +110,15 @@ msgstr "[AO Material Editor] Hierarchy上でより下にあるコンポーネン
 msgid "Log:PropertyIsLocked"
 msgstr "[AO Material Editor] Hierarchy上でより下にあるコンポーネントにより、プロパティ{0}が{1}に設定されているため、このコンポーネントではこのプロパティを変更できません。"
 
+msgid "Tooltip:ShaderIsLocked"
+msgstr "Hierarchy上でより下にあるコンポーネントにより、シェーダーが設定されているため、このコンポーネントではシェーダーを変更できません。"
+
+msgid "Tooltip:RenderQueueIsLocked"
+msgstr "Hierarchy上でより下にあるコンポーネントにより、レンダーキューが設定されているため、このコンポーネントではレンダーキューを変更できません。"
+
+msgid "Tooltip:PropertyIsLocked"
+msgstr "Hierarchy上でより下にあるコンポーネントにより、このプロパティは設定されているため、このコンポーネントでは変更できません。"
+
 msgid "Log:TargetShaderIsNull"
 msgstr "[AO Material Editor] 変更先のシェーダーが指定されていません。"
 

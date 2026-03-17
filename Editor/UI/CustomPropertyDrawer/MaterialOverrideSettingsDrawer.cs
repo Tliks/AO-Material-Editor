@@ -3,11 +3,21 @@ namespace Aoyon.MaterialEditor.UI;
 [CustomPropertyDrawer(typeof(MaterialOverrideSettings))]
 internal class MaterialOverrideSettingsDrawer : PropertyDrawer
 {
+    private static GUIContent? _tooltipOverlayContent;
+    private static GUIContent TooltipOverlayContent => _tooltipOverlayContent ??= new GUIContent("");
+
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
         // using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, property);
 
         position.SetSingleHeight();
+        var component = property.serializedObject.targetObject as MaterialEditorComponent;
+        var shaderLocked = component != null
+            && MaterialEditoEditorContext.ComponentToShaderLocked.TryGetValue(component, out var isShaderLocked)
+            && isShaderLocked;
+        var renderQueueLocked = component != null
+            && MaterialEditoEditorContext.ComponentToRenderQueueLocked.TryGetValue(component, out var isRenderQueueLocked)
+            && isRenderQueueLocked;
 
         var isExpanded = GUIHelper.Foldout(position, property, label);
         if (!isExpanded) return;
@@ -28,10 +38,18 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         if (isExpandedShader)
         {
             position.Indent();
-            LocalizedUI.PropertyField(position, overrideShader, "Label:Edit");
-            position.NewLine();
-            LocalizedUI.PropertyField(position, targetShader, "Label:Shader");
-            position.NewLine();
+            var shaderScopePosition = position;
+            using (new EditorGUI.DisabledGroupScope(shaderLocked))
+            {
+                LocalizedUI.PropertyField(position, overrideShader, "Label:Edit");
+                position.NewLine();
+                LocalizedUI.PropertyField(position, targetShader, "Label:Shader");
+                position.NewLine();
+            }
+            if (shaderLocked)
+            {
+                DrawTooltipOverlay(shaderScopePosition, position, "Tooltip:ShaderIsLocked".LS());
+            }
             position.Back();
         }
 
@@ -40,10 +58,18 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         if (isExpandedRenderQueue)
         {
             position.Indent();
-            LocalizedUI.PropertyField(position, overrideRenderQueue, "Label:Edit");
-            position.NewLine();
-            DrawRenderQueueGUI(position, renderQueueValue);
-            position.NewLine();
+            var renderQueueScopePosition = position;
+            using (new EditorGUI.DisabledGroupScope(renderQueueLocked))
+            {
+                LocalizedUI.PropertyField(position, overrideRenderQueue, "Label:Edit");
+                position.NewLine();
+                DrawRenderQueueGUI(position, renderQueueValue);
+                position.NewLine();
+            }
+            if (renderQueueLocked)
+            {
+                DrawTooltipOverlay(renderQueueScopePosition, position, "Tooltip:RenderQueueIsLocked".LS());
+            }
             position.Back();
         }
 
@@ -61,6 +87,18 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         var index = renderQueueValue.intValue == -1 ? 0 : 1;
         var newIndex = EditorGUI.Popup(presetRect, index, _renderQueuePresets);
         if (newIndex != index) renderQueueValue.intValue = newIndex == 0 ? -1 : 2000;
+    }
+
+    private static void DrawTooltipOverlay(Rect startPosition, Rect endPosition, string tooltip)
+    {
+        var rect = new Rect(
+            startPosition.xMin,
+            startPosition.yMin,
+            startPosition.width,
+            Mathf.Max(0f, endPosition.yMin - startPosition.yMin));
+
+        TooltipOverlayContent.tooltip = tooltip;
+        GUI.Label(rect, TooltipOverlayContent, GUIStyle.none);
     }
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)

@@ -110,6 +110,15 @@ msgstr "[AO Material Editor] This component cannot change the render queue becau
 msgid "Log:PropertyIsLocked"
 msgstr "[AO Material Editor] This component cannot change property {0} because a component lower in the hierarchy has set it to {1}."
 
+msgid "Tooltip:ShaderIsLocked"
+msgstr "This component cannot change the shader because a component lower in the hierarchy has set the shader."
+
+msgid "Tooltip:RenderQueueIsLocked"
+msgstr "This component cannot change the render queue because a component lower in the hierarchy has set the render queue."
+
+msgid "Tooltip:PropertyIsLocked"
+msgstr "This component cannot change this property because a component lower in the hierarchy has set the property."
+
 msgid "Log:TargetShaderIsNull"
 msgstr "[AO Material Editor] Target shader is not specified."
 
