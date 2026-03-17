@@ -6,7 +6,8 @@ internal static partial class GUIHelper
     // 汎用的なFoldout
     public static bool Foldout(Rect position, SerializedProperty property, GUIContent content, bool drawFoldout = true, bool toggleOnLabelClick = true, Func<Rect, SerializedProperty, Rect>? getClickableRect = null)
     {
-        var label = EditorGUI.BeginProperty(position, content, property);
+        using var scope = new EditorGUI.PropertyScope(position, content, property);
+        var label = scope.content;
         if(drawFoldout)
         {
             var clickableRect = getClickableRect != null ? getClickableRect(position, property) : position;
@@ -18,7 +19,6 @@ internal static partial class GUIHelper
             EditorGUI.LabelField(position, label);
             property.isExpanded = true;
         }
-        EditorGUI.EndProperty();
         return property.isExpanded;
     }
 

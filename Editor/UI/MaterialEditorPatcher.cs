@@ -52,32 +52,73 @@ internal static class MaterialEditorPatcher
     {
         var materialEditorType = typeof(UnityEditor.MaterialEditor);
         
-        PatchPrefix(harmony, materialEditorType, "ShaderPropertyInternal", new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(GUIContent) }, nameof(ShaderPropertyInternalPrefix));
+        PatchMethod(harmony, materialEditorType, "ShaderPropertyInternal",
+            new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(GUIContent) },
+            prefixName: nameof(ShaderPropertyInternalPrefix),
+            postfixName: nameof(PropertyPostfix));
 
         // leaf methods
-        PatchPrefix(harmony, materialEditorType, "DoPowerRangeProperty", new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(GUIContent), typeof(float) }, nameof(LeafPrefix));
-        PatchPrefix(harmony, materialEditorType, "IntegerPropertyInternal", new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(GUIContent) }, nameof(LeafPrefix));
-        PatchPrefix(harmony, materialEditorType, "FloatPropertyInternal", new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(GUIContent) }, nameof(LeafPrefix));
-        PatchPrefix(harmony, materialEditorType, "ColorPropertyInternal", new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(GUIContent) }, nameof(LeafPrefix));
-        PatchPrefix(harmony, materialEditorType, "VectorPropertyInternal", new[] { typeof(Rect).MakeByRefType(), typeof(UnityEditor.MaterialProperty).MakeByRefType(), typeof(GUIContent).MakeByRefType() }, nameof(LeafPrefix));
-        PatchPrefix(harmony, materialEditorType, "TextureProperty", new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(GUIContent), typeof(bool) }, nameof(LeafPrefix));
+        PatchMethod(harmony, materialEditorType, "DoPowerRangeProperty",
+            new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(GUIContent), typeof(float) },
+            prefixName: nameof(LeafPrefix),
+            postfixName: nameof(PropertyPostfix));
+        PatchMethod(harmony, materialEditorType, "IntegerPropertyInternal",
+            new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(GUIContent) },
+            prefixName: nameof(LeafPrefix),
+            postfixName: nameof(PropertyPostfix));
+        PatchMethod(harmony, materialEditorType, "FloatPropertyInternal",
+            new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(GUIContent) },
+            prefixName: nameof(LeafPrefix),
+            postfixName: nameof(PropertyPostfix));
+        PatchMethod(harmony, materialEditorType, "ColorPropertyInternal",
+            new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(GUIContent) },
+            prefixName: nameof(LeafPrefix),
+            postfixName: nameof(PropertyPostfix));
+        PatchMethod(harmony, materialEditorType, "VectorPropertyInternal",
+            new[] { typeof(Rect).MakeByRefType(), typeof(UnityEditor.MaterialProperty).MakeByRefType(), typeof(GUIContent).MakeByRefType() },
+            prefixName: nameof(LeafPrefix),
+            postfixName: nameof(PropertyPostfix));
+        PatchMethod(harmony, materialEditorType, "TextureProperty",
+            new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(GUIContent), typeof(bool) },
+            prefixName: nameof(LeafPrefix),
+            postfixName: nameof(PropertyPostfix));
 
-        PatchPrefix(harmony, materialEditorType, "TexturePropertyMiniThumbnail", new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(string), typeof(string) }, nameof(TexturePropertyMiniThumbnailPrefix));
-        PatchPrefix(harmony, materialEditorType, "TexturePropertyWithHDRColor", new[] { typeof(GUIContent), typeof(UnityEditor.MaterialProperty), typeof(UnityEditor.MaterialProperty), typeof(bool) }, nameof(TexturePropertyWithHDRColorPrefix));
-        PatchPrefix(harmony, materialEditorType, "TextureScaleOffsetProperty", new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(bool) }, nameof(TextureScaleOffsetPropertyPrefix));
+        PatchMethod(harmony, materialEditorType, "TexturePropertyMiniThumbnail",
+            new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(string), typeof(string) },
+            prefixName: nameof(TexturePropertyMiniThumbnailPrefix),
+            postfixName: nameof(PropertyPostfix));
+        PatchMethod(harmony, materialEditorType, "TexturePropertyWithHDRColor",
+            new[] { typeof(GUIContent), typeof(UnityEditor.MaterialProperty), typeof(UnityEditor.MaterialProperty), typeof(bool) },
+            prefixName: nameof(TexturePropertyWithHDRColorPrefix),
+            postfixName: nameof(PropertyPostfix));
+        PatchMethod(harmony, materialEditorType, "TextureScaleOffsetProperty",
+            new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(bool) },
+            prefixName: nameof(TextureScaleOffsetPropertyPrefix),
+            postfixName: nameof(PropertyPostfix));
     }
 
 
     private static void PatchGUILabel(Harmony harmony)
     {
-        PatchPrefix(harmony, typeof(UnityEngine.GUI), nameof(UnityEngine.GUI.Label), new[] { typeof(Rect), typeof(GUIContent), typeof(GUIStyle) }, nameof(GUILabelPrefix));
+        PatchMethod(harmony, typeof(UnityEngine.GUI), nameof(UnityEngine.GUI.Label),
+            new[] { typeof(Rect), typeof(GUIContent), typeof(GUIStyle) },
+            prefixName: nameof(GUILabelPrefix));
     }
 
-    private static void PatchPrefix(Harmony harmony, Type type, string methodName, Type[] args, string prefixName)
+    private static void PatchMethod(
+        Harmony harmony,
+        Type type,
+        string methodName,
+        Type[] args,
+        string? prefixName = null,
+        string? postfixName = null)
     {
         var method = AccessTools.Method(type, methodName, args)
             ?? throw new Exception($"{methodName} method not found");
-        harmony.Patch(method, prefix: new HarmonyMethod(typeof(MaterialEditorPatcher), prefixName));
+
+        var prefix = prefixName != null ? new HarmonyMethod(typeof(MaterialEditorPatcher), prefixName) : null;
+        var postfix = postfixName != null ? new HarmonyMethod(typeof(MaterialEditorPatcher), postfixName) : null;
+        harmony.Patch(method, prefix: prefix, postfix: postfix);
     }
 
     private static void ShaderPropertyInternalPrefix(
@@ -89,12 +130,12 @@ internal static class MaterialEditorPatcher
         // ただ同時にボタンは消えるのと判定ロジックが大変なので、重複を許容する
         // if (!HasCustomDrawer(prop)) 
         //     return;
-        TryDrawRevertButton(position, prop);
+        BeginPropertyGUI(position, prop);
     }
 
     private static void LeafPrefix(Rect position, UnityEditor.MaterialProperty prop)
     {
-        TryDrawRevertButton(position, prop);
+        BeginPropertyGUI(position, prop);
     }
 
     private static void TexturePropertyMiniThumbnailPrefix(
@@ -103,7 +144,7 @@ internal static class MaterialEditorPatcher
         string label, 
         string tooltip)
     {
-        TryDrawRevertButton(position, prop);
+        BeginPropertyGUI(position, prop);
     }
 
     private static void TexturePropertyWithHDRColorPrefix(
@@ -113,7 +154,7 @@ internal static class MaterialEditorPatcher
         UnityEditor.MaterialProperty colorProperty,
         bool showAlpha)
     {
-        TryDrawRevertButton(__result, colorProperty);
+        BeginPropertyGUI(__result, colorProperty);
     }
 
     private static void TextureScaleOffsetPropertyPrefix(
@@ -123,25 +164,85 @@ internal static class MaterialEditorPatcher
     {
         if (partOfTexturePropertyControl)
             return;
-        TryDrawRevertButton(position, property);
+        BeginPropertyGUI(position, property);
     }
 
-    private static void TryDrawRevertButton(Rect position, UnityEditor.MaterialProperty prop)
+    private static void PropertyPostfix()
     {
+        EndPropertyGUI();
+    }
+
+    private readonly record struct PropertyGUIState(
+        bool Enabled,
+        Rect Position,
+        string? Tooltip);
+
+    private static readonly Stack<PropertyGUIState> _guiStateStack = new();
+    private static GUIContent? _tooltipOverlayContent;
+    private static GUIContent TooltipOverlayContent => _tooltipOverlayContent ??= new GUIContent("");
+
+    private static void BeginPropertyGUI(Rect position, UnityEditor.MaterialProperty prop)
+    {
+        var enabled = GUI.enabled;
+        string? tooltip = null;
+
+        if (!TryGetRecordingContext(prop, out var component, out var overrideProperties, out var lockedProperties))
+        {
+            _guiStateStack.Push(new PropertyGUIState(enabled, position, null));
+            return;
+        }
+
+        if (overrideProperties.Contains(prop.name))
+            DrawRevertButton(position, prop, component);
+
+        if (lockedProperties.Contains(prop.name))
+        {
+            GUI.enabled = false;
+            tooltip = "Tooltip:PropertyIsLocked".LS();
+        }
+
+        _guiStateStack.Push(new PropertyGUIState(enabled, position, tooltip));
+    }
+
+    private static void EndPropertyGUI()
+    {
+        if (_guiStateStack.Count == 0)
+            return;
+
+        var state = _guiStateStack.Pop();
+        GUI.enabled = state.Enabled;
+
+        if (!string.IsNullOrEmpty(state.Tooltip))
+        {
+            TooltipOverlayContent.tooltip = state.Tooltip;
+            GUI.Label(state.Position, TooltipOverlayContent, GUIStyle.none);
+        }
+    }
+
+    private static bool TryGetRecordingContext(
+        UnityEditor.MaterialProperty prop,
+        out MaterialEditorComponent component,
+        out HashSet<string> overrideProperties,
+        out HashSet<string> lockedProperties)
+    {
+        component = null!;
+        overrideProperties = null!;
+        lockedProperties = null!;
+
         var targets = prop.targets;
         if (targets == null || targets.Length != 1 || targets[0] is not Material recordingMaterial)
-            return;
+            return false;
 
-        if (!MaterialEditoEditorContext.RecordingToComponent.TryGetValue(recordingMaterial, out var component))
-            return;
-        
-        if (!MaterialEditoEditorContext.ComponentToOverrideProperties.TryGetValue(component, out var overrideProperties))
-            return;
+        if (!MaterialEditoEditorContext.RecordingToComponent.TryGetValue(recordingMaterial, out component))
+            return false;
 
-        if (!overrideProperties.Contains(prop.name))
-            return;
+        if (!MaterialEditoEditorContext.ComponentToOverrideProperties.TryGetValue(component, out overrideProperties))
+            return false;
 
-        DrawRevertButton(position, prop, component);
+        if (!MaterialEditoEditorContext.ComponentToLockedProperties.TryGetValue(component, out lockedProperties))
+            return false;
+
+        return true;
     }
 
     private const float BUTTON_SIZE = 16f;

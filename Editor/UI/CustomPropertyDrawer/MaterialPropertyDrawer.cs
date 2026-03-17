@@ -7,7 +7,7 @@ internal class MaterialPropertyDrawer : PropertyDrawer
 {
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
-        EditorGUI.BeginProperty(position, label, property);
+        using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, property);
 
         position.SetSingleHeight();
 
@@ -43,10 +43,13 @@ internal class MaterialPropertyDrawer : PropertyDrawer
                 break;
             case ShaderPropertyType.Vector:
                 var vectorValue = property.FindPropertyRelative(nameof(MaterialProperty.VectorValue));
-                EditorGUI.BeginChangeCheck();
-                var newValue = EditorGUI.Vector4Field(valueRect, GUIContent.none, vectorValue.vector4Value);
-                if (EditorGUI.EndChangeCheck())
-                    vectorValue.vector4Value = newValue;
+                using (new EditorGUI.PropertyScope(valueRect, GUIContent.none, vectorValue))
+                {
+                    EditorGUI.BeginChangeCheck();
+                    var newValue = EditorGUI.Vector4Field(valueRect, GUIContent.none, vectorValue.vector4Value);
+                    if (EditorGUI.EndChangeCheck())
+                        vectorValue.vector4Value = newValue;
+                }
                 break;
             case ShaderPropertyType.Int:
                 var intValue = property.FindPropertyRelative(nameof(MaterialProperty.IntValue));
@@ -59,7 +62,6 @@ internal class MaterialPropertyDrawer : PropertyDrawer
                 break;
         }
 
-        EditorGUI.EndProperty();
     }
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)

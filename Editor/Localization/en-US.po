@@ -75,7 +75,7 @@ msgid "HelpBox:EditorInfo"
 msgstr "You can edit materials non-destructively here.\nYour edits are recorded automatically and saved to this component."
 
 msgid "Label:OverrideUtility"
-msgstr "Other Actions"
+msgstr "Useful Tools"
 
 msgid "Label:Edit"
 msgstr "Edit"
@@ -110,8 +110,50 @@ msgstr "[AO Material Editor] This component cannot change the render queue becau
 msgid "Log:PropertyIsLocked"
 msgstr "[AO Material Editor] This component cannot change property {0} because a component lower in the hierarchy has set it to {1}."
 
+msgid "Tooltip:ShaderIsLocked"
+msgstr "This component cannot change the shader because a component lower in the hierarchy has set the shader."
+
+msgid "Tooltip:RenderQueueIsLocked"
+msgstr "This component cannot change the render queue because a component lower in the hierarchy has set the render queue."
+
+msgid "Tooltip:PropertyIsLocked"
+msgstr "This component cannot change this property because a component lower in the hierarchy has set the property."
+
 msgid "Log:TargetShaderIsNull"
 msgstr "[AO Material Editor] Target shader is not specified."
 
 msgid "label.dragAndDrop"
 msgstr "Bulk add by drag and drop"
+
+msgid "label:ReplaceTexture"
+msgstr "Replace Texture"
+
+msgid "label:SourceTexture"
+msgstr "Texture to replace"
+
+msgid "label:DestinationTexture"
+msgstr "New texture"
+
+msgid "label:GetMaterialDiff"
+msgstr "Import Material Changes"
+
+msgid "label:OriginalMaterial"
+msgstr "Original Material"
+
+msgid "label:OverrideMaterial"
+msgstr "Modified Material"
+
+msgid "label:GetMaterialVariantDiff"
+msgstr "Import Material Variant Changes"
+
+msgid "label:MaterialVariant"
+msgstr "Material Variant"
+
+msgid "HelpBox:SelectedMaterialIsNotVariant"
+msgstr "The selected material is not a material variant."
+
+msgid "label:AddDiff"
+msgstr "Add Changes"
+
+msgid "label:AddDiffExcludeTexture"
+msgstr "Add Changes (Exclude Textures)"

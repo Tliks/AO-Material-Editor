@@ -7,7 +7,7 @@ internal class MaterialSlotReferenceDrawer : PropertyDrawer
 {
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
-        EditorGUI.BeginProperty(position, label, property);
+        using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, property);
         
         position.SetSingleHeight();
 
@@ -18,8 +18,6 @@ internal class MaterialSlotReferenceDrawer : PropertyDrawer
 
         EditorGUI.PropertyField(rendererRect, rendererReference, GUIContent.none);
         DrawMaterialSlot(materialSlotRect, rendererReference, materialIndex);
-
-        EditorGUI.EndProperty();
     }
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
@@ -31,6 +29,8 @@ internal class MaterialSlotReferenceDrawer : PropertyDrawer
     private static Material AllMaterials => _allMaterials != null ? _allMaterials : _allMaterials = new(Shader.Find("Standard")) { name = "All Materials" };
     private void DrawMaterialSlot(Rect position, SerializedProperty rendererReference, SerializedProperty materialIndex)
     {
+        using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, materialIndex);
+        
         var selectorWidth = MaterialSelector.GetSize().x;
         GUIHelper.SplitRectHorizontallyForRight(position, selectorWidth, out var materialRect, out var selectorRect);
 

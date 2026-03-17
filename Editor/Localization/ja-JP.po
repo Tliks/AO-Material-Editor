@@ -75,7 +75,7 @@ msgid "HelpBox:EditorInfo"
 msgstr "ここではマテリアルを非破壊的に編集できます。\n編集内容は自動記録され、このコンポーネントに保存されます。"
 
 msgid "Label:OverrideUtility"
-msgstr "その他の操作"
+msgstr "便利な機能"
 
 msgid "Label:Edit"
 msgstr "編集する"
@@ -110,8 +110,50 @@ msgstr "[AO Material Editor] Hierarchy上でより下にあるコンポーネン
 msgid "Log:PropertyIsLocked"
 msgstr "[AO Material Editor] Hierarchy上でより下にあるコンポーネントにより、プロパティ{0}が{1}に設定されているため、このコンポーネントではこのプロパティを変更できません。"
 
+msgid "Tooltip:ShaderIsLocked"
+msgstr "Hierarchy上でより下にあるコンポーネントにより、シェーダーが設定されているため、このコンポーネントではシェーダーを変更できません。"
+
+msgid "Tooltip:RenderQueueIsLocked"
+msgstr "Hierarchy上でより下にあるコンポーネントにより、レンダーキューが設定されているため、このコンポーネントではレンダーキューを変更できません。"
+
+msgid "Tooltip:PropertyIsLocked"
+msgstr "Hierarchy上でより下にあるコンポーネントにより、このプロパティは設定されているため、このコンポーネントでは変更できません。"
+
 msgid "Log:TargetShaderIsNull"
 msgstr "[AO Material Editor] 変更先のシェーダーが指定されていません。"
 
 msgid "label.dragAndDrop"
 msgstr "ドラッグ&ドロップで一括追加"
+
+msgid "label:ReplaceTexture"
+msgstr "テクスチャの置き換え"
+
+msgid "label:SourceTexture"
+msgstr "置き換えるテクスチャ"
+
+msgid "label:DestinationTexture"
+msgstr "新しく使うテクスチャ"
+
+msgid "label:GetMaterialDiff"
+msgstr "マテリアルの変更点を取り込む"
+
+msgid "label:OriginalMaterial"
+msgstr "元のマテリアル"
+
+msgid "label:OverrideMaterial"
+msgstr "変更後のマテリアル"
+
+msgid "label:GetMaterialVariantDiff"
+msgstr "マテリアルバリアントの変更点を取り込む"
+
+msgid "label:MaterialVariant"
+msgstr "マテリアルバリアント"
+
+msgid "HelpBox:SelectedMaterialIsNotVariant"
+msgstr "択したマテリアルはマテリアルバリアントではありません。"
+
+msgid "label:AddDiff"
+msgstr "変更点を追加"
+
+msgid "label:AddDiffExcludeTexture"
+msgstr "変更点を追加（テクスチャを除く）"
