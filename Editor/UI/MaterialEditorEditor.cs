@@ -135,14 +135,6 @@ internal class MaterialEditorEditor : Editor
     {
         var count = _target.OverrideSettings.OverrideCount;
         LocalizedUI.PropertyField(_overrideSettings, string.Format("Label:CurrentOverridesCount".LS(), count));
-        if (_overrideSettings.isExpanded)
-        {
-            if (GUILayout.Button("Label:ResetAll".LS()))
-            {
-                Undo.RecordObject(_target, "Reset AO Material Editor Overrides");
-                _target.OverrideSettings = MaterialOverrideSettings.Empty;
-            }
-        }
     }
     
     private HashSet<Material> UpdateTargetMaterials()
