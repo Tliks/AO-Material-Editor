@@ -147,6 +147,22 @@ internal static class MaterialUtility
         return settings;
     }
 
+    public static MaterialOverrideSettings GetTextureReplacementOverrides(Material material, Texture sourceTexture, Texture destinationTexture)
+    {
+        var overrides = new MaterialOverrideSettings();
+        foreach (var property in GetProperties(material))
+        {
+            if (property.PropertyType != ShaderPropertyType.Texture) continue;
+            if (property.TextureValue != sourceTexture) continue;
+
+            var updatedProperty = property;
+            updatedProperty.TextureValue = destinationTexture;
+            overrides.PropertyOverrides.Add(updatedProperty);
+        }
+
+        return overrides;
+    }
+
     public static void ApplyShader(Material editableMaterial, Shader targetShader)
     {
         // Material.shaderを変更するとMaterial.renderQueueが変更先のShader.renderQueueに自動で置き換わる仕様がある

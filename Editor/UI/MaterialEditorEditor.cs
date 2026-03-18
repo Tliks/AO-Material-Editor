@@ -576,7 +576,7 @@ internal class MaterialEditorEditor : Editor
         {
             if (_sourceTexture == null || _destinationTexture == null) return;
 
-            var overrides = GetTextureReplacementOverrides(_sourceTexture, _destinationTexture);
+            var overrides = MaterialUtility.GetTextureReplacementOverrides(_recordingMaterial, _sourceTexture, _destinationTexture);
             ApplyExtractedOverridesToComponent(overrides);
 
             _sourceTexture = null;
@@ -604,22 +604,6 @@ internal class MaterialEditorEditor : Editor
             _variantMaterial = null;
         
         }
-    }
-
-    private MaterialOverrideSettings GetTextureReplacementOverrides(Texture sourceTexture, Texture destinationTexture)
-    {
-        var overrides = new MaterialOverrideSettings();
-        foreach (var property in MaterialUtility.GetProperties(_recordingMaterial))
-        {
-            if (property.PropertyType != ShaderPropertyType.Texture) continue;
-            if (property.TextureValue != sourceTexture) continue;
-
-            var updatedProperty = property;
-            updatedProperty.TextureValue = destinationTexture;
-            overrides.PropertyOverrides.Add(updatedProperty);
-        }
-
-        return overrides;
     }
 
     private void ApplyExtractedOverridesToComponent(MaterialOverrideSettings extractedOverrides)
