@@ -135,14 +135,6 @@ internal class MaterialEditorEditor : Editor
     {
         var count = _target.OverrideSettings.OverrideCount;
         LocalizedUI.PropertyField(_overrideSettings, string.Format("Label:CurrentOverridesCount".LS(), count));
-        if (_overrideSettings.isExpanded)
-        {
-            if (GUILayout.Button("Label:ResetAll".LS()))
-            {
-                Undo.RecordObject(_target, "Reset AO Material Editor Overrides");
-                _target.OverrideSettings = MaterialOverrideSettings.Empty;
-            }
-        }
     }
     
     private HashSet<Material> UpdateTargetMaterials()
@@ -478,8 +470,7 @@ internal class MaterialEditorEditor : Editor
             // 新しい差分をマージ(上書き, 追加)する
             MaterialOverrideSettings.MergeInto(newOvrs, cloned);
 
-            Undo.RecordObject(_target, "Sync AO Material Editor from Recording Material");
-            _target.OverrideSettings = cloned;
+            CommitOverrideSettings(cloned);
         }
         catch (Exception e)
         {
@@ -489,6 +480,12 @@ internal class MaterialEditorEditor : Editor
         {
             DestroyImmediate(baseMaterial);
         }
+    }
+
+    private void CommitOverrideSettings(MaterialOverrideSettings value)
+    {
+        _overrideSettings.CopyFrom(value);
+        serializedObject.ApplyModifiedProperties();
     }
 
     // OverrideUtilityGUI
@@ -584,7 +581,7 @@ internal class MaterialEditorEditor : Editor
         {
             if (_sourceTexture == null || _destinationTexture == null) return;
 
-            var overrides = GetTextureReplacementOverrides(_sourceTexture, _destinationTexture);
+            var overrides = MaterialUtility.GetTextureReplacementOverrides(_recordingMaterial, _sourceTexture, _destinationTexture);
             ApplyExtractedOverridesToComponent(overrides);
 
             _sourceTexture = null;
@@ -614,22 +611,6 @@ internal class MaterialEditorEditor : Editor
         }
     }
 
-    private MaterialOverrideSettings GetTextureReplacementOverrides(Texture sourceTexture, Texture destinationTexture)
-    {
-        var overrides = new MaterialOverrideSettings();
-        foreach (var property in MaterialUtility.GetProperties(_recordingMaterial))
-        {
-            if (property.PropertyType != ShaderPropertyType.Texture) continue;
-            if (property.TextureValue != sourceTexture) continue;
-
-            var updatedProperty = property;
-            updatedProperty.TextureValue = destinationTexture;
-            overrides.PropertyOverrides.Add(updatedProperty);
-        }
-
-        return overrides;
-    }
-
     private void ApplyExtractedOverridesToComponent(MaterialOverrideSettings extractedOverrides)
     {
         if (!SanitizeExtractedOverridesAgainstAfter(extractedOverrides)) return;
@@ -640,8 +621,7 @@ internal class MaterialEditorEditor : Editor
         var merged = _target.OverrideSettings.Clone();
         MaterialOverrideSettings.MergeInto(extractedOverrides, merged);
 
-        Undo.RecordObject(_target, "Add AO Material Editor Overrides");
-        _target.OverrideSettings = merged;
+        CommitOverrideSettings(merged);
 
         // ObjectChnageにより、Recording Materialの変更等は行われる
     }

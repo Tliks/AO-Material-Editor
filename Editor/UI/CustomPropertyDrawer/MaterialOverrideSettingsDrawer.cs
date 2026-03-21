@@ -11,13 +11,6 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         // using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, property);
 
         position.SetSingleHeight();
-        var component = property.serializedObject.targetObject as MaterialEditorComponent;
-        var shaderLocked = component != null
-            && MaterialEditoEditorContext.ComponentToShaderLocked.TryGetValue(component, out var isShaderLocked)
-            && isShaderLocked;
-        var renderQueueLocked = component != null
-            && MaterialEditoEditorContext.ComponentToRenderQueueLocked.TryGetValue(component, out var isRenderQueueLocked)
-            && isRenderQueueLocked;
 
         var isExpanded = GUIHelper.Foldout(position, property, label);
         if (!isExpanded) return;
@@ -26,12 +19,25 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         position.Indent();
 
         position = GUIHelper.HelpBox(position, "HelpBox:OverridesInfo", MessageType.Info);
-        
+        if (GUI.Button(position, "Label:ResetAll".LS()))
+        {
+            property.CopyFrom(MaterialOverrideSettings.Empty);
+        }
+        position.NewLine();
+
         var overrideShader = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideShader));
         var targetShader = property.FindPropertyRelative(nameof(MaterialOverrideSettings.TargetShader));
         var overrideRenderQueue = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideRenderQueue));
         var renderQueueValue = property.FindPropertyRelative(nameof(MaterialOverrideSettings.RenderQueueValue));
         var propertyOverrides = property.FindPropertyRelative(nameof(MaterialOverrideSettings.PropertyOverrides));
+
+        var component = property.serializedObject.targetObject as MaterialEditorComponent;
+        var shaderLocked = component != null
+            && MaterialEditoEditorContext.ComponentToShaderLocked.TryGetValue(component, out var isShaderLocked)
+            && isShaderLocked;
+        var renderQueueLocked = component != null
+            && MaterialEditoEditorContext.ComponentToRenderQueueLocked.TryGetValue(component, out var isRenderQueueLocked)
+            && isRenderQueueLocked;
 
         var isExpandedShader = GUIHelper.Foldout(position, overrideShader, "Label:Shader".LG());
         position.NewLine();
@@ -109,6 +115,7 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         if (!property.isExpanded) return height;
 
         height += GUIHelper.GetHelpBoxHeight("HelpBox:OverridesInfo", MessageType.Info);
+        height += GUIHelper.propertyHeight;
 
         var overrideShader = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideShader));
         var overrideRenderQueue = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideRenderQueue));
