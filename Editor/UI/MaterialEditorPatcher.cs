@@ -284,8 +284,11 @@ internal static class MaterialEditorPatcher
     private static void RevertProperty(MaterialEditorComponent component, UnityEditor.MaterialProperty prop)
     {
         var propertyName = prop.name;
-        Undo.RecordObject(component, "Revert Property");
-        component.OverrideSettings.PropertyOverrides.RemoveAll(p => p.PropertyName == propertyName);
+        var edited = new List<MaterialProperty>(component.OverrideSettings.PropertyOverrides);
+        edited.RemoveAll(p => p.PropertyName == propertyName);
+        using var so = new SerializedObject(component);
+        so.FindProperty(nameof(MaterialEditorComponent.OverrideSettings)).FindPropertyRelative(nameof(MaterialOverrideSettings.PropertyOverrides)).CopyFrom(edited);
+        so.ApplyModifiedProperties();
     }
 
     private static readonly Texture _lockInChildrenIcon =

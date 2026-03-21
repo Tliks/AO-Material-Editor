@@ -470,8 +470,7 @@ internal class MaterialEditorEditor : Editor
             // 新しい差分をマージ(上書き, 追加)する
             MaterialOverrideSettings.MergeInto(newOvrs, cloned);
 
-            Undo.RecordObject(_target, "Sync AO Material Editor from Recording Material");
-            _target.OverrideSettings = cloned;
+            CommitOverrideSettings(cloned);
         }
         catch (Exception e)
         {
@@ -481,6 +480,12 @@ internal class MaterialEditorEditor : Editor
         {
             DestroyImmediate(baseMaterial);
         }
+    }
+
+    private void CommitOverrideSettings(MaterialOverrideSettings value)
+    {
+        _overrideSettings.CopyFrom(value);
+        serializedObject.ApplyModifiedProperties();
     }
 
     // OverrideUtilityGUI
@@ -616,8 +621,7 @@ internal class MaterialEditorEditor : Editor
         var merged = _target.OverrideSettings.Clone();
         MaterialOverrideSettings.MergeInto(extractedOverrides, merged);
 
-        Undo.RecordObject(_target, "Add AO Material Editor Overrides");
-        _target.OverrideSettings = merged;
+        CommitOverrideSettings(merged);
 
         // ObjectChnageにより、Recording Materialの変更等は行われる
     }
