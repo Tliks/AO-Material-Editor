@@ -5,7 +5,8 @@
         "Aoyon.MaterialEditor.Runtime",
         "nadena.dev.ndmf",
         "nadena.dev.ndmf.runtime",
-        "nadena.dev.modular-avatar.core"
+        "nadena.dev.modular-avatar.core",
+        "io.github.azukimochi.light-limit-changer.editor"
     ],
     "includePlatforms": [
         "Editor"
@@ -24,6 +25,11 @@
             "name": "com.vrchat.base",
             "expression": "(3.3.99999,)",
             "define": "ME_HARMONY"
+        },
+        {
+            "name": "io.github.azukimochi.light-limit-changer",
+            "expression": "2.4.0",
+            "define": "ME_LLC_2_4_0_OR_NEWER"
         }
     ],
     "noEngineReferences": false

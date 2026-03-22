@@ -16,12 +16,16 @@ internal sealed class PluginDefinition : Plugin<PluginDefinition>
         var sequence = InPhase(BuildPhase.Resolving);
         sequence.Run(ResolveReferencesPass.Instance);
 
-        // 外部に参照されていたマテリアルを割り当てるプラグインの後
+        // 外部に参照されていたマテリアルを割り当てる後
+        // マテリアルを正規化(プロパティのテクスチャへの焼き込みなど)する前
         sequence = InPhase(BuildPhase.Transforming)
             .AfterPlugin("nadena.dev.modular-avatar")
             .AfterPlugin("net.narazaka.vrchat.avatar-menu-creater-for-ma")
             .AfterPlugin("jp.lilxyzw.lilycalinventory");
         sequence.Run(MaterialEditorBuild.Instance)
+#if ME_LLC_2_4_0_OR_NEWER
+            .BeforePass("io.github.azukimochi.light-limit-changer.normalize-materials")
+#endif  
             .PreviewingWith(new MaterialEditorPreview());
     }
 }
