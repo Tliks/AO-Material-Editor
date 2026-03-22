@@ -153,7 +153,7 @@ internal class MaterialEditorEditor : Editor
         using (new EditorGUI.DisabledGroupScope(true)) {
             EditorGUILayout.ObjectField("Label:RecordingSourceMaterial".LS(), _recordingSourceMaterial, typeof(Material), false);
         }
-        MaterialSelector.Draw(() => _targetMaterials.ToList(), (m, i) => { _recordingSourceMaterial = m; OnRecordingSourceMaterialChanged(); });
+        MaterialSelector.Draw(() => _targetMaterials.ToArray(), (m, i) => { _recordingSourceMaterial = m; OnRecordingSourceMaterialChanged(); });
     }
 
     private Material? AutoSelectRecordingSourceMaterial()

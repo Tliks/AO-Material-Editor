@@ -29,8 +29,17 @@ msgstr "Saved edits are shown here.\nChanges made in the material editor above a
 msgid "Label:Select"
 msgstr "Select"
 
-msgid "Label:SelectMaterial"
-msgstr "Select material"
+msgid "Label:Material"
+msgstr "Material"
+
+msgid "Label:MaterialSlot"
+msgstr "Material Slot"
+
+msgid "Label:SelectWithName"
+msgstr "Select {0}"
+
+msgid "Label:AllMaterials"
+msgstr "All Materials"
 
 msgid "Label:ApplyMode"
 msgstr "Selection Method"
@@ -49,9 +58,6 @@ msgstr "These edits can be applied to multiple materials at once.\nThis is usefu
 
 msgid "HelpBox:AllModeInfo"
 msgstr "These edits can be applied to all materials at once.\nThis is useful when you want to match their appearance and settings."
-
-msgid "Label:Material"
-msgstr "Material"
 
 msgid "Label:ExcludeTargets"
 msgstr "Excluded materials"

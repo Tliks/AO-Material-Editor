@@ -21,7 +21,7 @@ internal static class MenuItems
         var selected = Selection.activeGameObject;
         if (selected == null) throw new Exception("No selected game object");
 
-        var materials = Utils.GetTargetMaterials(selected);
+        var materials = Utils.GetAllTargetMaterials(selected).ToList();
         if (materials.Count == 0) throw new Exception("No materials found");
 
         var root = new GameObject("Material Editor");
