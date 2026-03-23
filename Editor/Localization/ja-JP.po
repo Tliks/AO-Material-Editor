@@ -32,6 +32,9 @@ msgstr "選択"
 msgid "Label:Material"
 msgstr "マテリアル"
 
+msgid "Label:Texture"
+msgstr "テクスチャ"
+
 msgid "Label:MaterialSlot"
 msgstr "マテリアルスロット"
 
@@ -132,7 +135,7 @@ msgid "label.dragAndDrop"
 msgstr "ドラッグ&ドロップで一括追加"
 
 msgid "label:ReplaceTexture"
-msgstr "テクスチャの置き換え"
+msgstr "テクスチャを置き換える"
 
 msgid "label:SourceTexture"
 msgstr "置き換えるテクスチャ"

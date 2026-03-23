@@ -32,6 +32,9 @@ msgstr "Select"
 msgid "Label:Material"
 msgstr "Material"
 
+msgid "Label:Texture"
+msgstr "Texture"
+
 msgid "Label:MaterialSlot"
 msgstr "Material Slot"
 

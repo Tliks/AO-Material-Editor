@@ -6,6 +6,10 @@ internal class MaterialSelector : AssetSelector<Material>
 {
 }
 
+internal class TextureSelector : AssetSelector<Texture>
+{
+}
+
 internal class AssetSelector<T> : AdvancedSelector<T> where T : Object
 {
     public static new void Draw(Func<T?[]> getAssets, Action<T?, int> onSelected, 

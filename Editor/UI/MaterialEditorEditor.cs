@@ -511,7 +511,11 @@ internal class MaterialEditorEditor : Editor
         {
             using (new EditorGUI.IndentLevelScope())
             {
-                _sourceTexture = EditorGUILayout.ObjectField("label:SourceTexture".LS(), _sourceTexture, typeof(Texture), false, GUILayout.Height(18f)) as Texture;
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    _sourceTexture = EditorGUILayout.ObjectField("label:SourceTexture".LS(), _sourceTexture, typeof(Texture), false, GUILayout.Height(18f)) as Texture;
+                    TextureSelector.Draw(() => MaterialUtility.EnumerateTextures(_recordingMaterial).Distinct().ToArray(), (t, i) => { _sourceTexture = t; });
+                }
                 _destinationTexture = EditorGUILayout.ObjectField("label:DestinationTexture".LS(), _destinationTexture, typeof(Texture), false, GUILayout.Height(18f)) as Texture;
                 using (new EditorGUI.DisabledGroupScope(_sourceTexture == null || _destinationTexture == null))
                 {
