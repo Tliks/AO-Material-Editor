@@ -216,6 +216,7 @@ internal class MaterialEditorEditor : Editor
                     if (SanitizeRecordingMaterialAgainstAfter()) { // サニタイズに失敗した状態でコンポーネントに書き込むべきではない
                         SyncComponentFromRecordingMaterial();
                         serializedObject.ApplyModifiedPropertiesWithoutUndo();
+                        UpdateRecordingContext();
                     }
                 }
             }
@@ -248,6 +249,7 @@ internal class MaterialEditorEditor : Editor
     private void OnOtherComponentChanged()
     {
         UpdateOtherOverrides();
+        UpdateRecordingContext();
         SyncRecordingMaterialFromComponent();
     }
 
