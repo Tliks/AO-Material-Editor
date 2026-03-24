@@ -18,6 +18,15 @@ internal static class LocalizedUI
     /// </summary>
     public static IEnumerable<string> GetEnumOptionKeys(Type enumType) =>
         enumType.GetEnumNames().Select(k => $"Enum:{enumType.Name}:{k}");
+    
+    public static List<string> GetEnumOptionKeys(Type enumType, List<string> result)
+    {
+        foreach (var k in enumType.GetEnumNames())
+        {
+            result.Add($"Enum:{enumType.Name}:{k}");
+        }
+        return result;
+    }
 }
 
 internal static class LocalizedPopup
