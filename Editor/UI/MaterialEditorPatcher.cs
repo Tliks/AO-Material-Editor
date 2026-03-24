@@ -175,12 +175,16 @@ internal static class MaterialEditorPatcher
     private readonly record struct PropertyGUIState(
         bool Enabled,
         Rect Position,
-        string? Tooltip);
+        string? Tooltip,
+        MaterialEditorComponent? Component,
+        string? PropertyName,
+        bool ShowRevertButton);
 
     private static readonly Stack<PropertyGUIState> _guiStateStack = new();
     private static GUIContent? _tooltipOverlayContent;
     private static GUIContent TooltipOverlayContent => _tooltipOverlayContent ??= new GUIContent("");
 
+    // control idの衝突を防ぐ為、postfixでrevert buttonは描画する
     private static void BeginPropertyGUI(Rect position, UnityEditor.MaterialProperty prop)
     {
         var enabled = GUI.enabled;
@@ -188,12 +192,9 @@ internal static class MaterialEditorPatcher
 
         if (!TryGetRecordingContext(prop, out var component, out var overrideProperties, out var lockedProperties))
         {
-            _guiStateStack.Push(new PropertyGUIState(enabled, position, null));
+            _guiStateStack.Push(new PropertyGUIState(enabled, position, null, null, null, false));
             return;
         }
-
-        if (overrideProperties.Contains(prop.name))
-            DrawRevertButton(position, prop, component);
 
         if (lockedProperties.Contains(prop.name))
         {
@@ -201,7 +202,13 @@ internal static class MaterialEditorPatcher
             tooltip = "Tooltip:PropertyIsLocked".LS();
         }
 
-        _guiStateStack.Push(new PropertyGUIState(enabled, position, tooltip));
+        _guiStateStack.Push(new PropertyGUIState(
+            enabled,
+            position,
+            tooltip,
+            component,
+            prop.name,
+            overrideProperties.Contains(prop.name)));
     }
 
     private static void EndPropertyGUI()
@@ -211,6 +218,11 @@ internal static class MaterialEditorPatcher
 
         var state = _guiStateStack.Pop();
         GUI.enabled = state.Enabled;
+
+        if (state.ShowRevertButton && state.Component != null && state.PropertyName != null)
+        {
+            DrawRevertButton(state.Position, state.PropertyName, state.Component);
+        }
 
         if (!string.IsNullOrEmpty(state.Tooltip))
         {
@@ -260,7 +272,7 @@ internal static class MaterialEditorPatcher
 
     private static void DrawRevertButton(
         Rect position,
-        UnityEditor.MaterialProperty prop,
+        string propertyName,
         MaterialEditorComponent component)
     {
         if (!GUIHelper.TryGetMarginX(out var marginX))
@@ -275,15 +287,14 @@ internal static class MaterialEditorPatcher
         );
 
         if (GUI.Button(buttonRect, RevertButtonContent, IconButtonStyle)) {
-            RevertProperty(component, prop);
+            RevertProperty(component, propertyName);
             if (MaterialEditoEditorContext.ComponentToMaterialEditor.TryGetValue(component, out var materialEditor) && materialEditor != null)
                 EditorApplication.delayCall += () => materialEditor.Repaint();
         }
     }
 
-    private static void RevertProperty(MaterialEditorComponent component, UnityEditor.MaterialProperty prop)
+    private static void RevertProperty(MaterialEditorComponent component, string propertyName)
     {
-        var propertyName = prop.name;
         var edited = new List<MaterialProperty>(component.OverrideSettings.PropertyOverrides);
         edited.RemoveAll(p => p.PropertyName == propertyName);
         using var so = new SerializedObject(component);
