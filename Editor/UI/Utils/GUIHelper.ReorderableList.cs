@@ -8,6 +8,8 @@ namespace Aoyon.MaterialEditor.UI;
 // based on https://github.com/lilxyzw/lilycalInventory/blob/52763ab539d59609e63d6974493948ab0614f7c2/Editor/Helper/GUIHelper.ReorderableList.cs
 internal static partial class GUIHelper
 {
+    private static readonly GUIStyle buttonStyle = EditorStyles.miniButton;
+
     internal static Rect List(Rect position, SerializedProperty property, bool drawFoldout, GUIContent content, Action<SerializedProperty> initializeFunction = null)
     {
         return InternalList(position, property, drawFoldout, content, initializeFunction);
@@ -28,6 +30,7 @@ internal static partial class GUIHelper
         if (!isExpanded) return position;
 
         var reorderableList = PropertyHandlerWrap.GetOrSet(property, initializeFunction);
+        reorderableList.drawFooterCallback = _ => DrawFooter(foldoutRect, reorderableList);
         position.height = reorderableList.GetHeight() - propertyHeight; // フッターをずらした分リスト自体の高さは小さくなっている
         reorderableList.DoList(position);
         position.NewLineWithSingleHeight();
@@ -50,14 +53,18 @@ internal static partial class GUIHelper
         var isExpanded = Foldout(rect, property, content, drawFoldout, true, GetListHeaderClickableRect);
 
         if (isExpanded)
-            PropertyHandlerWrap.GetOrSet(property, initializeFunction).DoLayoutList();
+        {
+            var reorderableList = PropertyHandlerWrap.GetOrSet(property, initializeFunction);
+            reorderableList.drawFooterCallback = _ => DrawFooter(rect, reorderableList);
+            reorderableList.DoLayoutList();
+        }
         else
             DrawArraySizeOnLine(rect, property);
     }
 
     private static Rect GetListHeaderClickableRect(Rect position, SerializedProperty property)
     {
-        CalcFooterSize("List:Add".LG(), "List:Delete".LG(), ReorderableList.defaultBehaviours.preButton, position, out var rectNum, out _, out var rectAdd, out _);
+        CalcFooterSize("List:Add".LG(), "List:Delete".LG(), buttonStyle, position, out var rectNum, out _, out var rectAdd, out _);
         if (property.isExpanded)
         {
             return new Rect(position.x, position.y, rectAdd.x - EditorGUIUtility.standardVerticalSpacing - position.x, position.height);
@@ -90,14 +97,12 @@ internal static partial class GUIHelper
 
     private static ReorderableList CreateReorderableList(SerializedProperty property, Action<SerializedProperty> initializeFunction = null)
     {
-        Rect headerRect = default;
         var list = new ReorderableList(property.serializedObject, property.Copy(), true, false, true, true)
         {
             draggable = true,
             headerHeight = 0,
             //footerHeight = 0, // みやすさのためにあえて余白を残す
-            multiSelect = true,
-            drawHeaderCallback = rect => headerRect = rect
+            multiSelect = true
         };
         list.elementHeightCallback = index => EditorGUI.GetPropertyHeight(list.serializedProperty.GetArrayElementAtIndex(index));
         list.drawElementCallback = (rect, index, isActive, isFocused) =>
@@ -111,14 +116,6 @@ internal static partial class GUIHelper
         if(initializeFunction != null)
             list.onAddCallback = _ => list.serializedProperty.ResizeArray(list.serializedProperty.arraySize + 1, initializeFunction);
 
-        // フッターはヘッダーの位置にずらして操作しやすく
-        // ついでに表示もカスタマイズ
-        list.drawFooterCallback = rect =>
-        {
-            headerRect.height = EditorGUIUtility.singleLineHeight;
-            headerRect.y -= headerRect.height + EditorGUIUtility.standardVerticalSpacing;
-            DrawFooter(headerRect, list);
-        };
         return list;
     }
 
@@ -144,7 +141,6 @@ internal static partial class GUIHelper
 
         var addContent = "List:Add".LG();
         var deleteContent = "List:Delete".LG();
-        var buttonStyle = ReorderableList.defaultBehaviours.preButton;
         CalcFooterSize(addContent, deleteContent, buttonStyle, rect, out var rectNum, out var rectRem, out var rectAdd, out var rectBack);
 
         // Foldoutのラベルと重なることを防ぐために上からRectを描画
@@ -199,7 +195,7 @@ internal static partial class GUIHelper
         var addSize     = buttonStyle.CalcSize(addContent);
         var deleteSize  = buttonStyle.CalcSize(deleteContent);
 
-        var buttonSize = Mathf.Max(addSize.x, deleteSize.x) + 16f;
+        var buttonSize = Mathf.Max(addSize.x, deleteSize.x) + 8f;
         
         var spacing = EditorGUIUtility.standardVerticalSpacing;
 
@@ -237,7 +233,7 @@ internal static partial class GUIHelper
     {
         if(property == null || !property.isArray || property.hasMultipleDifferentValues) return;
 
-        var rectNum = new Rect(rect.xMax - EditorGUIUtility.fieldWidth + EditorGUIUtility.standardVerticalSpacing * 3, rect.y, EditorGUIUtility.fieldWidth, rect.height);
+        CalcFooterSize("List:Add".LG(), "List:Delete".LG(), buttonStyle, rect, out var rectNum, out _, out _, out _);
 
         EditorGUI.BeginChangeCheck();
         var size = EditorGUI.IntField(rectNum, property.arraySize);

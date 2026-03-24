@@ -14,10 +14,10 @@ internal class MaterialSlotReferenceDrawer : PropertyDrawer
         var rendererReference = property.FindPropertyRelative(nameof(MaterialSlotReference.RendererReference));
         var materialIndex = property.FindPropertyRelative(nameof(MaterialSlotReference.MaterialIndex));
 
-        GUIHelper.SplitRectHorizontally(position, 0.4f, out var rendererRect, out var materialSlotRect);
+        GUIHelper.SplitRectHorizontally(position, 0.5f, out var rendererRect, out var materialSlotRect);
 
         EditorGUI.PropertyField(rendererRect, rendererReference, GUIContent.none);
-        DrawMaterialSlot(materialSlotRect, rendererReference, materialIndex);
+        MaterialSlotSelector.Draw(materialSlotRect, rendererReference, materialIndex);
     }
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
@@ -25,69 +25,66 @@ internal class MaterialSlotReferenceDrawer : PropertyDrawer
         return GUIHelper.propertyHeight;
     }
 
-    private static Material? _allMaterials;
-    private static Material AllMaterials => _allMaterials != null ? _allMaterials : _allMaterials = new(Shader.Find("Standard")) { name = "All Materials" };
-    private void DrawMaterialSlot(Rect position, SerializedProperty rendererReference, SerializedProperty materialIndex)
+    class MaterialSlotSelector : MaterialSelector
     {
-        using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, materialIndex);
-        
-        var selectorWidth = MaterialSelector.GetSize().x;
-        GUIHelper.SplitRectHorizontallyForRight(position, selectorWidth, out var materialRect, out var selectorRect);
-
-        Renderer? renderer = null;
-        var gameObject = AvatarObjectReference.Get(rendererReference);
-        if (gameObject != null)
+        public static void Draw(Rect position, SerializedProperty rendererReference, SerializedProperty materialIndex)
         {
-            gameObject.transform.TryGetComponent<Renderer>(out renderer);
-        }
-
-        Material? material = null;
-        if (renderer != null)
-        {
-            var mats = renderer.sharedMaterials;
-            var materialIndexValue = materialIndex.intValue;
-
-            if (materialIndexValue == -1)
+            Renderer? renderer = null;
+            var gameObject = AvatarObjectReference.Get(rendererReference);
+            if (gameObject != null)
             {
-                material = AllMaterials;
+                gameObject.transform.TryGetComponent<Renderer>(out renderer);
             }
-            else if (materialIndexValue >= 0 && materialIndexValue < mats.Length)
+
+            if (renderer != null)
             {
-                material = mats[materialIndexValue].DestroyedAsNull();
+                using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, materialIndex);
+
+                var currentIndex = materialIndex.intValue;
+                var materials = renderer.sharedMaterials;
+                var currentMaterial = 0 <= currentIndex && currentIndex < materials.Length ? materials[currentIndex] : null;
+
+                Draw(position,
+                    () => (new Material?[] { null }).Concat(materials).ToArray(),
+                    (m, i) => OnSelected(materialIndex, m, i - 1),
+                    (mats) => GetItemLabels(mats),
+                    null,
+                    new(GetItemLabel(currentMaterial, currentIndex)),
+                    EditorStyles.popup,
+                    GetSelectLabel
+                );
+            }
+            else
+            {
+                EditorGUI.PropertyField(position, materialIndex, GUIContent.none);
             }
         }
 
-        using (new EditorGUI.DisabledGroupScope(true))
+        private static string[] GetItemLabels(Material?[] materials)
         {
-            EditorGUI.ObjectField(materialRect, material, typeof(Material), false);
+            var labels = new string[materials.Length];
+            for (int i = 0; i < materials.Length; i++)
+            {
+                labels[i] = GetItemLabel(materials[i], i - 1);
+            }
+            return labels;
         }
 
-        using (new EditorGUI.DisabledGroupScope(renderer == null))
+        private static string GetItemLabel(Material? material, int slotIndex)
         {
-            MaterialSelector.Draw(selectorRect, 
-                () => GetMaterials(renderer!), 
-                (m, i) => OnSelected(materialIndex, m, i),
-                (m, i) => m.name + " : " + (i-1));
+            var name = slotIndex == -1 ? "Label:AllMaterials".LS() : GetDefaultItemLabel(material);
+            return string.Format("{0} : {1}", slotIndex, name);
         }
-    }
 
-    private static List<Material> GetMaterials(Renderer renderer)
-    {
-        var materials = Utils.GetMaterials(renderer);
-        materials.Insert(0, AllMaterials);
-        return materials;
-    }
+        private static string GetSelectLabel()
+        {
+            return string.Format("Label:SelectWithName".LS(), "Label:MaterialSlot".LS());
+        }
 
-    private static void OnSelected(SerializedProperty materialIndex, Material material, int index)
-    {
-        if (index == 0) // all materials
+        private static void OnSelected(SerializedProperty materialIndex, Material? material, int slotIndex)
         {
-            materialIndex.intValue = -1;
+            materialIndex.intValue = slotIndex;
+            materialIndex.serializedObject.ApplyModifiedProperties();
         }
-        else
-        {
-            materialIndex.intValue = index - 1;
-        }
-        materialIndex.serializedObject.ApplyModifiedProperties();
     }
 }

@@ -1,14 +1,11 @@
+using UnityEngine.Pool;
+
 namespace Aoyon.MaterialEditor.UI;
 
 [CustomPropertyDrawer(typeof(MaterialTargetScope))]
 internal class MaterialTargetScopeDrawer : PropertyDrawer
 {
     private static readonly GUIStyle _typeStyle = StyleHelper.CenteredPopupStyle;
-    private static float? _typeWidth;
-    private static float TypeWidth =>
-        _typeWidth ??= LocalizedUI.GetEnumOptionKeys(typeof(MaterialTargetScope.ScopeType))
-            .Select(k => _typeStyle.CalcSize(k.LG()).x)
-            .Max() + 8f;
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
@@ -18,9 +15,14 @@ internal class MaterialTargetScopeDrawer : PropertyDrawer
 
         var type = property.FindPropertyRelative(nameof(MaterialTargetScope.Type));
 
-        GUIHelper.SplitRectHorizontallyForLeft(position, TypeWidth, out var typeRect, out var valueRect);
+        using var _1 = ListPool<string>.Get(out var optionKeys);
+        LocalizedUI.GetEnumOptionKeys(typeof(MaterialTargetScope.ScopeType), optionKeys);
 
-        LocalizedPopup.Field(typeRect, type, null, LocalizedUI.GetEnumOptionKeys(typeof(MaterialTargetScope.ScopeType)), _typeStyle);
+        var typeWidth = CalculateTypeWidth(optionKeys);
+
+        GUIHelper.SplitRectHorizontallyForLeft(position, typeWidth, out var typeRect, out var valueRect);
+
+        LocalizedPopup.Field(typeRect, type, null, optionKeys, _typeStyle);
 
         switch ((MaterialTargetScope.ScopeType)type.enumValueIndex)
         {
@@ -33,6 +35,11 @@ internal class MaterialTargetScopeDrawer : PropertyDrawer
                 EditorGUI.PropertyField(valueRect, materialSlotReference, GUIContent.none);
                 break;
         }
+    }
+
+    private static float CalculateTypeWidth(List<string> optionKeys)
+    {
+        return optionKeys.Select(k => _typeStyle.CalcSize(k.LG()).x).Max() + 8f;
     }
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)

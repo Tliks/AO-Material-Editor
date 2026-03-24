@@ -24,21 +24,12 @@ internal static class Utils
         return newMaterial;
     }
 
-    public static List<Material> GetTargetMaterials(GameObject gameObject)
+    public static IEnumerable<Material> GetAllTargetMaterials(GameObject gameObject)
     {
         return MaterialEditorProcessor.GetTargetRenderers(gameObject)
             .SelectMany(x => x.sharedMaterials)
             .SkipDestroyed()
-            .Distinct()
-            .ToList();
-    }
-
-    public static List<Material> GetMaterials(Renderer renderer)
-    {
-        return renderer.sharedMaterials
-            .SkipDestroyed()
-            .Distinct()
-            .ToList();
+            .Distinct();
     }
 
     public static bool SequenceEqualReference<T>(T?[] a, T?[] b) where T : class

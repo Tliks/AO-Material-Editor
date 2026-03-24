@@ -163,6 +163,17 @@ internal static class MaterialUtility
         return overrides;
     }
 
+    public static IEnumerable<Texture> EnumerateTextures(Material material)
+    {
+        foreach (var property in GetProperties(material))
+        {
+            if (property.PropertyType != ShaderPropertyType.Texture) continue;
+            var texture = property.TextureValue;
+            if (texture == null) continue;
+            yield return texture;
+        }
+    }
+
     public static void ApplyShader(Material editableMaterial, Shader targetShader)
     {
         // Material.shaderを変更するとMaterial.renderQueueが変更先のShader.renderQueueに自動で置き換わる仕様がある

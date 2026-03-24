@@ -17,19 +17,19 @@ internal class MaterialSelectorDrawer : PropertyDrawer
         MaterialSelector.Draw(selectorRect, () => GetMaterials(property), (m, i) => OnSelected(property, m, i));
     }
 
-    private static List<Material> GetMaterials(SerializedProperty property)
+    private static Material[] GetMaterials(SerializedProperty property)
     {
         var component = property.serializedObject.targetObject as Component;
         var gameObject = component != null ? component.gameObject : property.serializedObject.targetObject as GameObject;
-        if (gameObject == null) return new List<Material>();
+        if (gameObject == null) return Array.Empty<Material>();
 
         var root = Utils.FindAvatarInParents(gameObject);
-        if (root == null) return new List<Material>();
+        if (root == null) return Array.Empty<Material>();
 
-        return Utils.GetTargetMaterials(root);
+        return Utils.GetAllTargetMaterials(root).ToArray();
     }
 
-    private static void OnSelected(SerializedProperty property, Material material, int index)
+    private static void OnSelected(SerializedProperty property, Material? material, int index)
     {
         property.objectReferenceValue = material;
         property.serializedObject.ApplyModifiedProperties();
