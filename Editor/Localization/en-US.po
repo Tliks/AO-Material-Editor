@@ -17,8 +17,20 @@ msgstr "Target Materials"
 msgid "Label:EditorGUI"
 msgstr "Editor"
 
+msgid "Label:Step1TargetSettings"
+msgstr "Step 1. Select and Configure Material"
+
+msgid "Label:Step2EditorGUI"
+msgstr "Step 2. Edit Material"
+
 msgid "HelpBox:NoMaterialSelected"
 msgstr "No material is selected."
+
+msgid "HelpBox:Step1Info"
+msgstr "First, select or configure the material you want to edit."
+
+msgid "HelpBox:Step2Disabled"
+msgstr "Once you configure the material in Step 1, you can edit it here."
 
 msgid "Label:CurrentOverridesCount"
 msgstr "Edits: {0} entries"

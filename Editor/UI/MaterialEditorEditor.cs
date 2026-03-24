@@ -83,10 +83,9 @@ internal class MaterialEditorEditor : Editor
         EditorGUILayout.Space();
         DrawInformationGUI();
         EditorGUILayout.Space();
-        DrawEntrySettings();
+        DrawSelectionStep();
         EditorGUILayout.Space(); 
-        DrawEditor();
-        DrawOverrides();
+        DrawEditorStep();
 
         serializedObject.ApplyModifiedProperties();
     }
@@ -110,24 +109,35 @@ internal class MaterialEditorEditor : Editor
         EditorGUILayout.PropertyField(_entrySettings, "Label:TargetSettings".LG());
     }
 
-    private void DrawEditor()
+    private void DrawSelectionStep()
     {
-        EditorGUILayout.LabelField("# " + "Label:EditorGUI".LS(), EditorStyles.boldLabel);
-        if (_recordingSourceMaterial != null && _materialEditor != null)
+        EditorGUILayout.LabelField("# " + "Label:Step1TargetSettings".LS(), EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("HelpBox:Step1Info".LS(), MessageType.Info);
+        DrawEntrySettings();
+        DrawRecordingSourceMaterial();
+    }
+
+    private void DrawEditorStep()
+    {
+        EditorGUILayout.LabelField("# " + "Label:Step2EditorGUI".LS(), EditorStyles.boldLabel);
+        if (_recordingSourceMaterial == null || _materialEditor == null)
         {
-            _materialEditor.DrawHeader();
-            if (_materialEditor.isVisible) {
-                EditorGUILayout.HelpBox("HelpBox:EditorInfo".LS(), MessageType.Info);
-                DrawOverrideUtility();
-                DrawRecordingSourceMaterial();
-                EditorGUILayout.Space();
-                _materialEditor.OnInspectorGUI();
+            EditorGUILayout.HelpBox("HelpBox:Step2Disabled".LS(), MessageType.Info, true);
+            using (new EditorGUI.DisabledGroupScope(true))
+            {
+                DrawOverrides();
             }
+            return;
         }
-        else 
-        {
-            EditorGUILayout.HelpBox("HelpBox:NoMaterialSelected".LS(), MessageType.Warning, true);
+
+        EditorGUILayout.HelpBox("HelpBox:EditorInfo".LS(), MessageType.Info);
+        _materialEditor.DrawHeader();
+        if (_materialEditor.isVisible) {
+            DrawOverrideUtility();
+            EditorGUILayout.Space();
+            _materialEditor.OnInspectorGUI();
         }
+        DrawOverrides();
     }
 
     private void DrawOverrides()

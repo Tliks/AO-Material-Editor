@@ -60,4 +60,12 @@ internal static partial class GUIHelper
         StyleHelper.DropStyle.fontSize = (int)Mathf.Min(24, position.height);
         EditorGUI.LabelField(position, Localization.G("label.dragAndDrop"), StyleHelper.DropStyle);
     }
+
+    public static void DrawHorizontalWhiteLine(float thickness = 1.0f, float verticalPadding = 4.0f)
+    {
+        var rect = EditorGUILayout.GetControlRect(GUILayout.Height(thickness + verticalPadding * 2));
+        rect.y += verticalPadding;
+        rect.height = thickness;
+        EditorGUI.DrawRect(rect, Color.white);
+    }
 }

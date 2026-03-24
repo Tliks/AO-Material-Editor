@@ -12,13 +12,25 @@ msgid "HelpBox:NotEffective"
 msgstr "このコンポーネントは現在無効化されています。\nコンポーネントのチェックボックスがオフ、または EditorOnly の場合は適用されません。"
 
 msgid "Label:TargetSettings"
-msgstr "適用するマテリアル"
+msgstr "編集するマテリアル"
 
 msgid "Label:EditorGUI"
 msgstr "編集画面"
 
+msgid "Label:Step1TargetSettings"
+msgstr "Step 1. マテリアルの選択・設定"
+
+msgid "Label:Step2EditorGUI"
+msgstr "Step 2. マテリアルの編集"
+
 msgid "HelpBox:NoMaterialSelected"
 msgstr "マテリアルが選択されていません。"
+
+msgid "HelpBox:Step1Info"
+msgstr "最初に、編集したいマテリアルを選択または設定します。"
+
+msgid "HelpBox:Step2Disabled"
+msgstr "Step 1 で編集するマテリアルを設定すると、ここで編集できます。"
 
 msgid "Label:CurrentOverridesCount"
 msgstr "編集内容: {0}箇所"
@@ -45,7 +57,7 @@ msgid "Label:AllMaterials"
 msgstr "全てのマテリアル"
 
 msgid "Label:ApplyMode"
-msgstr "選択方法"
+msgstr "モード"
 
 msgid "Enum:ApplyMode:Basic"
 msgstr "通常"
