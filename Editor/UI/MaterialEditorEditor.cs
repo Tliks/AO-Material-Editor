@@ -1,5 +1,4 @@
 using UnityEngine.Pool;
-using UnityEngine.Rendering;
 using Aoyon.MaterialEditor.Processor;
 
 namespace Aoyon.MaterialEditor.UI;
@@ -176,6 +175,8 @@ internal class MaterialEditorEditor : Editor
     // これを回避するため、コンポーネントの変更とMaterialEditorを介したマテリアルの編集、両方のイベント取得をObjectChangeEventStream経由で行う
     private void OnObjectChanged(ref ObjectChangeEventStream stream)
     {
+        DebugLog("OnObjectChanged, frame: " + Time.frameCount);
+
         var componentId = _target.GetInstanceID();
         var recordingMaterialId = _recordingMaterial.GetInstanceID();
         
@@ -210,12 +211,12 @@ internal class MaterialEditorEditor : Editor
                 {
                     // コンポーネントの変更はUndoに通知される
                     // これにより、次のフレームで数行上のSyncRecordingMaterialFromComponentが実行される
-                    // 重複してパフォーマンス的にも無駄ではあるけど一応害はない
-                    // Todo: もっと良い感じのロジックを考える、あると良いな
+                    // これを防ぐためにUndoに保存せずコンポーネントに書き込む
+                    // Undoに保存していないが、MaterialEditorを介す関係でUndo可能っぽい…？ Todo: 調査
                     if (SanitizeRecordingMaterialAgainstAfter()) { // サニタイズに失敗した状態でコンポーネントに書き込むべきではない
                         SyncComponentFromRecordingMaterial();
+                        serializedObject.ApplyModifiedPropertiesWithoutUndo();
                     }
-                    return;
                 }
             }
         }
@@ -247,7 +248,6 @@ internal class MaterialEditorEditor : Editor
     private void OnOtherComponentChanged()
     {
         UpdateOtherOverrides();
-        UpdateRecordingContext();
         SyncRecordingMaterialFromComponent();
     }
 
@@ -290,12 +290,11 @@ internal class MaterialEditorEditor : Editor
             .ToHashSet();
     }
 
-    private HashSet<string> GetLockedPropertyNames()
-    {
-        return _afterOverrides.PropertyOverrides
-            .Select(p => p.PropertyName)
-            .ToHashSet();
-    }
+    private bool IsShaderLocked() => _afterOverrides.OverrideShader;
+    private bool IsRenderQueueLocked() => _afterOverrides.OverrideRenderQueue;
+    private HashSet<string> GetLockedPropertyNames() => _afterOverrides.PropertyOverrides
+        .Select(p => p.PropertyName)
+        .ToHashSet();
 
     private void UpdateRecordingContext()
     {
@@ -307,11 +306,10 @@ internal class MaterialEditorEditor : Editor
             IsRenderQueueLocked());
     }
 
-    private bool IsShaderLocked() => _afterOverrides.OverrideShader;
-    private bool IsRenderQueueLocked() => _afterOverrides.OverrideRenderQueue;
-
     private void SyncRecordingMaterialFromComponent()
-    {
+    {        
+        DebugLog("SyncRecordingMaterialFromComponent, frame: " + Time.frameCount);
+
         if (_recordingSourceMaterial == null) return;
 
         serializedObject.ApplyModifiedProperties();
@@ -421,6 +419,8 @@ internal class MaterialEditorEditor : Editor
 
     private void SyncComponentFromRecordingMaterial()
     {
+        DebugLog("SyncComponentFromRecordingMaterial, frame: " + Time.frameCount);
+
         if (_recordingSourceMaterial == null) return;
 
         var baseMaterial = new Material(_recordingSourceMaterial) { parent = null };
@@ -470,7 +470,7 @@ internal class MaterialEditorEditor : Editor
             // 新しい差分をマージ(上書き, 追加)する
             MaterialOverrideSettings.MergeInto(newOvrs, cloned);
 
-            CommitOverrideSettings(cloned);
+            _overrideSettings.CopyFrom(cloned);
         }
         catch (Exception e)
         {
@@ -480,12 +480,6 @@ internal class MaterialEditorEditor : Editor
         {
             DestroyImmediate(baseMaterial);
         }
-    }
-
-    private void CommitOverrideSettings(MaterialOverrideSettings value)
-    {
-        _overrideSettings.CopyFrom(value);
-        serializedObject.ApplyModifiedProperties();
     }
 
     // OverrideUtilityGUI
@@ -625,7 +619,8 @@ internal class MaterialEditorEditor : Editor
         var merged = _target.OverrideSettings.Clone();
         MaterialOverrideSettings.MergeInto(extractedOverrides, merged);
 
-        CommitOverrideSettings(merged);
+        _overrideSettings.CopyFrom(merged);
+        serializedObject.ApplyModifiedProperties();
 
         // ObjectChnageにより、Recording Materialの変更等は行われる
     }
@@ -663,6 +658,13 @@ internal class MaterialEditorEditor : Editor
         }
 
         return true;
+    }
+
+    static void DebugLog(string message)
+    {
+#if MATERIAL_EDITOR_DEBUG_EDITOR
+        Debug.Log("MaterialEditorEditor: " + message);
+#endif
     }
 }
 
