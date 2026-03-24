@@ -27,9 +27,11 @@ internal static class MenuItems
         var root = new GameObject("Material Editor");
         root.transform.SetParent(selected.transform, false);
 
+        GameObject? firstChild = null;
         foreach (var material in materials)
         {
             var child = new GameObject(material.name);
+            if (firstChild == null) firstChild = child;
             child.transform.SetParent(root.transform, false);
             var component = child.AddComponent<MaterialEditorComponent>();
             var entrySettings = component.EntrySettings;
@@ -39,8 +41,9 @@ internal static class MenuItems
 
         Undo.RegisterCreatedObjectUndo(root, "Create AO Material Editor");
 
-        EditorGUIUtility.PingObject(root);
-        GUIHelper.SetHierarchyExpanded(root, true);
+        // GUIHelper.SetHierarchyExpanded(root, true);
+        EditorGUIUtility.PingObject(firstChild);
+        Selection.activeGameObject = firstChild;
     }
 
     // Tools

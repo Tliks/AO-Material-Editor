@@ -1,5 +1,6 @@
 using UnityEngine.Pool;
 using Aoyon.MaterialEditor.Processor;
+using UnityEditorInternal;
 
 namespace Aoyon.MaterialEditor.UI;
 
@@ -51,6 +52,7 @@ internal class MaterialEditorEditor : Editor
             _recordingMaterial = new Material(Shader.Find("Standard")) { name = RecordingMaterialName };
         }
         _materialEditor = (UnityEditor.MaterialEditor)CreateEditor(_recordingMaterial, typeof(UnityEditor.MaterialEditor));
+        InternalEditorUtility.SetIsInspectorExpanded(_recordingMaterial, true); // 初期状態でEditorを展開しておく
 
         ObjectChangeEvents.changesPublished += OnObjectChanged;
         MaterialEditoEditorContext.StartRecording(
@@ -121,6 +123,8 @@ internal class MaterialEditorEditor : Editor
                 DrawOverrideUtility();
                 DrawRecordingSourceMaterial();
                 EditorGUILayout.Space();
+                var lineRect = EditorGUILayout.GetControlRect(false, 1f) with { x = 0, width = EditorGUIUtility.currentViewWidth };
+                GUIHelper.DrawHorizontalLine(lineRect, new Color(0.35f, 0.35f, 0.35f));
                 _materialEditor.OnInspectorGUI();
             }
         }
