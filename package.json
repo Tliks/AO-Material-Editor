@@ -11,6 +11,6 @@
   "url": "https://github.com/Tliks",
   "vpmDependencies": {
     "nadena.dev.ndmf": ">=1.8.0",
-    "nadena.dev.modular-avatar": ">=1.11.0"
+    "nadena.dev.modular-avatar": ">=1.15.0"
   }
 }
