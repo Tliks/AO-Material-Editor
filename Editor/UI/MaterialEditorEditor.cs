@@ -63,7 +63,8 @@ internal class MaterialEditorEditor : Editor
             IsShaderLocked(),
             IsRenderQueueLocked(),
             _materialEditor);
-        MaterialEditoEditorContext.OnUpdateRecording += OnUpdateRecording;
+        MaterialEditoEditorContext.OnRecordingEntryStateChanged += OnRecordingEntryStateChanged;
+        MaterialEditoEditorContext.OnRecordingOverrideStateChanged += OnRecordingOverrideStateChanged;
     }
 
     private void OnDisable()
@@ -74,7 +75,8 @@ internal class MaterialEditorEditor : Editor
         if (_materialEditor != null) { DestroyImmediate(_materialEditor); }
 
         ObjectChangeEvents.changesPublished -= OnObjectChanged;
-        MaterialEditoEditorContext.OnUpdateRecording -= OnUpdateRecording;
+        MaterialEditoEditorContext.OnRecordingEntryStateChanged -= OnRecordingEntryStateChanged;
+        MaterialEditoEditorContext.OnRecordingOverrideStateChanged -= OnRecordingOverrideStateChanged;
     }
 
     public override void OnInspectorGUI()
@@ -204,7 +206,7 @@ internal class MaterialEditorEditor : Editor
                         // マテリアルを直接編集するのでUndoに通知されない
                         // これにより、コンポーネントRecoridng Material間の無限ループは起きない
                         SyncRecordingMaterialFromComponent();
-                        UpdateRecordingContext();
+                        UpdateRecordingOverrideState();
                     }
                 }
             }
@@ -220,7 +222,7 @@ internal class MaterialEditorEditor : Editor
                     if (SanitizeRecordingMaterialAgainstAfter()) { // サニタイズに失敗した状態でコンポーネントに書き込むべきではない
                         SyncComponentFromRecordingMaterial();
                         serializedObject.ApplyModifiedPropertiesWithoutUndo();
-                        UpdateRecordingContext();
+                        UpdateRecordingOverrideState();
                     }
                 }
             }
@@ -232,16 +234,23 @@ internal class MaterialEditorEditor : Editor
         UpdateTargetMaterials();
         AutoSelectRecordingSourceMaterial();
         OnRecordingSourceMaterialChanged();
+        NotifyRecordingEntryStateChanged();
     }
 
     private void OnRecordingSourceMaterialChanged()
     {
         UpdateOtherOverrides();
-        UpdateRecordingContext();
+        UpdateRecordingLockedState();
         SyncRecordingMaterialFromComponent();
     }
 
-    private void OnUpdateRecording(MaterialEditorComponent component)
+    private void OnRecordingEntryStateChanged(MaterialEditorComponent component)
+    {
+        if (component == _target) return;
+        OnOtherComponentChanged();
+    }
+
+    private void OnRecordingOverrideStateChanged(MaterialEditorComponent component)
     {
         if (component == _target) return;
         OnOtherComponentChanged();
@@ -253,7 +262,7 @@ internal class MaterialEditorEditor : Editor
     private void OnOtherComponentChanged()
     {
         UpdateOtherOverrides();
-        UpdateRecordingContext();
+        UpdateRecordingLockedState();
         SyncRecordingMaterialFromComponent();
     }
 
@@ -302,14 +311,25 @@ internal class MaterialEditorEditor : Editor
         .Select(p => p.PropertyName)
         .ToHashSet();
 
-    private void UpdateRecordingContext()
+    private void NotifyRecordingEntryStateChanged()
     {
-        MaterialEditoEditorContext.UpdateRecording(
+        MaterialEditoEditorContext.NotifyRecordingEntryStateChanged(_target);
+    }
+
+    private void UpdateRecordingOverrideState()
+    {
+        MaterialEditoEditorContext.UpdateRecordingOverrideState(
             _target,
-            GetCurrentOverridePropertyNames(),
-            GetLockedPropertyNames(),
+            GetCurrentOverridePropertyNames());
+    }
+
+    private void UpdateRecordingLockedState()
+    {
+        MaterialEditoEditorContext.UpdateLockedState(
+            _target,
             IsShaderLocked(),
-            IsRenderQueueLocked());
+            IsRenderQueueLocked(),
+            GetLockedPropertyNames());
     }
 
     private void SyncRecordingMaterialFromComponent()
@@ -677,16 +697,19 @@ internal class MaterialEditorEditor : Editor
 internal static class MaterialEditoEditorContext
 {
     public static readonly Dictionary<Material, MaterialEditorComponent> RecordingToComponent = new();
+    public static readonly Dictionary<MaterialEditorComponent, UnityEditor.MaterialEditor?> ComponentToMaterialEditor = new();
+
     public static readonly Dictionary<MaterialEditorComponent, HashSet<string>> ComponentToOverrideProperties = new();
-    public static readonly Dictionary<MaterialEditorComponent, HashSet<string>> ComponentToLockedProperties = new();
+
     public static readonly Dictionary<MaterialEditorComponent, bool> ComponentToShaderLocked = new();
     public static readonly Dictionary<MaterialEditorComponent, bool> ComponentToRenderQueueLocked = new();
-    public static readonly Dictionary<MaterialEditorComponent, UnityEditor.MaterialEditor?> ComponentToMaterialEditor = new();
+    public static readonly Dictionary<MaterialEditorComponent, HashSet<string>> ComponentToLockedProperties = new();
 
     public static bool IsRecording => RecordingToComponent.Count > 0;
 
     public static event Action<MaterialEditorComponent>? OnStartRecording;
-    public static event Action<MaterialEditorComponent>? OnUpdateRecording;
+    public static event Action<MaterialEditorComponent>? OnRecordingEntryStateChanged;
+    public static event Action<MaterialEditorComponent>? OnRecordingOverrideStateChanged;
     public static event Action<MaterialEditorComponent>? OnStopRecording;
 
     public static void StartRecording(
@@ -707,18 +730,29 @@ internal static class MaterialEditoEditorContext
         OnStartRecording?.Invoke(component);
     }
 
-    public static void UpdateRecording(
+    public static void NotifyRecordingEntryStateChanged(
+        MaterialEditorComponent component)
+    {
+        OnRecordingEntryStateChanged?.Invoke(component);
+    }
+
+    public static void UpdateRecordingOverrideState(
         MaterialEditorComponent component,
-        HashSet<string> overrideProperties,
-        HashSet<string> lockedProperties,
-        bool shaderLocked,
-        bool renderQueueLocked)
+        HashSet<string> overrideProperties)
     {
         ComponentToOverrideProperties[component] = overrideProperties;
-        ComponentToLockedProperties[component] = lockedProperties;
+        OnRecordingOverrideStateChanged?.Invoke(component);
+    }
+
+    public static void UpdateLockedState(
+        MaterialEditorComponent component,
+        bool shaderLocked,
+        bool renderQueueLocked,
+        HashSet<string> lockedProperties)
+    {
         ComponentToShaderLocked[component] = shaderLocked;
         ComponentToRenderQueueLocked[component] = renderQueueLocked;
-        OnUpdateRecording?.Invoke(component);
+        ComponentToLockedProperties[component] = lockedProperties;
     }
 
     public static void StopRecording(Material recordingMaterial, MaterialEditorComponent component)
