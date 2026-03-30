@@ -22,29 +22,7 @@ internal static class MenuItems
     {
         var selected = Selection.activeGameObject;
         if (selected == null) throw new Exception("No selected game object");
-
-        var materials = Utils.GetAllTargetMaterials(selected).ToList();
-        if (materials.Count == 0) throw new Exception("No materials found");
-
-        var root = new GameObject("Material Editor");
-        root.transform.SetParent(selected.transform, false);
-
-        GameObject? firstChild = null;
-        foreach (var material in materials)
-        {
-            var child = new GameObject(material.name);
-            if (firstChild == null) firstChild = child;
-            child.transform.SetParent(root.transform, false);
-            var component = child.AddComponent<MaterialEditorComponent>();
-            component.TargetSettings.Mode = MaterialTargetSettings.SelectionMode.SingleMaterial;
-            component.TargetSettings.SingleMaterial.TargetMaterial = material;
-        }
-
-        Undo.RegisterCreatedObjectUndo(root, "Create AO Material Editor");
-
-        // GUIHelper.SetHierarchyExpanded(root, true);
-        EditorGUIUtility.PingObject(firstChild);
-        Selection.activeGameObject = firstChild;
+        MaterialEditorGenerator.Generate(selected);
     }
 
     // Tools
