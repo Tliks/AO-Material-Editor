@@ -1,3 +1,4 @@
+using Aoyon.MaterialEditor.Migration;
 using UnityEditorInternal;
 
 namespace Aoyon.MaterialEditor.UI;
@@ -81,4 +82,24 @@ internal static class MenuItems
         InternalEditorUtility.RepaintAllViews();
     }
 
+    // CONTEXT
+    private const string ContextPath = "CONTEXT/" + nameof(MaterialEditorComponent) + "/";
+
+    private const string MigratePath = ContextPath + "Migrate";
+
+    [MenuItem(MigratePath, true)]
+    static bool ValidateMigrate(MenuCommand command)
+    {
+        var component = command.context as MaterialEditorComponent;
+        if (component == null) return false;
+        return !component.IsLatestDataVersion();
+    }
+    
+    [MenuItem(MigratePath, false)]
+    static void Migrate(MenuCommand command)
+    {
+        var component = command.context as MaterialEditorComponent;
+        if (component == null) throw new Exception("MaterialEditorComponent not found");
+        Migrator.Migrate(component);
+    }
 }

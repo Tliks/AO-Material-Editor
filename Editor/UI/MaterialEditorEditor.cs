@@ -1,6 +1,7 @@
 using UnityEngine.Pool;
 using Aoyon.MaterialEditor.Processor;
 using UnityEditorInternal;
+using Aoyon.MaterialEditor.Migration;
 
 namespace Aoyon.MaterialEditor.UI;
 
@@ -84,7 +85,9 @@ internal class MaterialEditorEditor : Editor
         serializedObject.Update();
 
         Localization.DrawLanguageSwitcher();
-        EditorGUILayout.Space();
+        if (!Migrator.CheckAndDrawMigrationButton(_target)) {
+            return;
+        }
         DrawInformationGUI();
         EditorGUILayout.Space();
         DrawEntrySettings();
