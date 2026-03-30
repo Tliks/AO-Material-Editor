@@ -14,4 +14,17 @@ internal class MaterialEditorSettings
         }
     }
     public static event Action<bool>? EnableMaterialEditorPatcherChanged;
+
+    private const string ShowInspectorDescriptionKey = "aoyon.material-editor.show-inspector-description";
+    public static bool ShowInspectorDescription
+    {
+        get => EditorPrefs.GetBool(ShowInspectorDescriptionKey, true);
+        set
+        {
+            if (ShowInspectorDescription == value) return;
+            EditorPrefs.SetBool(ShowInspectorDescriptionKey, value);
+            ShowInspectorDescriptionChanged?.Invoke(value);
+        }
+    }
+    public static event Action<bool>? ShowInspectorDescriptionChanged;
 }

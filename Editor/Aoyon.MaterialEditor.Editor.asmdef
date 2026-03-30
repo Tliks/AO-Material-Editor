@@ -6,7 +6,7 @@
         "nadena.dev.ndmf",
         "nadena.dev.ndmf.runtime",
         "nadena.dev.modular-avatar.core",
-        "io.github.azukimochi.light-limit-changer.editor"
+        "jp.lilxyzw.lilycalinventory.runtime"
     ],
     "includePlatforms": [
         "Editor"
@@ -16,7 +16,8 @@
     "overrideReferences": true,
     "precompiledReferences": [
         "System.Collections.Immutable.dll",
-        "0Harmony.dll"
+        "0Harmony.dll",
+        "VRCSDKBase.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [],
@@ -30,6 +31,11 @@
             "name": "io.github.azukimochi.light-limit-changer",
             "expression": "2.4.0",
             "define": "ME_LLC_2_4_0_OR_NEWER"
+        },
+        {
+            "name": "jp.lilxyzw.lilycalinventory",
+            "expression": "",
+            "define": "ME_LI"
         }
     ],
     "noEngineReferences": false

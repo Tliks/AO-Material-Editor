@@ -47,16 +47,16 @@ internal class MaterialSlotReferenceDrawer : PropertyDrawer
                 Draw(position,
                     () => (new Material?[] { null }).Concat(materials).ToArray(),
                     (m, i) => OnSelected(materialIndex, m, i - 1),
-                    (mats) => GetItemLabels(mats),
-                    null,
-                    new(GetItemLabel(currentMaterial, currentIndex)),
-                    EditorStyles.popup,
-                    GetSelectLabel
+                    getItemLabels: mats => GetItemLabels(mats),
+                    getItemIcons: null,
+                    label: new(GetItemLabel(currentMaterial, currentIndex)),
+                    style: EditorStyles.popup,
+                    getSelectLabel: GetSelectLabel
                 );
             }
             else
             {
-                EditorGUI.PropertyField(position, materialIndex, GUIContent.none);
+                EditorGUI.LabelField(position, "materialSlot.noRenderer".LS());
             }
         }
 
@@ -72,13 +72,13 @@ internal class MaterialSlotReferenceDrawer : PropertyDrawer
 
         private static string GetItemLabel(Material? material, int slotIndex)
         {
-            var name = slotIndex == -1 ? "Label:AllMaterials".LS() : GetDefaultItemLabel(material);
+            var name = slotIndex == -1 ? "common.allMaterials".LS() : GetDefaultItemLabel(material);
             return string.Format("{0} : {1}", slotIndex, name);
         }
 
         private static string GetSelectLabel()
         {
-            return string.Format("Label:SelectWithName".LS(), "Label:MaterialSlot".LS());
+            return string.Format("common.selectWithName".LS(), "common.materialSlot".LS());
         }
 
         private static void OnSelected(SerializedProperty materialIndex, Material? material, int slotIndex)

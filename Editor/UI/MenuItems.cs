@@ -1,3 +1,4 @@
+using Aoyon.MaterialEditor.Migration;
 using UnityEditorInternal;
 
 namespace Aoyon.MaterialEditor.UI;
@@ -5,8 +6,9 @@ namespace Aoyon.MaterialEditor.UI;
 internal static class MenuItems
 {
     // GameObject
+    private const string GameObjectPath = "GameObject/AO Material Editor";
 
-    private const string GeneratePath = "GameObject/AO Material Editor";
+    private const string GeneratePath = GameObjectPath; // エントリーポイントなので階層を浅く
     private const int GeneratePriority = 100;
 
     [MenuItem(GeneratePath, true, GeneratePriority)]
@@ -20,32 +22,13 @@ internal static class MenuItems
     {
         var selected = Selection.activeGameObject;
         if (selected == null) throw new Exception("No selected game object");
-
-        var materials = Utils.GetAllTargetMaterials(selected).ToList();
-        if (materials.Count == 0) throw new Exception("No materials found");
-
-        var root = new GameObject("Material Editor");
-        root.transform.SetParent(selected.transform, false);
-
-        foreach (var material in materials)
-        {
-            var child = new GameObject(material.name);
-            child.transform.SetParent(root.transform, false);
-            var component = child.AddComponent<MaterialEditorComponent>();
-            var entrySettings = component.EntrySettings;
-            entrySettings.Mode = MaterialEntrySettings.ApplyMode.Basic;
-            entrySettings.BasicMaterial = material;
-        }
-
-        Undo.RegisterCreatedObjectUndo(root, "Create AO Material Editor");
-
-        EditorGUIUtility.PingObject(root);
-        GUIHelper.SetHierarchyExpanded(root, true);
+        MaterialEditorGenerator.Generate(selected);
     }
 
     // Tools
+    private const string ToolsPath = "Tools/AO Material Editor";
 
-    private const string EnableMaterialEditorPatcherPath = "Tools/AO Material Editor/Enable Material Editor Patcher";
+    private const string EnableMaterialEditorPatcherPath = ToolsPath + "/Enable Material Editor Patcher";
 
     [MenuItem(EnableMaterialEditorPatcherPath, true)]
     private static bool ValidateEnableMaterialEditorPatcher()
@@ -59,5 +42,42 @@ internal static class MenuItems
     {
         MaterialEditorSettings.EnableMaterialEditorPatcher = !MaterialEditorSettings.EnableMaterialEditorPatcher;
         InternalEditorUtility.RepaintAllViews();
+    }
+
+    private const string ShowInspectorDescriptionPath = ToolsPath + "/Show Inspector Description";
+
+    [MenuItem(ShowInspectorDescriptionPath, true)]
+    private static bool ValidateShowInspectorDescription()
+    {
+        Menu.SetChecked(ShowInspectorDescriptionPath, MaterialEditorSettings.ShowInspectorDescription);
+        return true;
+    }
+
+    [MenuItem(ShowInspectorDescriptionPath, false)]
+    private static void ToggleShowInspectorDescription()
+    {
+        MaterialEditorSettings.ShowInspectorDescription = !MaterialEditorSettings.ShowInspectorDescription;
+        InternalEditorUtility.RepaintAllViews();
+    }
+
+    // CONTEXT
+    private const string ContextPath = "CONTEXT/" + nameof(MaterialEditorComponent) + "/";
+
+    private const string MigratePath = ContextPath + "Migrate";
+
+    [MenuItem(MigratePath, true)]
+    static bool ValidateMigrate(MenuCommand command)
+    {
+        var component = command.context as MaterialEditorComponent;
+        if (component == null) return false;
+        return !component.IsLatestDataVersion();
+    }
+    
+    [MenuItem(MigratePath, false)]
+    static void Migrate(MenuCommand command)
+    {
+        var component = command.context as MaterialEditorComponent;
+        if (component == null) throw new Exception("MaterialEditorComponent not found");
+        Migrator.Migrate(component);
     }
 }

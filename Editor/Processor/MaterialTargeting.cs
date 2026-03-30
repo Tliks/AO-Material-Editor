@@ -6,7 +6,7 @@ internal readonly record struct MaterialSlotId(Renderer Renderer, int MaterialIn
 
 internal readonly record struct MaterialAssignment(MaterialSlotId SlotId, Material Material);
 
-internal class MaterialTargeting
+internal class MaterialTargeting : IMaterialTargeting
 {
     private readonly IMaterialTargeting[] _materialTargetings;
 

@@ -1,6 +1,6 @@
 namespace Aoyon.MaterialEditor;
 
-[Serializable]
+[Serializable, Obsolete]
 internal class MaterialTargetScope : IEquatable<MaterialTargetScope>
 {
     public enum ScopeType
