@@ -32,6 +32,7 @@ internal static class MaterialEditorPatcher
         {
             PatchMaterialEditor(harmony);
             PatchGUILabel(harmony);
+            PatchPoiyomiLayout(harmony);
         }
         catch (Exception e)
         {
@@ -103,6 +104,17 @@ internal static class MaterialEditorPatcher
         PatchMethod(harmony, typeof(UnityEngine.GUI), nameof(UnityEngine.GUI.Label),
             new[] { typeof(Rect), typeof(GUIContent), typeof(GUIStyle) },
             prefixName: nameof(GUILabelPrefix));
+    }
+
+    private static void PatchPoiyomiLayout(Harmony harmony)
+    {
+        var rectifiedLayoutType = AccessTools.TypeByName("Thry.ThryEditor.RectifiedLayout");
+        if (rectifiedLayoutType == null)
+            return;
+
+        PatchMethod(harmony, rectifiedLayoutType, "GetRect",
+            new[] { typeof(int) },
+            postfixName: nameof(PoiyomiRectifiedLayoutGetRectPostfix));
     }
 
     private static void PatchMethod(
@@ -320,6 +332,17 @@ internal static class MaterialEditorPatcher
             return true;
 
         return false;
+    }
+
+    private static void PoiyomiRectifiedLayoutGetRectPostfix(ref Rect __result)
+    {
+#if UNITY_2022_1_OR_NEWER
+        if (!MaterialEditoEditorContext.IsRecording)
+            return;
+
+        __result.x += 30;
+        __result.width = Mathf.Max(0, __result.width - 30);
+#endif
     }
 }
 
