@@ -20,6 +20,7 @@ internal class MaterialEditorEditor : Editor
 
     // recoding UI fields
     private Material? _recordingSourceMaterial;
+    private Material? _unlockedRecordingSourceMaterial;
     private Material _recordingMaterial = null!;
     private UnityEditor.MaterialEditor _materialEditor = null!;
     private MaterialTargetSettings? _cachedTargetSettings;
@@ -45,7 +46,8 @@ internal class MaterialEditorEditor : Editor
 
         _recordingSourceMaterial = AutoSelectRecordingSourceMaterial();
         if (_recordingSourceMaterial != null) { 
-            _recordingMaterial = new Material(_recordingSourceMaterial) { name = RecordingMaterialName, parent = null };
+            _unlockedRecordingSourceMaterial = CreateUnlockedRecordingSourceMaterial(_recordingSourceMaterial);
+            _recordingMaterial = new Material(_unlockedRecordingSourceMaterial) { name = RecordingMaterialName };
             UpdateOtherOverrides();
             SyncRecordingMaterialFromComponent();
         }
@@ -187,6 +189,13 @@ internal class MaterialEditorEditor : Editor
         return _recordingSourceMaterial;
     }
 
+    private Material CreateUnlockedRecordingSourceMaterial(Material source)
+    {
+        var unlocked = new Material(source);
+        MaterialUtility.Unlock(unlocked, source);
+        return unlocked;
+    }
+
     // PrefabuTility.PrefabInstanceUpdatedはPrefab Revertなどのイベントを拾わずRecording Materialの更新を行えない
     // これを回避するため、コンポーネントの変更とMaterialEditorを介したマテリアルの編集、両方のイベント取得をObjectChangeEventStream経由で行う
     private void OnObjectChanged(ref ObjectChangeEventStream stream)
@@ -249,6 +258,12 @@ internal class MaterialEditorEditor : Editor
 
     private void OnRecordingSourceMaterialChanged()
     {
+        if (_recordingSourceMaterial != null) {
+            _unlockedRecordingSourceMaterial = CreateUnlockedRecordingSourceMaterial(_recordingSourceMaterial);
+        }
+        else {
+            _unlockedRecordingSourceMaterial = null;
+        }
         UpdateOtherOverrides();
         UpdateRecordingLockedState();
         SyncRecordingMaterialFromComponent();
@@ -346,12 +361,12 @@ internal class MaterialEditorEditor : Editor
     {        
         DebugLog("SyncRecordingMaterialFromComponent, frame: " + Time.frameCount);
 
-        if (_recordingSourceMaterial == null) return;
+        if (_unlockedRecordingSourceMaterial == null) return;
 
         serializedObject.ApplyModifiedProperties();
 
         // sourceの状態に初期化
-        MaterialUtility.CopyAllSettings(_recordingSourceMaterial, _recordingMaterial);
+        MaterialUtility.CopyAllSettings(_unlockedRecordingSourceMaterial, _recordingMaterial);
         // 1. 自分より上のオーバーライドを反映
         MaterialUtility.ApplyOverrideSettings(_recordingMaterial, _beforeOverrides);
         // 2. 自分自身のオーバーライドを反映
@@ -362,11 +377,11 @@ internal class MaterialEditorEditor : Editor
 
     private bool SanitizeRecordingMaterialAgainstAfter()
     {
-        if (_recordingSourceMaterial == null) return true;
+        if (_unlockedRecordingSourceMaterial == null) return true;
 
         if (!_afterOverrides.OverrideShader && !_afterOverrides.OverrideRenderQueue && _afterOverrides.PropertyOverrides.Count == 0) return true;
 
-        var authoritative = new Material(_recordingSourceMaterial) { parent = null };
+        var authoritative = new Material(_unlockedRecordingSourceMaterial);
         try
         {
             var sanitized = false;
@@ -457,9 +472,9 @@ internal class MaterialEditorEditor : Editor
     {
         DebugLog("SyncComponentFromRecordingMaterial, frame: " + Time.frameCount);
 
-        if (_recordingSourceMaterial == null) return;
+        if (_unlockedRecordingSourceMaterial == null) return;
 
-        var baseMaterial = new Material(_recordingSourceMaterial) { parent = null };
+        var baseMaterial = new Material(_unlockedRecordingSourceMaterial);
         try
         {
             MaterialUtility.ApplyOverrideSettings(baseMaterial, _beforeOverrides);

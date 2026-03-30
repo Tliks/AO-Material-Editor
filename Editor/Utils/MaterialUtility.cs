@@ -1,4 +1,5 @@
 using UnityEngine.Rendering;
+using Aoyon.MaterialEditor.Extension;
 
 namespace Aoyon.MaterialEditor;
 
@@ -229,5 +230,15 @@ internal static class MaterialUtility
         ApplyShader(target, source.shader);
         ApplyCustomRenderQueue(target, GetCustomRenderQueue(source));
         CopyPropertiesForSameShader(source, target);
+    }
+
+    public static void Unlock(Material editableMaterial, Material? sourceMaterial = null)
+    {
+        editableMaterial.parent = null;
+
+        if (PoiyomiMaterialUtility.IsPoiyomiMaterial(editableMaterial))
+        {
+            PoiyomiMaterialUtility.Unlock(editableMaterial, sourceMaterial);
+        }
     }
 }
