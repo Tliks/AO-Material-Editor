@@ -21,7 +21,7 @@ internal sealed class PluginDefinition : Plugin<PluginDefinition>
         sequence.Run(MaterialEditorBuild.Instance)
 #if ME_LLC_2_4_0_OR_NEWER
             .BeforePass("io.github.azukimochi.light-limit-changer.normalize-materials")
-#elif ME_LLC
+#else
             .BeforePlugin("io.github.azukimochi.light-limit-changer")
 #endif
             .PreviewingWith(new MaterialEditorPreview());

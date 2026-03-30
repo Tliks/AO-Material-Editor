@@ -29,11 +29,6 @@
         },
         {
             "name": "io.github.azukimochi.light-limit-changer",
-            "expression": "",
-            "define": "ME_LLC"
-        },
-        {
-            "name": "io.github.azukimochi.light-limit-changer",
             "expression": "2.4.0",
             "define": "ME_LLC_2_4_0_OR_NEWER"
         },
