@@ -1,5 +1,6 @@
 using nadena.dev.ndmf;
 using nadena.dev.ndmf.animator;
+using Aoyon.MaterialEditor.Processor.Extension;
 
 namespace Aoyon.MaterialEditor.Processor;
 
@@ -19,9 +20,15 @@ internal class MaterialEditorBuild : Pass<MaterialEditorBuild>
         var effectiveComponents = allComponents.Where(c => MaterialEditorProcessor.IsEffective(c));
 
         var animationIndex = context.Extension<AnimatorServicesContext>().AnimationIndex;
+        // TTT/LLCに対する互換性を優先し、他ツールのAnimatorへ追加されるマテリアルはフィールド置き換えで対応する
+        // https://github.com/Tliks/AO-Material-Editor/issues/18
         var materialTargeting = new MaterialTargeting(
             new DefaultMaterialTargeting(), 
-            new AnimatorMaterialTargeting(root, animationIndex)
+            new AnimatorMaterialTargeting(root, animationIndex),
+#if ME_LI
+            new LilycalInventoryMaterialTargeting(root),
+#endif
+            new ModularAvatarMaterialTargeting(root)
         );
 
         var renderers = MaterialEditorProcessor.GetTargetRenderers(root);
