@@ -14,19 +14,7 @@ internal class MaterialSelectorDrawer : PropertyDrawer
         GUIHelper.SplitRectHorizontallyForRight(position, selectorWidth, out var objectFieldRect, out var selectorRect);
 
         property.objectReferenceValue = EditorGUI.ObjectField(objectFieldRect, label, property.objectReferenceValue, typeof(Material), true);
-        MaterialSelector.Draw(selectorRect, () => GetMaterials(property), (m, i) => OnSelected(property, m, i));
-    }
-
-    private static Material[] GetMaterials(SerializedProperty property)
-    {
-        var component = property.serializedObject.targetObject as Component;
-        var gameObject = component != null ? component.gameObject : property.serializedObject.targetObject as GameObject;
-        if (gameObject == null) return Array.Empty<Material>();
-
-        var root = Utils.FindAvatarInParents(gameObject);
-        if (root == null) return Array.Empty<Material>();
-
-        return Utils.GetAllTargetMaterials(root).ToArray();
+        MaterialSelector.Draw(selectorRect, () => Utils.GetAllTargetMaterialsInAvatar(property), (m, i) => OnSelected(property, m, i));
     }
 
     private static void OnSelected(SerializedProperty property, Material? material, int index)

@@ -5,8 +5,9 @@ namespace Aoyon.MaterialEditor.UI;
 internal static class MenuItems
 {
     // GameObject
+    private const string GameObjectPath = "GameObject/AO Material Editor";
 
-    private const string GeneratePath = "GameObject/AO Material Editor";
+    private const string GeneratePath = GameObjectPath; // エントリーポイントなので階層を浅く
     private const int GeneratePriority = 100;
 
     [MenuItem(GeneratePath, true, GeneratePriority)]
@@ -34,9 +35,8 @@ internal static class MenuItems
             if (firstChild == null) firstChild = child;
             child.transform.SetParent(root.transform, false);
             var component = child.AddComponent<MaterialEditorComponent>();
-            var entrySettings = component.EntrySettings;
-            entrySettings.Mode = MaterialEntrySettings.ApplyMode.Basic;
-            entrySettings.BasicMaterial = material;
+            component.TargetSettings.Mode = MaterialTargetSettings.SelectionMode.SingleMaterial;
+            component.TargetSettings.SingleMaterial.TargetMaterial = material;
         }
 
         Undo.RegisterCreatedObjectUndo(root, "Create AO Material Editor");
@@ -47,8 +47,9 @@ internal static class MenuItems
     }
 
     // Tools
+    private const string ToolsPath = "Tools/AO Material Editor";
 
-    private const string EnableMaterialEditorPatcherPath = "Tools/AO Material Editor/Enable Material Editor Patcher";
+    private const string EnableMaterialEditorPatcherPath = ToolsPath + "/Enable Material Editor Patcher";
 
     [MenuItem(EnableMaterialEditorPatcherPath, true)]
     private static bool ValidateEnableMaterialEditorPatcher()
@@ -63,4 +64,21 @@ internal static class MenuItems
         MaterialEditorSettings.EnableMaterialEditorPatcher = !MaterialEditorSettings.EnableMaterialEditorPatcher;
         InternalEditorUtility.RepaintAllViews();
     }
+
+    private const string ShowInspectorDescriptionPath = ToolsPath + "/Show Inspector Description";
+
+    [MenuItem(ShowInspectorDescriptionPath, true)]
+    private static bool ValidateShowInspectorDescription()
+    {
+        Menu.SetChecked(ShowInspectorDescriptionPath, MaterialEditorSettings.ShowInspectorDescription);
+        return true;
+    }
+
+    [MenuItem(ShowInspectorDescriptionPath, false)]
+    private static void ToggleShowInspectorDescription()
+    {
+        MaterialEditorSettings.ShowInspectorDescription = !MaterialEditorSettings.ShowInspectorDescription;
+        InternalEditorUtility.RepaintAllViews();
+    }
+
 }

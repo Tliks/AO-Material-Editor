@@ -1,6 +1,6 @@
 namespace Aoyon.MaterialEditor;
 
-[Serializable]
+[Serializable, Obsolete]
 internal class MaterialEntrySettings : IEquatable<MaterialEntrySettings>
 {
     public enum ApplyMode

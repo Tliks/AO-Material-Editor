@@ -5,164 +5,219 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Language: en-US\n"
 
-msgid "HelpBox:NoAvatarRoot"
-msgstr "This component is currently disabled.\nIt is only active when placed under the avatar hierarchy."
-
-msgid "HelpBox:NotEffective"
-msgstr "This component is currently disabled.\nIt is not applied when the component's checkbox is off or when it is set to EditorOnly."
-
-msgid "Label:TargetSettings"
-msgstr "Target Materials"
-
-msgid "Label:EditorGUI"
-msgstr "Editor"
-
-msgid "HelpBox:NoMaterialSelected"
-msgstr "No material is selected."
-
-msgid "Label:CurrentOverridesCount"
-msgstr "Edits: {0} entries"
-
-msgid "HelpBox:OverridesInfo"
-msgstr "Saved edits are shown here.\nChanges made in the material editor above are reflected here automatically, so you usually do not need to edit this directly.\nThese edits are applied to the material during preview and build."
-
-msgid "Label:Select"
+# common
+msgid "common.select"
 msgstr "Select"
 
-msgid "Label:Material"
-msgstr "Material"
-
-msgid "Label:Texture"
-msgstr "Texture"
-
-msgid "Label:MaterialSlot"
-msgstr "Material Slot"
-
-msgid "Label:SelectWithName"
+msgid "common.selectWithName"
 msgstr "Select {0}"
 
-msgid "Label:AllMaterials"
-msgstr "All Materials"
-
-msgid "Label:ApplyMode"
-msgstr "Selection Method"
-
-msgid "Enum:ApplyMode:Basic"
-msgstr "Normal"
-
-msgid "Enum:ApplyMode:Advanced"
-msgstr "Advanced"
-
-msgid "Enum:ApplyMode:All"
-msgstr "All"
-
-msgid "HelpBox:AdvancedModeInfo"
-msgstr "These edits can be applied to multiple materials at once.\nThis is useful when you want to match their appearance and settings.\nIn addition to selecting by material, you can also specify targets by material slot."
-
-msgid "HelpBox:AllModeInfo"
-msgstr "These edits can be applied to all materials at once.\nThis is useful when you want to match their appearance and settings."
-
-msgid "Label:ExcludeTargets"
-msgstr "Excluded materials"
-
-msgid "Label:ExcludeObjectReferences"
-msgstr "Materials under GameObjects"
-
-msgid "List:Add"
+msgid "common.add"
 msgstr "Add"
 
-msgid "List:Delete"
+msgid "common.remove"
 msgstr "Remove"
 
-msgid "Enum:ScopeType:Asset"
-msgstr "Asset"
+msgid "common.material"
+msgstr "Material"
 
-msgid "Enum:ScopeType:Slot"
-msgstr "Slot"
+msgid "common.texture"
+msgstr "Texture"
 
-msgid "HelpBox:EditorInfo"
-msgstr "You can edit materials non-destructively here.\nYour edits are recorded automatically and saved to this component."
+msgid "common.materialSlot"
+msgstr "Material Slot"
 
-msgid "Label:OverrideUtility"
-msgstr "Useful Tools"
+msgid "common.allMaterials"
+msgstr "All Materials"
 
-msgid "Label:Edit"
+msgid "common.edit"
 msgstr "Edit"
 
-msgid "Label:Shader"
+msgid "common.shader"
 msgstr "Shader"
 
-msgid "Label:RenderQueue"
+msgid "common.renderQueue"
 msgstr "Render Queue"
 
-msgid "Label:PropertyOverrides"
+msgid "common.dragAndDropAdd"
+msgstr "Bulk Add by Drag and Drop"
+
+# target settings
+msgid "targetSettings.title"
+msgstr "Set Materials to Edit"
+
+msgid "targetSettings.mode.label"
+msgstr "Mode"
+
+msgid "targetSettings.mode.singleMaterial"
+msgstr "Edit One"
+
+msgid "targetSettings.mode.singleMaterial.help"
+msgstr "Edit a single material. If needed, you can exclude specific usage slots."
+
+msgid "targetSettings.mode.bulkMaterials"
+msgstr "Edit Multiple"
+
+msgid "targetSettings.mode.bulkMaterials.help"
+msgstr "Apply the same edits to multiple materials at once.\nThis is useful when you want to match their appearance and settings."
+
+msgid "targetSettings.mode.slotTargets"
+msgstr "Specify by Material Slot"
+
+msgid "targetSettings.mode.slotTargets.help"
+msgstr "Specify targets by material slot instead of by material.\nThis is useful when you want to edit by usage location or specify targets by path.\nYou can select multiple material slots at once, and the same edits will be applied to each of them. If a single slot can contain multiple materials, such as through animation, the same edits will be applied to all of them."
+
+msgid "targetSettings.mode.allMaterials"
+msgstr "Edit All"
+
+msgid "targetSettings.mode.allMaterials.help"
+msgstr "Apply the same edits to all materials at once.\nThis is useful when you want to match their appearance and settings."
+
+msgid "targetSettings.material.label"
+msgstr "Material"
+
+msgid "targetSettings.materials.label"
+msgstr "Materials"
+
+msgid "targetSettings.slotTargets.label"
+msgstr "Material Slots"
+
+msgid "targetSettings.exclusions.use"
+msgstr "Exclude"
+
+msgid "targetSettings.exclusions.useSlots"
+msgstr "Exclude Some Usage Slots"
+
+msgid "targetSettings.exclusions.useSlots.help"
+msgstr "If a target material is used in multiple slots, you can exclude some of them to apply edits only to specific ones."
+
+msgid "targetSettings.exclusions.materials"
+msgstr "Materials to Exclude"
+
+msgid "targetSettings.exclusions.slots"
+msgstr "Slots to Exclude"
+
+msgid "targetSettings.exclusions.objects"
+msgstr "GameObjects to Exclude"
+
+msgid "targetSettings.exclusions.selectUsageSlots"
+msgstr "Select Usage Slots to Exclude"
+
+msgid "targetSettings.slotTargets.add.title"
+msgstr "Bulk Add"
+
+msgid "targetSettings.slotTargets.add.byGameObject"
+msgstr "Material Slots Under GameObject"
+
+msgid "targetSettings.slotTargets.add.byMaterial"
+msgstr "Usage Slots for Material"
+
+msgid "targetSettings.slotTargets.add.help"
+msgstr "You can also bulk add by selecting multiple materials or meshes and dragging them here."
+
+# editor
+msgid "editor.title"
+msgstr "Edit Materials"
+
+msgid "editor.help"
+msgstr "Materials can be edited non-destructively here.\nYour edits are recorded automatically and saved to this component."
+
+msgid "editor.noAvatarRoot.help"
+msgstr "This component is currently disabled.\nIt is only active when placed under the avatar hierarchy."
+
+msgid "editor.notEffective.help"
+msgstr "This component is currently disabled.\nIt will not be applied when the component checkbox is off or when it is set to EditorOnly."
+
+msgid "editor.noMaterialSelected.help"
+msgstr "No material to edit was found. Configure it above."
+
+msgid "editor.recordingSourceMaterial"
+msgstr "Displayed Material"
+
+# override settings
+msgid "overrideSettings.count"
+msgstr "Saved Edits: {0} entries"
+
+msgid "overrideSettings.help"
+msgstr "Saved edits are shown here.\nChanges made in the material editor above are reflected automatically, so you usually do not need to edit this directly.\nThese edits are applied to the material during preview and build."
+
+msgid "overrideSettings.properties"
 msgstr "Properties"
 
-msgid "Label:MaterialProperty:TextureOffsetValue"
-msgstr "Offset"
-
-msgid "Label:MaterialProperty:TextureScaleValue"
-msgstr "Scale"
-
-msgid "Label:ResetAll"
+msgid "overrideSettings.reset"
 msgstr "Reset"
 
-msgid "Label:RecordingSourceMaterial"
-msgstr "Display Material"
+# override utility
+msgid "overrideUtility.title"
+msgstr "Utilities"
 
-msgid "Log:ShaderIsLocked"
-msgstr "[AO Material Editor] This component cannot change the shader because a component lower in the hierarchy has set it to {0}."
-
-msgid "Log:RenderQueueIsLocked"
-msgstr "[AO Material Editor] This component cannot change the render queue because a component lower in the hierarchy has set it to {0}."
-
-msgid "Log:PropertyIsLocked"
-msgstr "[AO Material Editor] This component cannot change property {0} because a component lower in the hierarchy has set it to {1}."
-
-msgid "Tooltip:ShaderIsLocked"
-msgstr "This component cannot change the shader because a component lower in the hierarchy has set the shader."
-
-msgid "Tooltip:RenderQueueIsLocked"
-msgstr "This component cannot change the render queue because a component lower in the hierarchy has set the render queue."
-
-msgid "Tooltip:PropertyIsLocked"
-msgstr "This component cannot change this property because a component lower in the hierarchy has set the property."
-
-msgid "Log:TargetShaderIsNull"
-msgstr "[AO Material Editor] Target shader is not specified."
-
-msgid "label.dragAndDrop"
-msgstr "Bulk add by drag and drop"
-
-msgid "label:ReplaceTexture"
+msgid "overrideUtility.replaceTexture.title"
 msgstr "Replace Texture"
 
-msgid "label:SourceTexture"
+msgid "overrideUtility.replaceTexture.source"
 msgstr "Texture to replace"
 
-msgid "label:DestinationTexture"
+msgid "overrideUtility.replaceTexture.destination"
 msgstr "New texture"
 
-msgid "label:GetMaterialDiff"
+msgid "overrideUtility.materialDiff.title"
 msgstr "Import Material Changes"
 
-msgid "label:OriginalMaterial"
+msgid "overrideUtility.materialDiff.original"
 msgstr "Original Material"
 
-msgid "label:OverrideMaterial"
+msgid "overrideUtility.materialDiff.modified"
 msgstr "Modified Material"
 
-msgid "label:GetMaterialVariantDiff"
+msgid "overrideUtility.variantDiff.title"
 msgstr "Import Material Variant Changes"
 
-msgid "label:MaterialVariant"
+msgid "overrideUtility.variantDiff.material"
 msgstr "Material Variant"
 
-msgid "HelpBox:SelectedMaterialIsNotVariant"
+msgid "overrideUtility.variantDiff.notVariant"
 msgstr "The selected material is not a material variant."
 
-msgid "label:AddDiff"
-msgstr "Add Changes"
+msgid "overrideUtility.addChanges"
+msgstr "Import Changes"
 
-msgid "label:AddDiffExcludeTexture"
-msgstr "Add Changes (Exclude Textures)"
+msgid "overrideUtility.addChangesExcludeTexture"
+msgstr "Import Changes (Exclude Textures)"
+
+# material property
+msgid "materialProperty.textureOffset"
+msgstr "Offset"
+
+msgid "materialProperty.textureScale"
+msgstr "Scale"
+
+# material slot
+msgid "materialSlot.noRenderer"
+msgstr "Select a mesh."
+
+# migration
+msgid "migration.required"
+msgstr "Migrate Data"
+
+# lock
+msgid "lock.shader.log"
+msgstr "[AO Material Editor] This component cannot change the shader because a component lower in the Hierarchy has set it to {0}."
+
+msgid "lock.shader.tooltip"
+msgstr "This component cannot change the shader because a component lower in the Hierarchy has set the shader."
+
+msgid "lock.renderQueue.log"
+msgstr "[AO Material Editor] This component cannot change the render queue because a component lower in the Hierarchy has set it to {0}."
+
+msgid "lock.renderQueue.tooltip"
+msgstr "This component cannot change the render queue because a component lower in the Hierarchy has set the render queue."
+
+msgid "lock.property.log"
+msgstr "[AO Material Editor] This component cannot change property {0} because a component lower in the Hierarchy has set it to {1}."
+
+msgid "lock.property.tooltip"
+msgstr "This component cannot change this property because a component lower in the Hierarchy has set the property."
+
+# error
+msgid "error.targetShaderMissing"
+msgstr "[AO Material Editor] Target shader is not specified."

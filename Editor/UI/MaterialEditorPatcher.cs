@@ -199,7 +199,7 @@ internal static class MaterialEditorPatcher
         if (lockedProperties.Contains(prop.name))
         {
             GUI.enabled = false;
-            tooltip = "Tooltip:PropertyIsLocked".LS();
+            tooltip = "lock.property.tooltip".LS();
         }
 
         _guiStateStack.Push(new PropertyGUIState(
@@ -280,7 +280,7 @@ internal static class MaterialEditorPatcher
 
         var rowRect = new Rect(position.xMin, position.yMin, position.width, position.height);
         var buttonRect = new Rect(
-            marginX,
+            marginX + 1,
             rowRect.y + (rowRect.height - BUTTON_SIZE) * 0.5f,
             BUTTON_SIZE,
             BUTTON_SIZE

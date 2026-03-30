@@ -5,164 +5,219 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Language: ja-JP\n"
 
-msgid "HelpBox:NoAvatarRoot"
-msgstr "このコンポーネントは現在無効化されています。\nアバター以下にある場合のみ有効です。"
-
-msgid "HelpBox:NotEffective"
-msgstr "このコンポーネントは現在無効化されています。\nコンポーネントのチェックボックスがオフ、または EditorOnly の場合は適用されません。"
-
-msgid "Label:TargetSettings"
-msgstr "適用するマテリアル"
-
-msgid "Label:EditorGUI"
-msgstr "編集画面"
-
-msgid "HelpBox:NoMaterialSelected"
-msgstr "マテリアルが選択されていません。"
-
-msgid "Label:CurrentOverridesCount"
-msgstr "編集内容: {0}箇所"
-
-msgid "HelpBox:OverridesInfo"
-msgstr "保存された編集内容がここに表示されます。\n上部のマテリアル編集で自動反映されるため、通常はここを直接編集する必要はありません。\nプレビュー時やビルド時に、この編集内容がマテリアルに適用されます。"
-
-msgid "Label:Select"
+# common
+msgid "common.select"
 msgstr "選択"
 
-msgid "Label:Material"
-msgstr "マテリアル"
-
-msgid "Label:Texture"
-msgstr "テクスチャ"
-
-msgid "Label:MaterialSlot"
-msgstr "マテリアルスロット"
-
-msgid "Label:SelectWithName"
+msgid "common.selectWithName"
 msgstr "{0}を選択"
 
-msgid "Label:AllMaterials"
-msgstr "全てのマテリアル"
-
-msgid "Label:ApplyMode"
-msgstr "選択方法"
-
-msgid "Enum:ApplyMode:Basic"
-msgstr "通常"
-
-msgid "Enum:ApplyMode:Advanced"
-msgstr "高度"
-
-msgid "Enum:ApplyMode:All"
-msgstr "全て"
-
-msgid "HelpBox:AdvancedModeInfo"
-msgstr "編集内容を複数のマテリアルへ一括適用できます。\n質感や設定を揃えたいときに便利です。\n通常のマテリアル単位に加え、マテリアルスロット単位でも指定できます。"
-
-msgid "HelpBox:AllModeInfo"
-msgstr "編集内容をすべてのマテリアルへ一括適用できます。\n質感や設定を揃えたいときに便利です。"
-
-msgid "Label:ExcludeTargets"
-msgstr "除外するマテリアル"
-
-msgid "Label:ExcludeObjectReferences"
-msgstr "GameObject以下のマテリアル"
-
-msgid "List:Add"
+msgid "common.add"
 msgstr "追加"
 
-msgid "List:Delete"
+msgid "common.remove"
 msgstr "削除"
 
-msgid "Enum:ScopeType:Asset"
-msgstr "アセット"
+msgid "common.material"
+msgstr "マテリアル"
 
-msgid "Enum:ScopeType:Slot"
-msgstr "スロット"
+msgid "common.texture"
+msgstr "テクスチャ"
 
-msgid "HelpBox:EditorInfo"
-msgstr "ここではマテリアルを非破壊的に編集できます。\n編集内容は自動記録され、このコンポーネントに保存されます。"
+msgid "common.materialSlot"
+msgstr "マテリアルスロット"
 
-msgid "Label:OverrideUtility"
-msgstr "便利な機能"
+msgid "common.allMaterials"
+msgstr "すべてのマテリアル"
 
-msgid "Label:Edit"
+msgid "common.edit"
 msgstr "編集する"
 
-msgid "Label:Shader"
+msgid "common.shader"
 msgstr "シェーダー"
 
-msgid "Label:RenderQueue"
+msgid "common.renderQueue"
 msgstr "レンダーキュー"
 
-msgid "Label:PropertyOverrides"
-msgstr "プロパティ"
-
-msgid "Label:MaterialProperty:TextureOffsetValue"
-msgstr "オフセット"
-
-msgid "Label:MaterialProperty:TextureScaleValue"
-msgstr "スケール"
-
-msgid "Label:ResetAll"
-msgstr "リセット"
-
-msgid "Label:RecordingSourceMaterial"
-msgstr "表示用のマテリアル"
-
-msgid "Log:ShaderIsLocked"
-msgstr "[AO Material Editor] Hierarchy上でより下にあるコンポーネントにより、シェーダーが{0}に設定されているため、このコンポーネントではシェーダーを変更できません。"
-
-msgid "Log:RenderQueueIsLocked"
-msgstr "[AO Material Editor] Hierarchy上でより下にあるコンポーネントにより、レンダーキューが{0}に設定されているため、このコンポーネントではレンダーキューを変更できません。"
-
-msgid "Log:PropertyIsLocked"
-msgstr "[AO Material Editor] Hierarchy上でより下にあるコンポーネントにより、プロパティ{0}が{1}に設定されているため、このコンポーネントではこのプロパティを変更できません。"
-
-msgid "Tooltip:ShaderIsLocked"
-msgstr "Hierarchy上でより下にあるコンポーネントにより、シェーダーが設定されているため、このコンポーネントではシェーダーを変更できません。"
-
-msgid "Tooltip:RenderQueueIsLocked"
-msgstr "Hierarchy上でより下にあるコンポーネントにより、レンダーキューが設定されているため、このコンポーネントではレンダーキューを変更できません。"
-
-msgid "Tooltip:PropertyIsLocked"
-msgstr "Hierarchy上でより下にあるコンポーネントにより、このプロパティは設定されているため、このコンポーネントでは変更できません。"
-
-msgid "Log:TargetShaderIsNull"
-msgstr "[AO Material Editor] 変更先のシェーダーが指定されていません。"
-
-msgid "label.dragAndDrop"
+msgid "common.dragAndDropAdd"
 msgstr "ドラッグ&ドロップで一括追加"
 
-msgid "label:ReplaceTexture"
+# target settings
+msgid "targetSettings.title"
+msgstr "編集するマテリアルを設定"
+
+msgid "targetSettings.mode.label"
+msgstr "モード"
+
+msgid "targetSettings.mode.singleMaterial"
+msgstr "1つを編集"
+
+msgid "targetSettings.mode.singleMaterial.help"
+msgstr "1つのマテリアルを編集します。必要なときだけ、一部の使用箇所を除外できます。"
+
+msgid "targetSettings.mode.bulkMaterials"
+msgstr "複数をまとめて編集"
+
+msgid "targetSettings.mode.bulkMaterials.help"
+msgstr "複数のマテリアルへ同じ編集内容を一括適用します。質感や設定を揃えたいときに便利です。"
+
+msgid "targetSettings.mode.slotTargets"
+msgstr "マテリアルスロットで指定"
+
+msgid "targetSettings.mode.slotTargets.help"
+msgstr "マテリアルではなく、マテリアルスロットごとに編集対象を指定します。\n使用箇所ごとに編集したい場合や、パスで指定したいときに便利です。\n複数のマテリアルスロットをまとめて指定でき、それぞれに同じ編集内容が適用されます。アニメーションなどで1つのスロットに複数のマテリアルが割り当てられる場合も、それらすべてに同じ編集内容が適用されます。"
+
+msgid "targetSettings.mode.allMaterials"
+msgstr "すべてをまとめて編集"
+
+msgid "targetSettings.mode.allMaterials.help"
+msgstr "すべてのマテリアルへ同じ編集内容を一括適用します。質感や設定を揃えたいときに便利です。"
+
+msgid "targetSettings.material.label"
+msgstr "マテリアル"
+
+msgid "targetSettings.materials.label"
+msgstr "マテリアル"
+
+msgid "targetSettings.slotTargets.label"
+msgstr "マテリアルスロット"
+
+msgid "targetSettings.exclusions.use"
+msgstr "除外する"
+
+msgid "targetSettings.exclusions.useSlots"
+msgstr "一部の使用箇所を除外"
+
+msgid "targetSettings.exclusions.useSlots.help"
+msgstr "対象のマテリアルが複数箇所で使われている場合は、除外することで一部だけに編集を適用できます。"
+
+msgid "targetSettings.exclusions.materials"
+msgstr "除外するマテリアル"
+
+msgid "targetSettings.exclusions.slots"
+msgstr "除外する場所"
+
+msgid "targetSettings.exclusions.objects"
+msgstr "除外する GameObject"
+
+msgid "targetSettings.exclusions.selectUsageSlots"
+msgstr "除外する使用箇所を選択"
+
+msgid "targetSettings.slotTargets.add.title"
+msgstr "一括追加"
+
+msgid "targetSettings.slotTargets.add.byGameObject"
+msgstr "GameObject 以下のマテリアルスロット"
+
+msgid "targetSettings.slotTargets.add.byMaterial"
+msgstr "マテリアルの使用箇所"
+
+msgid "targetSettings.slotTargets.add.help"
+msgstr "マテリアルやメッシュを複数選択し、ここにドラッグ&ドロップすることでも一括追加できます。"
+
+# editor
+msgid "editor.title"
+msgstr "マテリアルを編集"
+
+msgid "editor.help"
+msgstr "ここではマテリアルを非破壊的に編集できます。\n編集内容は自動記録され、このコンポーネントに保存されます。"
+
+msgid "editor.noAvatarRoot.help"
+msgstr "このコンポーネントは現在無効化されています。\nアバター以下にある場合のみ有効です。"
+
+msgid "editor.notEffective.help"
+msgstr "このコンポーネントは現在無効化されています。\nコンポーネントのチェックボックスがオフ、または EditorOnly の場合は適用されません。"
+
+msgid "editor.noMaterialSelected.help"
+msgstr "編集対象のマテリアルが見つかりません。上部から設定してください。"
+
+msgid "editor.recordingSourceMaterial"
+msgstr "表示用のマテリアル"
+
+# override settings
+msgid "overrideSettings.count"
+msgstr "保存された編集内容: {0}箇所"
+
+msgid "overrideSettings.help"
+msgstr "保存された編集内容がここに表示されます。\n上部のマテリアル編集で自動反映されるため、通常はここを直接編集する必要はありません。\nプレビュー時やビルド時に、この編集内容がマテリアルに適用されます。"
+
+msgid "overrideSettings.properties"
+msgstr "プロパティ"
+
+msgid "overrideSettings.reset"
+msgstr "リセット"
+
+# override utility
+msgid "overrideUtility.title"
+msgstr "補助ツール"
+
+msgid "overrideUtility.replaceTexture.title"
 msgstr "テクスチャを置き換える"
 
-msgid "label:SourceTexture"
+msgid "overrideUtility.replaceTexture.source"
 msgstr "置き換えるテクスチャ"
 
-msgid "label:DestinationTexture"
+msgid "overrideUtility.replaceTexture.destination"
 msgstr "新しく使うテクスチャ"
 
-msgid "label:GetMaterialDiff"
+msgid "overrideUtility.materialDiff.title"
 msgstr "マテリアルの変更点を取り込む"
 
-msgid "label:OriginalMaterial"
+msgid "overrideUtility.materialDiff.original"
 msgstr "元のマテリアル"
 
-msgid "label:OverrideMaterial"
+msgid "overrideUtility.materialDiff.modified"
 msgstr "変更後のマテリアル"
 
-msgid "label:GetMaterialVariantDiff"
+msgid "overrideUtility.variantDiff.title"
 msgstr "マテリアルバリアントの変更点を取り込む"
 
-msgid "label:MaterialVariant"
+msgid "overrideUtility.variantDiff.material"
 msgstr "マテリアルバリアント"
 
-msgid "HelpBox:SelectedMaterialIsNotVariant"
-msgstr "択したマテリアルはマテリアルバリアントではありません。"
+msgid "overrideUtility.variantDiff.notVariant"
+msgstr "選択したマテリアルはマテリアルバリアントではありません。"
 
-msgid "label:AddDiff"
-msgstr "変更点を追加"
+msgid "overrideUtility.addChanges"
+msgstr "変更点を取り込む"
 
-msgid "label:AddDiffExcludeTexture"
-msgstr "変更点を追加（テクスチャを除く）"
+msgid "overrideUtility.addChangesExcludeTexture"
+msgstr "変更点を取り込む（テクスチャを除く）"
+
+# material property
+msgid "materialProperty.textureOffset"
+msgstr "オフセット"
+
+msgid "materialProperty.textureScale"
+msgstr "スケール"
+
+# material slot
+msgid "materialSlot.noRenderer"
+msgstr "メッシュを選択してください"
+
+# migration
+msgid "migration.required"
+msgstr "データを移行する"
+
+# lock
+msgid "lock.shader.log"
+msgstr "[AO Material Editor] Hierarchy 上でより下にあるコンポーネントにより、シェーダーが{0}に設定されているため、このコンポーネントではシェーダーを変更できません。"
+
+msgid "lock.shader.tooltip"
+msgstr "Hierarchy 上でより下にあるコンポーネントにより、シェーダーが設定されているため、このコンポーネントではシェーダーを変更できません。"
+
+msgid "lock.renderQueue.log"
+msgstr "[AO Material Editor] Hierarchy 上でより下にあるコンポーネントにより、レンダーキューが{0}に設定されているため、このコンポーネントではレンダーキューを変更できません。"
+
+msgid "lock.renderQueue.tooltip"
+msgstr "Hierarchy 上でより下にあるコンポーネントにより、レンダーキューが設定されているため、このコンポーネントではレンダーキューを変更できません。"
+
+msgid "lock.property.log"
+msgstr "[AO Material Editor] Hierarchy 上でより下にあるコンポーネントにより、プロパティ{0}が{1}に設定されているため、このコンポーネントではこのプロパティを変更できません。"
+
+msgid "lock.property.tooltip"
+msgstr "Hierarchy 上でより下にあるコンポーネントにより、このプロパティは設定されているため、このコンポーネントでは変更できません。"
+
+# error
+msgid "error.targetShaderMissing"
+msgstr "[AO Material Editor] 変更先のシェーダーが指定されていません。"

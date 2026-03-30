@@ -29,7 +29,7 @@ internal class MaterialPropertyDrawer : PropertyDrawer
                 var textureScaleValue = property.FindPropertyRelative(nameof(MaterialProperty.TextureScaleValue));
                 EditorGUI.PropertyField(valueRect, textureValue, GUIContent.none);
                 position.NewLine();
-                var offsetScaleLabel = new GUIContent($"{"Label:MaterialProperty:TextureOffsetValue".LS()}・{"Label:MaterialProperty:TextureScaleValue".LS()}");
+                var offsetScaleLabel = new GUIContent($"{"materialProperty.textureOffset".LS()}・{"materialProperty.textureScale".LS()}");
                 var offsetScaleLabelWidth = GUI.skin.label.CalcSize(offsetScaleLabel).x;
                 GUIHelper.SplitRectHorizontallyForLeft(position, offsetScaleLabelWidth, out var labelRect, out var fieldRect);
                 EditorGUI.LabelField(labelRect, offsetScaleLabel);
