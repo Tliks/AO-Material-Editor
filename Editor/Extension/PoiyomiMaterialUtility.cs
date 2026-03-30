@@ -14,6 +14,17 @@ internal static class PoiyomiMaterialUtility
     private const string AnimatedTagSuffix = "Animated";
     private const string StrippedTextureTagPrefix = "_stripped_tex_";
 
+    public static bool IsPoiyomiMaterial(Material material)
+    {
+        var shaderName = material.shader.name;
+        var originalShaderName = material.GetTag(OriginalShaderTag, false, "");
+        return shaderName.Contains("poiyomi", StringComparison.OrdinalIgnoreCase)
+               || shaderName.Contains("PCSS4Poi", StringComparison.Ordinal)
+               || originalShaderName.Contains("poiyomi", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // https://github.com/poiyomi/PoiyomiToonShader/blame/c5aaeeb3a67782b7e8a26e184d5e0a1970792294/_PoiyomiShaders/Scripts/ThryEditor/Editor/ShaderOptimizer.cs#L2306
+
     private static readonly Type? ShaderOptimizerType =
         Type.GetType("Thry.ThryEditor.ShaderOptimizer, ThryAssemblyDefinition", false);
 
@@ -29,18 +40,6 @@ internal static class PoiyomiMaterialUtility
     private static readonly FieldInfo? IllegalPropertyRenamesField =
         ShaderOptimizerType?.GetField("IllegalPropertyRenames", StaticBindingFlags);
 
-    public static bool IsPoiyomiMaterial(Material? material)
-    {
-        if (material?.shader == null) return false;
-
-        var shaderName = material.shader.name;
-        var originalShaderName = material.GetTag(OriginalShaderTag, false, "");
-        return shaderName.Contains("poiyomi", StringComparison.OrdinalIgnoreCase)
-               || shaderName.Contains("PCSS4Poi", StringComparison.Ordinal)
-               || originalShaderName.Contains("poiyomi", StringComparison.OrdinalIgnoreCase);
-    }
-
-    // https://github.com/poiyomi/PoiyomiToonShader/blame/c5aaeeb3a67782b7e8a26e184d5e0a1970792294/_PoiyomiShaders/Scripts/ThryEditor/Editor/ShaderOptimizer.cs#L2306
     public static bool Unlock(Material material, Material? sourceMaterial = null)
     {
         if (sourceMaterial != null)
