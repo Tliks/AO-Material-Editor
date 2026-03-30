@@ -16,75 +16,95 @@ internal static partial class MaterialEditorProcessor
         observeContext ??= new NonObserveContext();
 
         // read only
-        var entrySettings = observeContext.Observe(component, c => c.EntrySettings.Clone(), (a, b) => a.Equals(b));
+        var targetSettings = observeContext.Observe(component, c => c.TargetSettings.Clone(), (a, b) => a.Equals(b));
 
-        var targetMaterials = new HashSet<MaterialAssignment>();
-        ResolveEntrySettings();
-        return targetMaterials;
+        var targets = new HashSet<MaterialAssignment>();
+        ResolveTargetSettings();
+        return targets;
 
-        void ResolveEntrySettings()
+        void ResolveTargetSettings()
         {
-            switch (entrySettings.Mode)
+            switch (targetSettings.Mode)
             {
-                case MaterialEntrySettings.ApplyMode.Basic:
+                case MaterialTargetSettings.SelectionMode.SingleMaterial:
                 {
-                    var targetMaterial = entrySettings.BasicMaterial;
+                    var targetMaterial = targetSettings.SingleMaterial.TargetMaterial;
                     if (targetMaterial == null) break;
 
                     foreach (var materialSlot in allAssignments)
-                        if (materialCompare(materialSlot.Material, targetMaterial) is true)
-                            targetMaterials.Add(materialSlot);
-                    break;
-                }
-                case MaterialEntrySettings.ApplyMode.Advanced:
-                {
-                    foreach (var scope in entrySettings.AdvancedTargets)
-                        foreach (var materialSlot in ResolveScope(scope))
-                            targetMaterials.Add(materialSlot);
-                    break;
-                }
-                case MaterialEntrySettings.ApplyMode.All:
-                {
-                    foreach (var materialSlot in ResolveAllMaterialTargetScope(entrySettings.AllMaterialTargetScope))
-                        targetMaterials.Add(materialSlot);
-                    break;
-                }
-            }
-        }
+                    {
+                        if (materialCompare(materialSlot.Material, targetMaterial))
+                        {
+                            targets.Add(materialSlot);
+                        }
+                    }
 
-        IEnumerable<MaterialAssignment> ResolveScope(MaterialTargetScope scope)
-        {
-            switch (scope.Type)
-            {
-                case MaterialTargetScope.ScopeType.Asset:
-                    var targetMaterial = scope.Material;
-                    if (targetMaterial == null) yield break;
+                    if (targetSettings.SingleMaterial.UseSlotExclusions)
+                    {
+                        ExcludeSlots(targets, targetSettings.SingleMaterial.ExcludedSlots);
+                    }
+                    break;
+                }
 
+                case MaterialTargetSettings.SelectionMode.BulkMaterials:
+                {
+                    var targetMaterials = targetSettings.BulkMaterials.TargetMaterials;
+                    foreach (var targetMaterial in targetMaterials)
+                    {
+                        foreach (var materialSlot in allAssignments)
+                        {
+                            if (materialCompare(materialSlot.Material, targetMaterial))
+                            {
+                                targets.Add(materialSlot);
+                            }
+                        }
+                    }
+
+                    if (targetSettings.BulkMaterials.UseSlotExclusions)
+                    {
+                        ExcludeSlots(targets, targetSettings.BulkMaterials.ExcludedSlots);
+                    }
+                    break;
+                }
+
+                case MaterialTargetSettings.SelectionMode.SlotTargets:
+                {
+                    foreach (var reference in targetSettings.SlotTargets.TargetSlots)
+                    {
+                        foreach (var materialSlot in ResolveMaterialSlotReference(reference))
+                        {
+                            targets.Add(materialSlot);
+                        }
+                    }
+                    break;
+                }
+
+                case MaterialTargetSettings.SelectionMode.AllMaterials:
+                {
                     foreach (var materialSlot in allAssignments)
-                        if (materialCompare(materialSlot.Material, targetMaterial) is true)
-                            yield return materialSlot;
+                    {
+                        targets.Add(materialSlot);
+                    }
+
+                    if (!targetSettings.AllMaterials.UseExclusions) break;
+
+                    foreach (var targetMaterial in targetSettings.AllMaterials.ExcludedMaterials)
+                    {
+                        targets.RemoveWhere(assignment => materialCompare(assignment.Material, targetMaterial));
+                    }
+
+                    ExcludeSlots(targets, targetSettings.AllMaterials.ExcludedSlots);
+
+                    foreach (var excludeObjectReference in targetSettings.AllMaterials.ExcludedObjects)
+                    {
+                        foreach (var materialSlot in ResolveObjectReference(excludeObjectReference))
+                        {
+                            targets.Remove(materialSlot);
+                        }
+                    }
                     break;
-                case MaterialTargetScope.ScopeType.Slot:
-                    foreach (var materialSlot in ResolveMaterialSlotReference(scope.MaterialSlotReference))
-                        yield return materialSlot;
-                    break;
+                }
             }
-        }
-
-        HashSet<MaterialAssignment> ResolveAllMaterialTargetScope(AllMaterialTargetScope scope)
-        {
-            var result = new HashSet<MaterialAssignment>();
-
-            result.UnionWith(allAssignments);
-
-            foreach (var excludeTargetScope in scope.ExcludeTargets)
-                foreach (var materialSlot in ResolveScope(excludeTargetScope))
-                    result.Remove(materialSlot);
-            foreach (var excludeObjectReference in scope.ExcludeObjectReferences)
-                foreach (var materialSlot in ResolveObjectReference(excludeObjectReference))
-                    result.Remove(materialSlot);
-                    
-            return result;
         }
 
         IEnumerable<MaterialAssignment> ResolveObjectReference(AvatarObjectReference objectReference)
@@ -95,7 +115,7 @@ internal static partial class MaterialEditorProcessor
             using var _1 = ListPool<Renderer>.Get(out var childRenderers);
             observeContext.GetComponentsInChildren<Renderer>(targetObject, true, childRenderers);
             foreach (var materialSlot in allAssignments)
-                if (childRenderers.Any(r => rendererCompare(materialSlot.SlotId.Renderer, r)) is true)
+                if (childRenderers.Any(r => rendererCompare(materialSlot.SlotId.Renderer, r)))
                     yield return materialSlot;
         }
 
@@ -130,6 +150,17 @@ internal static partial class MaterialEditorProcessor
             if (renderers.Count == 0) return null;
 
             return renderers[0];
+        }
+
+        void ExcludeSlots(HashSet<MaterialAssignment> result, IEnumerable<MaterialSlotReference> excludedSlots)
+        {
+            foreach (var excludedSlot in excludedSlots)
+            {
+                foreach (var materialSlot in ResolveMaterialSlotReference(excludedSlot))
+                {
+                    result.Remove(materialSlot);
+                }
+            }
         }
     }
 }

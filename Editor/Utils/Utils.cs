@@ -32,6 +32,21 @@ internal static class Utils
             .Distinct();
     }
 
+    public static Material[] GetAllTargetMaterialsInAvatar(GameObject marker)
+    {
+        var root = FindAvatarInParents(marker);
+        if (root == null) return Array.Empty<Material>();
+
+        return GetAllTargetMaterials(root).ToArray();
+    }
+
+    public static Material[] GetAllTargetMaterialsInAvatar(SerializedProperty property)
+    {
+        if (!property.TryGetGameObject(out var gameObject)) return Array.Empty<Material>();
+
+        return GetAllTargetMaterialsInAvatar(gameObject);
+    }
+
     public static bool SequenceEqualReference<T>(T?[] a, T?[] b) where T : class
     {
         if (ReferenceEquals(a, b)) return true;

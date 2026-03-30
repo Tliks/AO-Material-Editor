@@ -198,7 +198,7 @@ internal static class MaterialUtility
             var targetShader = overrideSettings.TargetShader;
             if (targetShader == null)
             {
-                LocalizedLog.Error("Log:TargetShaderIsNull");
+                LocalizedLog.Error("error.targetShaderMissing");
             }
             else
             {

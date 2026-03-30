@@ -2,7 +2,7 @@ using nadena.dev.modular_avatar.core;
 
 namespace Aoyon.MaterialEditor;
 
-[Serializable]
+[Serializable, Obsolete]
 internal class AllMaterialTargetScope : IEquatable<AllMaterialTargetScope>
 {
     public List<MaterialTargetScope> ExcludeTargets = new();

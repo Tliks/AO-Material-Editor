@@ -12,7 +12,7 @@ internal class TextureSelector : AssetSelector<Texture>
 
 internal class AssetSelector<T> : AdvancedSelector<T> where T : Object
 {
-    public static new void Draw(Func<T?[]> getAssets, Action<T?, int> onSelected, 
+    public static new void Draw(Func<T?[]> getAssets, Action<T?, int>? onSelected, 
         Func<T?[], string[]>? getItemLabels = null, 
         Func<T?[], Texture2D?[]>? getItemIcons = null,
         GUIContent? label = null,
@@ -25,7 +25,7 @@ internal class AssetSelector<T> : AdvancedSelector<T> where T : Object
         );
     }
 
-    public static new void Draw(Rect position, Func<T?[]> getAssets, Action<T?, int> onSelected, 
+    public static new void Draw(Rect position, Func<T?[]> getAssets, Action<T?, int>? onSelected, 
         Func<T?[], string[]>? getItemLabels = null,
         Func<T?[], Texture2D?[]>? getItemIcons = null,
         GUIContent? label = null,
@@ -83,35 +83,27 @@ internal class AssetSelector<T> : AdvancedSelector<T> where T : Object
 internal class AdvancedSelector<T>
 {    
     public static void Draw(Func<T?[]> getAssets, 
-        Action<T?, int> onSelected, 
+        Action<T?, int>? onSelected, 
         Func<T?[], string[]> getItemLabels, 
-        Func<T?[], Texture2D?[]> getItemIcons,
+        Func<T?[], Texture2D?[]>? getItemIcons = null,
         GUIContent? label = null,
         GUIStyle? style = null,
         Func<string>? getSelectLabel = null)
     {
         label ??= DefaultContent;
         style ??= DefaultStyle;
-        var rect = GUILayoutUtility.GetRect(label, style, GUILayout.Width(GetSize(label).x));
+        var rect = GUILayoutUtility.GetRect(label, style, GUILayout.Width(GetSize(label, style).x));
         if (GUI.Button(rect, label, style))
         {
             var assets = getAssets();
-            var dropdown = new CustomAdvancedDropdown<T>(
-                assets,
-                getItemLabels(assets),
-                getItemIcons(assets),
-                getSelectLabel != null ? getSelectLabel() : GetDefaultSelectLabel(),
-                onSelected,
-                new()
-            );
-            dropdown.Show(rect);
+            Open(rect, assets, onSelected, getItemLabels, getItemIcons, getSelectLabel);
         }
     }
 
     public static void Draw(Rect position, Func<T?[]> getAssets, 
-        Action<T?, int> onSelected, 
+        Action<T?, int>? onSelected, 
         Func<T?[], string[]> getItemLabels,
-        Func<T?[], Texture2D?[]> getItemIcons,
+        Func<T?[], Texture2D?[]>? getItemIcons = null,
         GUIContent? label = null,
         GUIStyle? style = null,
         Func<string>? getSelectLabel = null)
@@ -121,27 +113,58 @@ internal class AdvancedSelector<T>
         if (GUI.Button(position, label, style))
         {
             var assets = getAssets();
-            var dropdown = new CustomAdvancedDropdown<T>(
-                assets,
-                getItemLabels(assets),
-                getItemIcons(assets),
-                getSelectLabel != null ? getSelectLabel() : GetDefaultSelectLabel(),
-                onSelected,
-                new()
-            );
-            dropdown.Show(position);
+            Open(position, assets, onSelected, getItemLabels, getItemIcons, getSelectLabel);
         }
     }
 
-    private static GUIContent DefaultContent => "Label:Select".LG();
+    public static void Open(Rect position,
+        Func<T?[]> getAssets,
+        Action<T?, int>? onSelected,
+        Func<T?[], string[]> getItemLabels,
+        Func<T?[], Texture2D?[]>? getItemIcons = null,
+        Func<string>? getSelectLabel = null)
+    {
+        var assets = getAssets();
+        Open(position, assets, onSelected, getItemLabels, getItemIcons, getSelectLabel);
+    }
+
+    private static void Open(Rect position,
+        T?[] assets,
+        Action<T?, int>? onSelected,
+        Func<T?[], string[]> getItemLabels,
+        Func<T?[], Texture2D?[]>? getItemIcons = null,
+        Func<string>? getSelectLabel = null)
+    {
+        var dropdown = new CustomAdvancedDropdown<T>(
+            assets,
+            getItemLabels(assets),
+            getItemIcons != null ? getItemIcons(assets) : new Texture2D?[assets.Length],
+            getSelectLabel != null ? getSelectLabel() : GetDefaultSelectLabel(),
+            onSelected,
+            new()
+        );
+        dropdown.Show(position);
+    }
+
+    private static GUIContent DefaultContent => "common.select".LG();
     private static GUIStyle DefaultStyle => StyleHelper.CenteredPopupStyle;
 
     private static string GetDefaultSelectLabel()
     {
-        var assetName = Localization.TryGetLocalizedString("Label:" + typeof(T).Name, out var label)
+        var assetLabelKey = GetAssetLabelKey();
+        var assetName = assetLabelKey != null && Localization.TryGetLocalizedString(assetLabelKey, out var label)
             ? label
             : typeof(T).Name;
-        return string.Format("Label:SelectWithName".LS(), assetName);
+        return string.Format("common.selectWithName".LS(), assetName);
+    }
+
+    private static string? GetAssetLabelKey()
+    {
+        var type = typeof(T);
+        if (type == typeof(Material)) return "common.material";
+        if (type == typeof(Texture)) return "common.texture";
+        if (type == typeof(MaterialSlotReference)) return "common.materialSlot";
+        return null;
     }
 
     public static Vector2 GetSize(GUIContent? label = null, GUIStyle? style = null)
@@ -160,7 +183,7 @@ internal class CustomAdvancedDropdown<T> : AdvancedDropdown
     private readonly T?[] _assets;
     private readonly string[] _labels;
     private readonly Texture2D?[] _icons;
-    private readonly Action<T?, int> _onSelected;
+    private readonly Action<T?, int>? _onSelected;
     private readonly string _selectLabel;
 
     const float minWidth = 260f;
@@ -171,7 +194,7 @@ internal class CustomAdvancedDropdown<T> : AdvancedDropdown
         string[] labels,
         Texture2D?[] icons,
         string selectLabel,
-        Action<T?, int> onSelected,
+        Action<T?, int>? onSelected,
         AdvancedDropdownState state
     ) : base(state)
     {

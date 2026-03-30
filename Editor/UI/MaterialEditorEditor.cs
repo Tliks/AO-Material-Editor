@@ -10,7 +10,7 @@ internal class MaterialEditorEditor : Editor
     private MaterialEditorComponent _target = null!;
     private GameObject? _avatarRoot;
 
-    private SerializedProperty _entrySettings = null!;
+    private SerializedProperty _targetSettings = null!;
     private SerializedProperty _overrideSettings = null!;
 
     private IMaterialTargeting _materialTargeting = null!;
@@ -21,7 +21,7 @@ internal class MaterialEditorEditor : Editor
     private Material? _recordingSourceMaterial;
     private Material _recordingMaterial = null!;
     private UnityEditor.MaterialEditor _materialEditor = null!;
-    private MaterialEntrySettings? _cachedEntrySettings;
+    private MaterialTargetSettings? _cachedTargetSettings;
 
     private MaterialOverrideSettings _beforeOverrides = MaterialOverrideSettings.Empty;
     private MaterialOverrideSettings _afterOverrides = MaterialOverrideSettings.Empty;
@@ -33,14 +33,14 @@ internal class MaterialEditorEditor : Editor
         _target = (MaterialEditorComponent)target;
         _avatarRoot = Utils.FindAvatarInParents(_target.gameObject);
 
-        _entrySettings = serializedObject.FindProperty(nameof(MaterialEditorComponent.EntrySettings));
+        _targetSettings = serializedObject.FindProperty(nameof(MaterialEditorComponent.TargetSettings));
         _overrideSettings = serializedObject.FindProperty(nameof(MaterialEditorComponent.OverrideSettings));
 
         _materialTargeting = new DefaultMaterialTargeting();
         var renderers = _avatarRoot != null ? MaterialEditorProcessor.GetTargetRenderers(_avatarRoot) : new List<Renderer>();
         _allAssignments = _materialTargeting.GetAssignments(renderers).ToHashSet();
         _targetMaterials = UpdateTargetMaterials();
-        _cachedEntrySettings = _target.EntrySettings.Clone();
+        _cachedTargetSettings = _target.TargetSettings.Clone();
 
         _recordingSourceMaterial = AutoSelectRecordingSourceMaterial();
         if (_recordingSourceMaterial != null) { 
@@ -88,9 +88,9 @@ internal class MaterialEditorEditor : Editor
         DrawInformationGUI();
         EditorGUILayout.Space();
         DrawEntrySettings();
+        EditorGUILayout.Space();
         EditorGUILayout.Space(); 
         DrawEditor();
-        DrawOverrides();
 
         serializedObject.ApplyModifiedProperties();
     }
@@ -99,47 +99,54 @@ internal class MaterialEditorEditor : Editor
     {
         if (_avatarRoot == null)
         {
-            EditorGUILayout.HelpBox("HelpBox:NoAvatarRoot".LS(), MessageType.Warning);
+            EditorGUILayout.Space();
+            EditorGUILayout.HelpBox("editor.noAvatarRoot.help".LS(), MessageType.Warning);
         }
 
         var effective = MaterialEditorProcessor.IsEffective(_target);
         if (!effective)
         {
-            EditorGUILayout.HelpBox("HelpBox:NotEffective".LS(), MessageType.Warning);
+            EditorGUILayout.Space();
+            EditorGUILayout.HelpBox("editor.notEffective.help".LS(), MessageType.Warning);
         }
     }
 
     private void DrawEntrySettings()
     {
-        EditorGUILayout.PropertyField(_entrySettings, "Label:TargetSettings".LG());
+        var label = $"# {"targetSettings.title".LS()}";
+        EditorGUILayout.PropertyField(_targetSettings, new GUIContent(label));
     }
 
     private void DrawEditor()
     {
-        EditorGUILayout.LabelField("# " + "Label:EditorGUI".LS(), EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("# " + "editor.title".LS(), EditorStyles.boldLabel);
+
         if (_recordingSourceMaterial != null && _materialEditor != null)
         {
             _materialEditor.DrawHeader();
             if (_materialEditor.isVisible) {
-                EditorGUILayout.HelpBox("HelpBox:EditorInfo".LS(), MessageType.Info);
-                DrawOverrideUtility();
+                if (MaterialEditorSettings.ShowInspectorDescription)
+                {
+                    EditorGUILayout.HelpBox("editor.help".LS(), MessageType.Info);
+                }
                 DrawRecordingSourceMaterial();
+                using (new EditorGUI.IndentLevelScope()) {
+                    DrawOverrideUtility();
+                }
+                GUIHelper.DrawFullWidthHorizontalLine(new Color(0.35f, 0.35f, 0.35f));
                 EditorGUILayout.Space();
-                var lineRect = EditorGUILayout.GetControlRect(false, 1f) with { x = 0, width = EditorGUIUtility.currentViewWidth };
-                GUIHelper.DrawHorizontalLine(lineRect, new Color(0.35f, 0.35f, 0.35f));
                 _materialEditor.OnInspectorGUI();
             }
         }
         else 
         {
-            EditorGUILayout.HelpBox("HelpBox:NoMaterialSelected".LS(), MessageType.Warning, true);
+            EditorGUILayout.HelpBox("editor.noMaterialSelected.help".LS(), MessageType.Warning, true);
         }
-    }
 
-    private void DrawOverrides()
-    {
+        // Draw Overrides
         var count = _target.OverrideSettings.OverrideCount;
-        LocalizedUI.PropertyField(_overrideSettings, string.Format("Label:CurrentOverridesCount".LS(), count));
+        EditorGUILayout.PropertyField(_overrideSettings, new GUIContent(string.Format("overrideSettings.count".LS(), count)));
+
     }
     
     private HashSet<Material> UpdateTargetMaterials()
@@ -156,7 +163,7 @@ internal class MaterialEditorEditor : Editor
 
         using var _ = new EditorGUILayout.HorizontalScope();
         using (new EditorGUI.DisabledGroupScope(true)) {
-            EditorGUILayout.ObjectField("Label:RecordingSourceMaterial".LS(), _recordingSourceMaterial, typeof(Material), false);
+            EditorGUILayout.ObjectField("editor.recordingSourceMaterial".LS(), _recordingSourceMaterial, typeof(Material), false);
         }
         MaterialSelector.Draw(() => _targetMaterials.ToArray(), (m, i) => { _recordingSourceMaterial = m; OnRecordingSourceMaterialChanged(); });
     }
@@ -196,9 +203,9 @@ internal class MaterialEditorEditor : Editor
                 if (data.instanceId == componentId)
                 {
                     // AdvancedDropdown などは changed を立てないため、ここで検知する。
-                    if (!_target.EntrySettings.Equals(_cachedEntrySettings))
+                    if (!_target.TargetSettings.Equals(_cachedTargetSettings))
                     {
-                        _cachedEntrySettings = _target.EntrySettings.Clone();
+                        _cachedTargetSettings = _target.TargetSettings.Clone();
                         OnEntrySettingsChanged();
                     }
                     else // その他(overrides)の変更
@@ -374,7 +381,7 @@ internal class MaterialEditorEditor : Editor
             if (conflicts.ShaderLocked)
             {
                 MaterialUtility.CopyAllSettings(authoritative, _recordingMaterial);
-                LocalizedLog.Warning("Log:ShaderIsLocked", authoritative.shader.name);
+                LocalizedLog.Warning("lock.shader.log", authoritative.shader.name);
                 sanitized = true;
             }
             else
@@ -382,7 +389,7 @@ internal class MaterialEditorEditor : Editor
                 if (conflicts.RenderQueueLocked)
                 {
                     MaterialUtility.ApplyCustomRenderQueue(_recordingMaterial, MaterialUtility.GetCustomRenderQueue(authoritative));
-                    LocalizedLog.Warning("Log:RenderQueueIsLocked", MaterialUtility.GetCustomRenderQueue(authoritative));
+                    LocalizedLog.Warning("lock.renderQueue.log", MaterialUtility.GetCustomRenderQueue(authoritative));
                     sanitized = true;
                 }
 
@@ -396,7 +403,7 @@ internal class MaterialEditorEditor : Editor
                         if (!authoritativeProperties.TryGetValue(propertyName, out var authoritativeProperty)) continue;
 
                         authoritativeProperty.TrySet(_recordingMaterial);
-                        LocalizedLog.Warning("Log:PropertyIsLocked", propertyName, authoritativeProperty.PropertyValue);
+                        LocalizedLog.Warning("lock.property.log", propertyName, authoritativeProperty.PropertyValue);
                         sanitized = true;
                     }
                 }
@@ -520,81 +527,70 @@ internal class MaterialEditorEditor : Editor
     private Material? _variantMaterial = null;
     private void DrawOverrideUtility()
     {
-        _showOverrideUtility = EditorGUILayout.Foldout(_showOverrideUtility, "Label:OverrideUtility".LS(), true);
+        _showOverrideUtility = EditorGUILayout.Foldout(_showOverrideUtility, "overrideUtility.title".LS(), true);
         if (!_showOverrideUtility) return;
 
         using var indent = new EditorGUI.IndentLevelScope();
 
         // Replace Texture Foldout
-        _showReplaceTexture = EditorGUILayout.Foldout(_showReplaceTexture, "label:ReplaceTexture".LS(), true);
+        _showReplaceTexture = EditorGUILayout.Foldout(_showReplaceTexture, "overrideUtility.replaceTexture.title".LS(), true);
         if (_showReplaceTexture)
         {
-            using (new EditorGUI.IndentLevelScope())
+            using (new EditorGUILayout.HorizontalScope())
             {
-                using (new EditorGUILayout.HorizontalScope())
+                _sourceTexture = EditorGUILayout.ObjectField("overrideUtility.replaceTexture.source".LS(), _sourceTexture, typeof(Texture), false, GUILayout.Height(18f)) as Texture;
+                TextureSelector.Draw(() => MaterialUtility.EnumerateTextures(_recordingMaterial).Distinct().ToArray(), (t, _) => { _sourceTexture = t; });
+            }
+            _destinationTexture = EditorGUILayout.ObjectField("overrideUtility.replaceTexture.destination".LS(), _destinationTexture, typeof(Texture), false, GUILayout.Height(18f)) as Texture;
+            using (new EditorGUI.DisabledGroupScope(_sourceTexture == null || _destinationTexture == null))
+            {
+                if (GUILayout.Button("overrideUtility.replaceTexture.title".LS()))
                 {
-                    _sourceTexture = EditorGUILayout.ObjectField("label:SourceTexture".LS(), _sourceTexture, typeof(Texture), false, GUILayout.Height(18f)) as Texture;
-                    TextureSelector.Draw(() => MaterialUtility.EnumerateTextures(_recordingMaterial).Distinct().ToArray(), (t, i) => { _sourceTexture = t; });
-                }
-                _destinationTexture = EditorGUILayout.ObjectField("label:DestinationTexture".LS(), _destinationTexture, typeof(Texture), false, GUILayout.Height(18f)) as Texture;
-                using (new EditorGUI.DisabledGroupScope(_sourceTexture == null || _destinationTexture == null))
-                {
-                    if (GUILayout.Button("label:ReplaceTexture".LS()))
-                    {
-                        ProcessReplaceTexture();
-                    }
+                    ProcessReplaceTexture();
                 }
             }
-            EditorGUILayout.Space();
         }
 
         // Material Diff Foldout
-        _showMaterialDiff = EditorGUILayout.Foldout(_showMaterialDiff, "label:GetMaterialDiff".LS(), true);
+        _showMaterialDiff = EditorGUILayout.Foldout(_showMaterialDiff, "overrideUtility.materialDiff.title".LS(), true);
         if (_showMaterialDiff)
         {
-            using (new EditorGUI.IndentLevelScope())
+            _originalMaterial ??= _recordingSourceMaterial;
+            _originalMaterial = EditorGUILayout.ObjectField("overrideUtility.materialDiff.original".LS(), _originalMaterial, typeof(Material), false) as Material;
+            _overrideMaterial = EditorGUILayout.ObjectField("overrideUtility.materialDiff.modified".LS(), _overrideMaterial, typeof(Material), false) as Material;
+        
+            using (new EditorGUI.DisabledGroupScope(_originalMaterial == null || _overrideMaterial == null))
             {
-                _originalMaterial ??= _recordingSourceMaterial;
-                _originalMaterial = EditorGUILayout.ObjectField("label:OriginalMaterial".LS(), _originalMaterial, typeof(Material), false) as Material;
-                _overrideMaterial = EditorGUILayout.ObjectField("label:OverrideMaterial".LS(), _overrideMaterial, typeof(Material), false) as Material;
-            
-                using (new EditorGUI.DisabledGroupScope(_originalMaterial == null || _overrideMaterial == null))
+                if (GUILayout.Button("overrideUtility.addChanges".LS()))
                 {
-                    if (GUILayout.Button("label:AddDiff".LS()))
-                    {
-                        ProcessMaterialDiff(true);
-                    }
-                    if (GUILayout.Button("label:AddDiffExcludeTexture".LS()))
-                    {
-                        ProcessMaterialDiff(false);
-                    }
+                    ProcessMaterialDiff(true);
+                }
+                if (GUILayout.Button("overrideUtility.addChangesExcludeTexture".LS()))
+                {
+                    ProcessMaterialDiff(false);
                 }
             }
-            EditorGUILayout.Space();
         }
 
         // Material Variant Diff Foldout
-        _showMaterialVariantDiff = EditorGUILayout.Foldout(_showMaterialVariantDiff, "label:GetMaterialVariantDiff".LS(), true);
+        _showMaterialVariantDiff = EditorGUILayout.Foldout(_showMaterialVariantDiff, "overrideUtility.variantDiff.title".LS(), true);
         if (_showMaterialVariantDiff)
         {
-            using (new EditorGUI.IndentLevelScope())
+            _variantMaterial = EditorGUILayout.ObjectField("overrideUtility.variantDiff.material".LS(), _variantMaterial, typeof(Material), false) as Material;
+            if (_variantMaterial != null && !_variantMaterial.isVariant)
             {
-                _variantMaterial = EditorGUILayout.ObjectField("label:MaterialVariant".LS(), _variantMaterial, typeof(Material), false) as Material;
-                if (_variantMaterial != null && !_variantMaterial.isVariant)
+                EditorGUILayout.HelpBox("overrideUtility.variantDiff.notVariant".LS(), MessageType.Info);
+            }
+        
+            using (new EditorGUI.DisabledGroupScope(_variantMaterial == null || !_variantMaterial.isVariant))
+            {
+                if (GUILayout.Button("overrideUtility.addChanges".LS()))
                 {
-                    EditorGUILayout.HelpBox("HelpBox:SelectedMaterialIsNotVariant".LS(), MessageType.Info);
+                    ProcessMaterialVariantDiff(true);
                 }
-            
-                using (new EditorGUI.DisabledGroupScope(_variantMaterial == null || !_variantMaterial.isVariant))
+                if (GUILayout.Button("overrideUtility.addChangesExcludeTexture".LS()))
                 {
-                    if (GUILayout.Button("label:AddDiff".LS()))
-                    {
-                        ProcessMaterialVariantDiff(true);
-                    }
-                    if (GUILayout.Button("label:AddDiffExcludeTexture".LS()))
-                    {
-                        ProcessMaterialVariantDiff(false);
-                    }
+                    ProcessMaterialVariantDiff(false);
                 }
             }
         }
@@ -659,7 +655,7 @@ internal class MaterialEditorEditor : Editor
         {
             if (_afterOverrides.TargetShader != null)
             {
-                LocalizedLog.Warning("Log:ShaderIsLocked", _afterOverrides.TargetShader.name);
+                LocalizedLog.Warning("lock.shader.log", _afterOverrides.TargetShader.name);
             }
             return false;
         }
@@ -667,7 +663,7 @@ internal class MaterialEditorEditor : Editor
         if (conflicts.RenderQueueLocked)
         {
             extractedOverrides.OverrideRenderQueue = false;
-            LocalizedLog.Warning("Log:RenderQueueIsLocked", _afterOverrides.RenderQueueValue);
+            LocalizedLog.Warning("lock.renderQueue.log", _afterOverrides.RenderQueueValue);
         }
 
         if (conflicts.LockedPropertyNames.Count > 0)
@@ -677,7 +673,7 @@ internal class MaterialEditorEditor : Editor
                 {
                     if (!conflicts.LockedPropertyValues.TryGetValue(property.PropertyName, out var lockedValue)) return true;
 
-                    LocalizedLog.Warning("Log:PropertyIsLocked", property.PropertyName, lockedValue);
+                    LocalizedLog.Warning("lock.property.log", property.PropertyName, lockedValue);
                     return false;
                 })
                 .ToList();

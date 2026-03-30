@@ -137,4 +137,11 @@ internal static class SerializedPropertyExtensions
             }
         }
     }
+
+    public static bool TryGetGameObject(this SerializedProperty prop, [NotNullWhen(true)] out GameObject? gameObject)
+    {
+        var component = prop.serializedObject.targetObject as Component;
+        gameObject = component != null ? component.gameObject : prop.serializedObject.targetObject as GameObject;
+        return gameObject != null;
+    }
 }

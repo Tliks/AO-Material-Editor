@@ -14,18 +14,25 @@ internal static class LocalizedUI
     }
 
     /// <summary>
-    /// Returns option keys for enum: Enum:{enumType.Name}:{enumValueName}
+    /// Returns option keys for enum values: {prefix}.{enumValueName}
     /// </summary>
-    public static IEnumerable<string> GetEnumOptionKeys(Type enumType) =>
-        enumType.GetEnumNames().Select(k => $"Enum:{enumType.Name}:{k}");
-    
-    public static List<string> GetEnumOptionKeys(Type enumType, List<string> result)
+    public static IEnumerable<string> GetEnumOptionKeys(string prefix, Type enumType) =>
+        enumType.GetEnumNames().Select(k => $"{prefix}.{ToLowerCamelCase(k)}");
+
+    public static List<string> GetEnumOptionKeys(string prefix, Type enumType, List<string> result)
     {
         foreach (var k in enumType.GetEnumNames())
         {
-            result.Add($"Enum:{enumType.Name}:{k}");
+            result.Add($"{prefix}.{ToLowerCamelCase(k)}");
         }
         return result;
+    }
+
+    private static string ToLowerCamelCase(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        if (value.Length == 1) return value.ToLowerInvariant();
+        return char.ToLowerInvariant(value[0]) + value.Substring(1);
     }
 }
 
@@ -34,14 +41,16 @@ internal static class LocalizedPopup
     public static int Draw(int selectedIndex, string? labelKey, IEnumerable<string> optionKeys, GUIStyle? style = null, params GUILayoutOption[] layoutOptions)
     {
         var label = labelKey != null ? labelKey.LG() : GUIContent.none;
-        var contents = optionKeys.Select(k => k.LG()).ToArray();
+        var contents = optionKeys.Select(k => k.LG() ?? new GUIContent(k)).ToArray();
+        style ??= EditorStyles.popup;
         return EditorGUILayout.Popup(label, selectedIndex, contents, style, layoutOptions);
     }
 
     public static int Draw(Rect position, int selectedIndex, string? labelKey, IEnumerable<string> optionKeys, GUIStyle? style = null)
     {
         var label = labelKey != null ? labelKey.LG() : GUIContent.none;
-        var contents = optionKeys.Select(k => k.LG()).ToArray();
+        var contents = optionKeys.Select(k => k.LG() ?? new GUIContent(k)).ToArray();
+        style ??= EditorStyles.popup;
         return EditorGUI.Popup(position, label, selectedIndex, contents, style);
     }
 
