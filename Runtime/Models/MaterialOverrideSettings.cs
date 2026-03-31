@@ -105,6 +105,7 @@ internal class MaterialOverrideSettings : IEquatable<MaterialOverrideSettings>
         hash.Add(TargetShader);
         hash.Add(OverrideRenderQueue);
         hash.Add(RenderQueueValue);
+        hash.Add(PropertyOverrides.Count);
         foreach (var property in PropertyOverrides)
         {
             hash.Add(property);
