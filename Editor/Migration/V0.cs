@@ -95,7 +95,15 @@ internal class V0 : IMigrator
             migrated.SlotTargets.TargetSlots.Add(slot);
         }
 
-        foreach (var slot in ResolveAssetTargetsToSlots(component, assetTargets))
+        var targetMaterials = assetTargets
+            .Select(t => t.Material)
+            .OfType<Material>()
+            .ToHashSet();
+        if (targetMaterials.Count == 0) return;
+
+        migrated.BulkMaterials.TargetMaterials = targetMaterials.ToList();
+
+        foreach (var slot in ResolveAssetTargetsToSlots(component, targetMaterials))
         {
             migrated.SlotTargets.TargetSlots.Add(slot);
         }
@@ -103,14 +111,8 @@ internal class V0 : IMigrator
 
     private static IEnumerable<MaterialSlotReference> ResolveAssetTargetsToSlots(
         MaterialEditorComponent component,
-        IEnumerable<MaterialTargetScope> assetTargets)
+        HashSet<Material> targetMaterials)
     {
-        var targetMaterials = assetTargets
-            .Select(t => t.Material)
-            .OfType<Material>()
-            .ToHashSet();
-        if (targetMaterials.Count == 0) yield break;
-
         var root = Utils.FindAvatarInParents(component.gameObject);
         var scopeRoot = root != null ? root : component.transform.root.gameObject;
         var renderers = MaterialEditorProcessor.GetTargetRenderers(scopeRoot);
