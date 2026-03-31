@@ -1,7 +1,6 @@
 #pragma warning disable CS0612
 
 using Aoyon.MaterialEditor.Processor;
-using UnityEngine.Pool;
 using nadena.dev.modular_avatar.core;
 
 namespace Aoyon.MaterialEditor.Migration;
@@ -75,10 +74,13 @@ internal class V0 : IMigrator
         MaterialTargetSettings migrated)
     {
         var advancedTargets = legacy.AdvancedTargets;
-        if (advancedTargets.All(t => t.Type == MaterialTargetScope.ScopeType.Asset))
+        var assetTargets = advancedTargets
+            .Where(t => t.Type == MaterialTargetScope.ScopeType.Asset)
+            .ToList();
+        if (assetTargets.Count == advancedTargets.Count)
         {
             migrated.Mode = MaterialTargetSettings.SelectionMode.BulkMaterials;
-            foreach (var material in advancedTargets.Select(t => t.Material).OfType<Material>().Distinct())
+            foreach (var material in assetTargets.Select(t => t.Material).OfType<Material>().Distinct())
             {
                 migrated.BulkMaterials.TargetMaterials.Add(material);
             }
@@ -86,26 +88,41 @@ internal class V0 : IMigrator
         }
 
         migrated.Mode = MaterialTargetSettings.SelectionMode.SlotTargets;
-        foreach (var slot in ResolveAdvancedTargetsToSlots(component, legacy))
+        foreach (var slot in advancedTargets
+                     .Where(t => t.Type == MaterialTargetScope.ScopeType.Slot)
+                     .Select(t => t.MaterialSlotReference.Clone()))
+        {
+            migrated.SlotTargets.TargetSlots.Add(slot);
+        }
+
+        var targetMaterials = assetTargets
+            .Select(t => t.Material)
+            .OfType<Material>()
+            .ToHashSet();
+        if (targetMaterials.Count == 0) return;
+
+        migrated.BulkMaterials.TargetMaterials = targetMaterials.ToList();
+
+        foreach (var slot in ResolveAssetTargetsToSlots(component, targetMaterials))
         {
             migrated.SlotTargets.TargetSlots.Add(slot);
         }
     }
 
-    private static IEnumerable<MaterialSlotReference> ResolveAdvancedTargetsToSlots(
+    private static IEnumerable<MaterialSlotReference> ResolveAssetTargetsToSlots(
         MaterialEditorComponent component,
-        MaterialEntrySettings legacy)
+        HashSet<Material> targetMaterials)
     {
         var root = Utils.FindAvatarInParents(component.gameObject);
-        if (root == null) yield break;
-
-        var renderers = MaterialEditorProcessor.GetTargetRenderers(root);
+        var scopeRoot = root != null ? root : component.transform.root.gameObject;
+        var renderers = MaterialEditorProcessor.GetTargetRenderers(scopeRoot);
         var allAssignments = new DefaultMaterialTargeting().GetAssignments(renderers).ToHashSet();
-        var resolved = ResolveLegacyTargetAssignments(allAssignments, component, legacy);
         var unique = new HashSet<MaterialSlotReference>();
 
-        foreach (var assignment in resolved)
+        foreach (var assignment in allAssignments)
         {
+            if (!targetMaterials.Contains(assignment.Material)) continue;
+
             var slot = new MaterialSlotReference
             {
                 RendererReference = new AvatarObjectReference(assignment.SlotId.Renderer.gameObject),
@@ -115,139 +132,6 @@ internal class V0 : IMigrator
             {
                 yield return slot;
             }
-        }
-    }
-
-    private static HashSet<MaterialAssignment> ResolveLegacyTargetAssignments(
-        HashSet<MaterialAssignment> allAssignments,
-        MaterialEditorComponent component,
-        MaterialEntrySettings entrySettings)
-    {
-        var targetMaterials = new HashSet<MaterialAssignment>();
-
-        switch (entrySettings.Mode)
-        {
-            case MaterialEntrySettings.ApplyMode.Basic:
-            {
-                var targetMaterial = entrySettings.BasicMaterial;
-                if (targetMaterial == null) break;
-
-                foreach (var materialSlot in allAssignments)
-                {
-                    if (materialSlot.Material == targetMaterial)
-                    {
-                        targetMaterials.Add(materialSlot);
-                    }
-                }
-                break;
-            }
-
-            case MaterialEntrySettings.ApplyMode.Advanced:
-                foreach (var scope in entrySettings.AdvancedTargets)
-                {
-                    foreach (var materialSlot in ResolveScope(scope))
-                    {
-                        targetMaterials.Add(materialSlot);
-                    }
-                }
-                break;
-
-            case MaterialEntrySettings.ApplyMode.All:
-                foreach (var materialSlot in ResolveAllMaterialTargetScope(entrySettings.AllMaterialTargetScope))
-                {
-                    targetMaterials.Add(materialSlot);
-                }
-                break;
-        }
-
-        return targetMaterials;
-
-        IEnumerable<MaterialAssignment> ResolveScope(MaterialTargetScope scope)
-        {
-            switch (scope.Type)
-            {
-                case MaterialTargetScope.ScopeType.Asset:
-                    var targetMaterial = scope.Material;
-                    if (targetMaterial == null) yield break;
-
-                    foreach (var materialSlot in allAssignments)
-                    {
-                        if (materialSlot.Material == targetMaterial)
-                        {
-                            yield return materialSlot;
-                        }
-                    }
-                    break;
-
-                case MaterialTargetScope.ScopeType.Slot:
-                    foreach (var materialSlot in ResolveMaterialSlotReference(scope.MaterialSlotReference))
-                    {
-                        yield return materialSlot;
-                    }
-                    break;
-            }
-        }
-
-        HashSet<MaterialAssignment> ResolveAllMaterialTargetScope(AllMaterialTargetScope scope)
-        {
-            var result = new HashSet<MaterialAssignment>(allAssignments);
-
-            foreach (var excludeTargetScope in scope.ExcludeTargets)
-            {
-                foreach (var materialSlot in ResolveScope(excludeTargetScope))
-                {
-                    result.Remove(materialSlot);
-                }
-            }
-
-            foreach (var excludeObjectReference in scope.ExcludeObjectReferences)
-            {
-                foreach (var materialSlot in ResolveObjectReference(excludeObjectReference))
-                {
-                    result.Remove(materialSlot);
-                }
-            }
-
-            return result;
-        }
-
-        IEnumerable<MaterialAssignment> ResolveObjectReference(AvatarObjectReference objectReference)
-        {
-            var targetObject = objectReference.Get(component);
-            if (targetObject == null) yield break;
-
-            using var _ = ListPool<Renderer>.Get(out var childRenderers);
-            targetObject.GetComponentsInChildren(true, childRenderers);
-            foreach (var materialSlot in allAssignments)
-            {
-                if (childRenderers.Any(r => r == materialSlot.SlotId.Renderer))
-                {
-                    yield return materialSlot;
-                }
-            }
-        }
-
-        IEnumerable<MaterialAssignment> ResolveMaterialSlotReference(MaterialSlotReference reference)
-        {
-            var targetRenderer = ResolveRendererReference(reference.RendererReference);
-            if (targetRenderer == null) yield break;
-
-            foreach (var materialSlot in allAssignments)
-            {
-                if (materialSlot.SlotId.Renderer != targetRenderer) continue;
-
-                if (reference.MaterialIndex == -1 || materialSlot.SlotId.MaterialIndex == reference.MaterialIndex)
-                {
-                    yield return materialSlot;
-                }
-            }
-        }
-
-        Renderer? ResolveRendererReference(AvatarObjectReference rendererReference)
-        {
-            var gameObject = rendererReference.Get(component);
-            if (gameObject == null) return null;
-            return gameObject.GetComponent<Renderer>();
         }
     }
 
