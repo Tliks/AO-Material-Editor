@@ -27,6 +27,7 @@ internal class MaterialEditorEditor : Editor
 
     private MaterialOverrideSettings _beforeOverrides = MaterialOverrideSettings.Empty;
     private MaterialOverrideSettings _afterOverrides = MaterialOverrideSettings.Empty;
+    private MaterialOverrideSettings? _pendingSelfCommittedOverrides;
 
     private const string RecordingMaterialName = "Recording…";
 
@@ -222,8 +223,11 @@ internal class MaterialEditorEditor : Editor
                     }
                     else // その他(overrides)の変更
                     {
-                        // マテリアルを直接編集するのでUndoに通知されない
-                        // これにより、コンポーネントRecoridng Material間の無限ループは起きない
+                        if (TryConsumeSelfCommittedOverrideEcho())
+                        {
+                            continue;
+                        }
+
                         SyncRecordingMaterialFromComponent();
                         UpdateRecordingOverrideState();
                     }
@@ -234,14 +238,12 @@ internal class MaterialEditorEditor : Editor
                 stream.GetChangeAssetObjectPropertiesEvent(i, out var data);
                 if (data.instanceId == recordingMaterialId)
                 {
-                    // コンポーネントの変更はUndoに通知される
-                    // これにより、次のフレームで数行上のSyncRecordingMaterialFromComponentが実行される
-                    // これを防ぐためにUndoに保存せずコンポーネントに書き込む
-                    // Undoに保存していないが、MaterialEditorを介す関係でUndo可能っぽい…？ Todo: 調査
                     if (SanitizeRecordingMaterialAgainstAfter()) { // サニタイズに失敗した状態でコンポーネントに書き込むべきではない
-                        SyncComponentFromRecordingMaterial();
-                        serializedObject.ApplyModifiedPropertiesWithoutUndo();
-                        UpdateRecordingOverrideState();
+                        var nextOverrides = BuildOverrideSettingsFromRecordingMaterial();
+                        if (nextOverrides != null)
+                        {
+                            CommitOverridesFromRecording(nextOverrides);
+                        }
                     }
                 }
             }
@@ -468,11 +470,11 @@ internal class MaterialEditorEditor : Editor
         HashSet<string> LockedPropertyNames,
         Dictionary<string, string> LockedPropertyValues);
 
-    private void SyncComponentFromRecordingMaterial()
+    private MaterialOverrideSettings? BuildOverrideSettingsFromRecordingMaterial()
     {
-        DebugLog("SyncComponentFromRecordingMaterial, frame: " + Time.frameCount);
+        DebugLog("BuildOverrideSettingsFromRecordingMaterial, frame: " + Time.frameCount);
 
-        if (_unlockedRecordingSourceMaterial == null) return;
+        if (_unlockedRecordingSourceMaterial == null) return null;
 
         var baseMaterial = new Material(_unlockedRecordingSourceMaterial);
         try
@@ -521,16 +523,42 @@ internal class MaterialEditorEditor : Editor
             // 新しい差分をマージ(上書き, 追加)する
             MaterialOverrideSettings.MergeInto(newOvrs, cloned);
 
-            _overrideSettings.CopyFrom(cloned);
+            return cloned;
         }
         catch (Exception e)
         {
             Debug.LogError(e);
+            return null;
         }
         finally
         {
             DestroyImmediate(baseMaterial);
         }
+    }
+
+    private void CommitOverridesFromRecording(MaterialOverrideSettings value)
+    {
+        serializedObject.Update();
+        _pendingSelfCommittedOverrides = value.Clone();
+        _overrideSettings.CopyFrom(value);
+        serializedObject.ApplyModifiedProperties();
+        UpdateRecordingOverrideState();
+    }
+
+    private bool TryConsumeSelfCommittedOverrideEcho()
+    {
+        if (_pendingSelfCommittedOverrides == null) return false;
+
+        var expected = _pendingSelfCommittedOverrides;
+        _pendingSelfCommittedOverrides = null;
+
+        if (!_target.OverrideSettings.Equals(expected))
+        {
+            return false;
+        }
+
+        DebugLog("ConsumeSelfCommittedOverrideEcho, frame: " + Time.frameCount);
+        return true;
     }
 
     // OverrideUtilityGUI
