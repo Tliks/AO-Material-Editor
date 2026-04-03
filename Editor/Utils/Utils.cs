@@ -17,7 +17,12 @@ internal static class Utils
         return ObjectRegistry.GetReference(a).Equals(ObjectRegistry.GetReference(b));
     }
 
-    public static Material CloneAndRegister(Material material, string suffix = "_AO_MaterialEditor")
+    public static Material CloneAndRegister(Material material)
+    {
+        return CloneAndRegister(material, "_AO_MaterialEditor");
+    }
+
+    public static Material CloneAndRegister(Material material, string suffix)
     {
         var newMaterial = new Material(material) { name = $"{material.name}{suffix}" };
         ObjectRegistry.RegisterReplacedObject(material, newMaterial);
@@ -45,19 +50,5 @@ internal static class Utils
         if (!property.TryGetGameObject(out var gameObject)) return Array.Empty<Material>();
 
         return GetAllTargetMaterialsInAvatar(gameObject);
-    }
-
-    public static bool SequenceEqualReference<T>(T?[] a, T?[] b) where T : class
-    {
-        if (ReferenceEquals(a, b)) return true;
-        
-        if (a.Length != b.Length) return false;
-
-        for (int i = 0; i < a.Length; i++)
-        {
-            if (!ReferenceEquals(a[i], b[i])) return false;
-        }
-
-        return true;
     }
 }

@@ -70,7 +70,7 @@ internal class DefaultMaterialTargeting : IMaterialTargeting
     {
         context ??= new NonObserveContext();
 
-        var materials = context.Observe(renderer, r => (Material?[])r.sharedMaterials.Clone(), Utils.SequenceEqualReference);
+        var materials = _context.Observe(renderer, r => (Material?[])r.sharedMaterials.Clone(), Enumerable.SequenceEqual);
         for (int i = 0; i < materials.Length; i++)
         {
             var material = materials[i];

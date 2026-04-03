@@ -38,7 +38,7 @@ internal class MaterialEditorBuild : Pass<MaterialEditorBuild>
             allAssignments, Utils.OriginalReferenceEquals, Utils.OriginalReferenceEquals);
 
         var replacements = MaterialEditorProcessor.CloneAndApplyOverrides(overridePlans, 
-            m => Utils.CloneAndRegister(m));
+            Utils.CloneAndRegister);
 
         materialTargeting.ApplyReplacements(replacements);
 
