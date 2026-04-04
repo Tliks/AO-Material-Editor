@@ -1,10 +1,12 @@
+using nadena.dev.ndmf.preview;
+
 namespace Aoyon.MaterialEditor.Processor;
 
 internal static partial class MaterialEditorProcessor
 {
-    public static bool IsEffective(MaterialEditorComponent component, IObserveContext? observeContext = null)
+    public static bool IsEffective(MaterialEditorComponent component, ComputeContext? observeContext = null)
     {
-        observeContext ??= new NonObserveContext();
+        observeContext ??= ComputeContext.NullContext;
 
         var enabled = observeContext.Observe(component, c => c.enabled, (a, b) => a == b);
         if (!enabled) return false;
@@ -14,9 +16,9 @@ internal static partial class MaterialEditorProcessor
         return true;
     }
 
-    public static List<Renderer> GetTargetRenderers(GameObject gameObject, IObserveContext? observeContext = null)
+    public static List<Renderer> GetTargetRenderers(GameObject gameObject, ComputeContext? observeContext = null)
     {
-        observeContext ??= new NonObserveContext();
+        observeContext ??= ComputeContext.NullContext;
         var renderers = new List<Renderer>();
         observeContext.GetComponentsInChildren<Renderer>(gameObject, true, renderers);
         renderers.RemoveAll(r => r is not (SkinnedMeshRenderer or MeshRenderer));
@@ -27,10 +29,9 @@ internal static partial class MaterialEditorProcessor
         IEnumerable<MaterialEditorComponent> components, HashSet<MaterialAssignment> allAssignments,
         Func<Material, Material, bool>? materialCompare = null, 
         Func<Renderer, Renderer, bool>? rendererCompare = null,
-        IObserveContext? observeContext = null)
+        ComputeContext? observeContext = null)
     {
         var plans = new Dictionary<MaterialAssignment, MaterialOverrideSettings>();
-        observeContext ??= new NonObserveContext();
         var emptySettings = MaterialOverrideSettings.Empty;
         foreach (var component in components)
         {

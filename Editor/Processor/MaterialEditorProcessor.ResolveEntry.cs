@@ -1,5 +1,6 @@
 using UnityEngine.Pool;
 using nadena.dev.modular_avatar.core;
+using nadena.dev.ndmf.preview;
 
 namespace Aoyon.MaterialEditor.Processor;
 
@@ -9,11 +10,11 @@ internal static partial class MaterialEditorProcessor
         HashSet<MaterialAssignment> allAssignments, MaterialEditorComponent component, 
         Func<Material, Material, bool>? materialCompare = null, 
         Func<Renderer, Renderer, bool>? rendererCompare = null,
-        IObserveContext? observeContext = null)
+        ComputeContext? observeContext = null)
     {
         materialCompare ??= (a, b) => a == b;
         rendererCompare ??= (a, b) => a == b;
-        observeContext ??= new NonObserveContext();
+        observeContext ??= ComputeContext.NullContext;
 
         // read only
         var targetSettings = observeContext.Observe(component, c => c.TargetSettings.Clone(), (a, b) => a.Equals(b));
