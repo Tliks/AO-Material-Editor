@@ -109,16 +109,17 @@ internal class SingleMaterialTargetSettings : IEquatable<SingleMaterialTargetSet
     {
         if (other is null) return false;
         if (ReferenceEquals(this, other)) return true;
-        return TargetMaterial == other.TargetMaterial
-            && UseSlotExclusions == other.UseSlotExclusions
-            && ExcludedSlots.SequenceEqual(other.ExcludedSlots);
+        if (TargetMaterial != other.TargetMaterial) return false;
+        if (!UseSlotExclusions && !other.UseSlotExclusions) return true;
+        if (!UseSlotExclusions) return other.ExcludedSlots.Count == 0;
+        if (!other.UseSlotExclusions) return ExcludedSlots.Count == 0;
+        return ExcludedSlots.SequenceEqual(other.ExcludedSlots);
     }
 
     public override int GetHashCode()
     {
         var hash = new HashCode();
         hash.Add(TargetMaterial);
-        hash.Add(UseSlotExclusions);
         if (UseSlotExclusions) foreach (var slot in ExcludedSlots) hash.Add(slot);
         return hash.ToHashCode();
     }
@@ -154,16 +155,17 @@ internal class BulkMaterialTargetSettings : IEquatable<BulkMaterialTargetSetting
     {
         if (other is null) return false;
         if (ReferenceEquals(this, other)) return true;
-        return TargetMaterials.SequenceEqual(other.TargetMaterials)
-            && UseSlotExclusions == other.UseSlotExclusions
-            && ExcludedSlots.SequenceEqual(other.ExcludedSlots);
+        if (!TargetMaterials.SequenceEqual(other.TargetMaterials)) return false;
+        if (!UseSlotExclusions && !other.UseSlotExclusions) return true;
+        if (!UseSlotExclusions) return other.ExcludedSlots.Count == 0;
+        if (!other.UseSlotExclusions) return ExcludedSlots.Count == 0;
+        return ExcludedSlots.SequenceEqual(other.ExcludedSlots);
     }
 
     public override int GetHashCode()
     {
         var hash = new HashCode();
         foreach (var material in TargetMaterials) hash.Add(material);
-        hash.Add(UseSlotExclusions);
         if (UseSlotExclusions) foreach (var slot in ExcludedSlots) hash.Add(slot);
         return hash.ToHashCode();
     }
