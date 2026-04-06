@@ -131,6 +131,7 @@ internal class MaterialEditorEditor : Editor
         {
             _materialEditor.DrawHeader();
             if (_materialEditor.isVisible) {
+                DrawOverridesGUI();
                 if (MaterialEditorSettings.ShowInspectorDescription)
                 {
                     EditorGUILayout.HelpBox("editor.help".LS(), MessageType.Info);
@@ -143,16 +144,21 @@ internal class MaterialEditorEditor : Editor
                 EditorGUILayout.Space();
                 _materialEditor.OnInspectorGUI();
             }
+            else {
+                DrawOverridesGUI();
+            }
         }
         else 
         {
             EditorGUILayout.HelpBox("editor.noMaterialSelected.help".LS(), MessageType.Warning, true);
+            DrawOverridesGUI();
         }
+    }
 
-        // Draw Overrides
+    private void DrawOverridesGUI()
+    {
         var count = _target.OverrideSettings.OverrideCount;
         EditorGUILayout.PropertyField(_overrideSettings, new GUIContent(string.Format("overrideSettings.count".LS(), count)));
-
     }
     
     private HashSet<Material> UpdateTargetMaterials()
