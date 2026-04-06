@@ -18,6 +18,11 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         position.NewLine();
         // position.Indent();
 
+        var helpBoxRect = position;
+        helpBoxRect.height = GetInnerHeight(property);
+        helpBoxRect = new RectOffset(3, 3, 3, 3).Add(helpBoxRect);
+        EditorGUI.LabelField(helpBoxRect, GUIContent.none, EditorStyles.helpBox);
+
         if (MaterialEditorSettings.ShowInspectorDescription)
         {
             position = GUIHelper.HelpBox(position, "overrideSettings.help".LS(), MessageType.Info);
@@ -112,12 +117,9 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         GUI.Label(rect, TooltipOverlayContent, GUIStyle.none);
     }
 
-    public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+    private float GetInnerHeight(SerializedProperty property)
     {
         var height = 0f;
-        height += GUIHelper.propertyHeight;
-
-        if (!property.isExpanded) return height;
 
         if (MaterialEditorSettings.ShowInspectorDescription)
         {
@@ -142,6 +144,20 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
             height += (GUIHelper.propertyHeight + GUIHelper.GUI_SPACE) * 2;
         }
         height += GUIHelper.GetListHeight(propertyOverrides, propertyOverridesListOptions);
+
+        return height;
+    }
+
+    public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+    {
+        var height = 0f;
+        height += GUIHelper.propertyHeight;
+
+        if (!property.isExpanded) return height;
+
+        height += GetInnerHeight(property);
+
+        height += GUIHelper.GUI_SPACE * 2; // 背景の為にスペース多め
         return height;
     }
 }

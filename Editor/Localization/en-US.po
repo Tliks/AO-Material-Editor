@@ -120,7 +120,7 @@ msgid "editor.title"
 msgstr "Edit Materials"
 
 msgid "editor.help"
-msgstr "Materials can be edited non-destructively here.\nYour edits are recorded automatically and saved to this component."
+msgstr "You can edit the material from the editing screen below.\nYour edits are recorded automatically and saved to this component."
 
 msgid "editor.noAvatarRoot.help"
 msgstr "This component is currently disabled.\nIt is only active when placed under the avatar hierarchy."
@@ -139,7 +139,7 @@ msgid "overrideSettings.count"
 msgstr "Saved Edits: {0} entries"
 
 msgid "overrideSettings.help"
-msgstr "Saved edits are shown here.\nChanges made in the material editor above are reflected automatically, so you usually do not need to edit this directly.\nThese edits are applied to the material during preview and build."
+msgstr "Saved edits are shown here.\nChanges made in the normal material editing screen below are reflected automatically, so you usually do not need to edit this directly.\nThese edits are applied to the material during preview and build."
 
 msgid "overrideSettings.properties"
 msgstr "Properties"
