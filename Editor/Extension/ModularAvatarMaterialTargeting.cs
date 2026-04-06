@@ -15,20 +15,20 @@ internal class ModularAvatarMaterialTargeting : IMaterialTargeting
         };
     }
 
-    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers, IObserveContext? context = null)
+    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers)
     {
         foreach (var materialTargeting in _materialTargetings)
         {
-            foreach (var assignment in materialTargeting.GetAssignments(renderers, context))
+            foreach (var assignment in materialTargeting.GetAssignments(renderers))
             {
                 yield return assignment;
             }
         }
     }
 
-    public IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer, IObserveContext? context = null)
+    public IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer)
     {
-        return GetAssignments(new[] { renderer }, context);
+        return GetAssignments(new[] { renderer });
     }
 
     public void ApplyReplacements(IReadOnlyDictionary<MaterialAssignment, Material> replacements)
@@ -49,7 +49,7 @@ internal class ModularAvatarMaterialSetterTargeting : IMaterialTargeting
         _root = root;
     }
 
-    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers, IObserveContext? context = null)
+    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers)
     {
         var rendererSet = renderers.ToHashSet();
         foreach (var setter in _root.GetComponentsInChildren<ModularAvatarMaterialSetter>(true))
@@ -68,9 +68,9 @@ internal class ModularAvatarMaterialSetterTargeting : IMaterialTargeting
         }
     }
 
-    public IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer, IObserveContext? context = null)
+    public IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer)
     {
-        return GetAssignments(new[] { renderer }, context);
+        return GetAssignments(new[] { renderer });
     }
 
     public void ApplyReplacements(IReadOnlyDictionary<MaterialAssignment, Material> replacements)
@@ -112,7 +112,7 @@ internal class ModularAvatarMaterialSwapTargeting : IMaterialTargeting
         _renderers = MaterialEditorProcessor.GetTargetRenderers(root);
     }
 
-    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers, IObserveContext? context = null)
+    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers)
     {
         var rendererSet = renderers.ToHashSet();
         foreach (var swap in _root.GetComponentsInChildren<ModularAvatarMaterialSwap>(true))
@@ -137,9 +137,9 @@ internal class ModularAvatarMaterialSwapTargeting : IMaterialTargeting
         }
     }
 
-    public IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer, IObserveContext? context = null)
+    public IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer)
     {
-        return GetAssignments(new[] { renderer }, context);
+        return GetAssignments(new[] { renderer });
     }
 
     public void ApplyReplacements(IReadOnlyDictionary<MaterialAssignment, Material> replacements)

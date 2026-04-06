@@ -13,7 +13,7 @@ internal class LilycalInventoryMaterialTargeting : IMaterialTargeting
         _root = root;
     }
 
-    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers, IObserveContext? context = null)
+    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers)
     {
         var rendererSet = renderers.ToHashSet();
         foreach (var replacer in EnumerateMaterialReplacers(_root))
@@ -25,9 +25,9 @@ internal class LilycalInventoryMaterialTargeting : IMaterialTargeting
         }
     }
 
-    public IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer, IObserveContext? context = null)
+    public IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer)
     {
-        return GetAssignments(new[] { renderer }, context);
+        return GetAssignments(new[] { renderer });
     }
 
     public void ApplyReplacements(IReadOnlyDictionary<MaterialAssignment, Material> replacements)

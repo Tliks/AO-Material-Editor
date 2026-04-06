@@ -1,10 +1,18 @@
 using nadena.dev.ndmf.animator;
+using nadena.dev.ndmf.preview;
 
 namespace Aoyon.MaterialEditor.Processor;
 
 internal readonly record struct MaterialSlotId(Renderer Renderer, int MaterialIndex);
 
 internal readonly record struct MaterialAssignment(MaterialSlotId SlotId, Material Material);
+
+internal interface IMaterialTargeting
+{
+    IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers);
+    IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer);
+    void ApplyReplacements(IReadOnlyDictionary<MaterialAssignment, Material> replacements);
+}
 
 internal class MaterialTargeting : IMaterialTargeting
 {
@@ -15,22 +23,22 @@ internal class MaterialTargeting : IMaterialTargeting
         _materialTargetings = materialTargetings;
     }
 
-    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers, IObserveContext? context = null)
+    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers)
     {
         foreach (var materialTargeting in _materialTargetings)
         {
-            foreach (var assignment in materialTargeting.GetAssignments(renderers, context))
+            foreach (var assignment in materialTargeting.GetAssignments(renderers))
             {
                 yield return assignment;
             }
         }
     }
 
-    public IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer, IObserveContext? context = null)
+    public IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer)
     {
         foreach (var materialTargeting in _materialTargetings)
         {
-            foreach (var assignment in materialTargeting.GetAssignments(renderer, context))
+            foreach (var assignment in materialTargeting.GetAssignments(renderer))
             {
                 yield return assignment;
             }
@@ -46,31 +54,29 @@ internal class MaterialTargeting : IMaterialTargeting
     }
 }
 
-internal interface IMaterialTargeting
-{
-    IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers, IObserveContext? context = null);
-    IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer, IObserveContext? context = null);
-    void ApplyReplacements(IReadOnlyDictionary<MaterialAssignment, Material> replacements);
-}
-
 internal class DefaultMaterialTargeting : IMaterialTargeting
 {
-    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers, IObserveContext? context = null)
+    private readonly ComputeContext _context;
+
+    public DefaultMaterialTargeting(ComputeContext? context = null)
+    {
+        _context = context ?? ComputeContext.NullContext;
+    }
+
+    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers)
     {
         foreach (var renderer in renderers)
         {
-            foreach (var assignment in GetAssignments(renderer, context))
+            foreach (var assignment in GetAssignments(renderer))
             {
                 yield return assignment;
             }
         }
     }
 
-    public IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer, IObserveContext? context = null)
+    public IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer)
     {
-        context ??= new NonObserveContext();
-
-        var materials = context.Observe(renderer, r => (Material?[])r.sharedMaterials.Clone(), Utils.SequenceEqualReference);
+        var materials = _context.Observe(renderer, r => (Material?[])r.sharedMaterials.Clone(), Enumerable.SequenceEqual);
         for (int i = 0; i < materials.Length; i++)
         {
             var material = materials[i];
@@ -118,17 +124,17 @@ internal class AnimatorMaterialTargeting : IMaterialTargeting
         _animationIndex = animationIndex;
     }
 
-    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers, IObserveContext? context = null)
+    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers)
     {
-        return GetMaterialsImpl(renderers.ToHashSet(), context);
+        return GetMaterialsImpl(renderers.ToHashSet());
     }
 
-    public IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer, IObserveContext? context = null)
+    public IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer)
     {
-        return GetMaterialsImpl(new HashSet<Renderer> { renderer }, context);
+        return GetMaterialsImpl(new HashSet<Renderer> { renderer });
     }
 
-    private IEnumerable<MaterialAssignment> GetMaterialsImpl(HashSet<Renderer> renderers, IObserveContext? context = null)
+    private IEnumerable<MaterialAssignment> GetMaterialsImpl(HashSet<Renderer> renderers)
     {
         foreach (var (binding, obj) in _animationIndex.GetPPtrReferencedObjectsWithBinding)
         {

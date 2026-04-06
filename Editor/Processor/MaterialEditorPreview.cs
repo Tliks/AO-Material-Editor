@@ -1,64 +1,92 @@
 using System.Collections.Immutable;
 using System.Threading.Tasks;
-using UnityEngine.Pool;
 using nadena.dev.ndmf.preview;
+using UnityEngine.Pool;
 
 namespace Aoyon.MaterialEditor.Processor;
 
 internal class MaterialEditorPreview : IRenderFilter
 {
+    private readonly PropCache<GameObject, ComponentTargets> _originalComponentTargetsCache = new(
+        "MaterialEditorPreview.OriginalComponentTargets", AnalyzeOriginalComponentTargets, (a, b) => a.Equals(b));
+
     ImmutableList<RenderGroup> IRenderFilter.GetTargetGroups(ComputeContext context)
     {
-        var groups = new List<RenderGroup>();
-
         try
         {
-            var observeContext = new NDMFObserveContext(context);
+            var groups = ImmutableList.CreateBuilder<RenderGroup>();
             foreach (var root in context.GetAvatarRoots().Distinct())
             {
-                if (!context.ActiveInHierarchy(root)) continue;
+                var componentTargets = _originalComponentTargetsCache.Get(context, root);
+                if (componentTargets.Values.Length == 0) continue;
 
-                var renderers = MaterialEditorProcessor.GetTargetRenderers(root, observeContext);
-                // sharedmaterialsはNDMF側で監視されていない
-                var allAssignments = new DefaultMaterialTargeting().GetAssignments(renderers, observeContext).ToHashSet(); 
-
-                // 負荷軽減のため、IsEffectiveはGetTargetGroupsで監視せず、Instantiateで監視する。
-                var allComponents = context.GetComponentsInChildren<MaterialEditorComponent>(root, true);
-
-                // IsEffectiveは監視しないが、一切のオーバライドが存在しない初期状態のコンポーネントは除外するようにする
-                // MenuItemから生成される初期のコンポーネント群を除外したい
-                var editedComponents = allComponents
-                    .Where(c => context.Observe(c, c => c.OverrideSettings.OverrideCount > 0, (a, b) => a == b));
-                
-                var componentTargets = new Dictionary<MaterialEditorComponent, HashSet<MaterialAssignment>>();
-                foreach (var component in editedComponents)
-                {
-                    // 順序の変更を見るためにPathを監視する
-                    context.ObservePath(component.transform);
-
-                    // OriginalRendererなのでObjectRegistryは見なくていい
-                    var targetAssignments = MaterialEditorProcessor.SelectTargetAssignments(allAssignments, component, 
-                        null, null, observeContext);
-                    if (targetAssignments.Count == 0) continue;
-                    componentTargets[component] = targetAssignments;
-                }
-                if (componentTargets.Count == 0) continue;
-
-                groups.AddRange(BuildRenderGroups(componentTargets, root));
+                groups.AddRange(BuildRenderGroups(componentTargets));
             }
+            return groups.ToImmutable();
         }
         catch (Exception e)
         {
             Debug.LogError(e.Message);
+            return ImmutableList<RenderGroup>.Empty;
         }
-
-        return groups.ToImmutableList();
     }
 
-    private static List<RenderGroup> BuildRenderGroups(Dictionary<MaterialEditorComponent, HashSet<MaterialAssignment>> componentTargets, GameObject root)
+    private static ComponentTargets AnalyzeOriginalComponentTargets(ComputeContext context, GameObject root)
     {
+        var componentTargets = ImmutableArray.CreateBuilder<(MaterialEditorComponent, ImmutableHashSet<MaterialAssignment>)>();
+
+        var renderers = MaterialEditorProcessor.GetTargetRenderers(root, context);
+        var allAssignments = new DefaultMaterialTargeting(context).GetAssignments(renderers).ToHashSet();
+        var components = context.GetComponentsInChildren<MaterialEditorComponent>(root, true);
+
+        foreach (var component in components)
+        {
+            // RenderGroupを小さくするために初期状態を対象から除外する
+            var hasOverrides = context.Observe(component, c => c.OverrideSettings.OverrideCount > 0, (a, b) => a == b);
+            if (!hasOverrides) continue;
+
+            // OriginalRendererなのでObjectRegistryは見なくていい
+            var targetAssignments = MaterialEditorProcessor.SelectTargetAssignments(allAssignments, component, null, null, context);
+            if (targetAssignments.Count == 0) continue;
+
+            componentTargets.Add((component, targetAssignments.ToImmutableHashSet()));
+        }
+
+        return new ComponentTargets(componentTargets.ToImmutable());
+    }
+
+    record ComponentTargets(ImmutableArray<(MaterialEditorComponent Component, ImmutableHashSet<MaterialAssignment> Assignments)> Values)
+    {
+        public virtual bool Equals(ComponentTargets other)
+        {
+            if (Values.Length != other.Values.Length) return false;
+            for (var i = 0; i < Values.Length; i++)
+            {
+                if (Values[i].Component != other.Values[i].Component) return false;
+                if (!CollectionEquality.SetEquals(Values[i].Assignments, other.Values[i].Assignments)) return false;
+            }
+            return true;
+        }
+
+        public override int GetHashCode()
+        {
+            var hash = 0;
+            foreach (var (component, assignments) in Values)
+            {
+                hash = HashCode.Combine(hash, component, CollectionEquality.GetSetHashCode(assignments));
+            }
+            return HashCode.Combine(Values.Length, hash);
+        }
+    }
+
+    private static RenderGroup[] BuildRenderGroups(ComponentTargets componentTargets)
+    {
+        var componentOrder = componentTargets.Values
+            .Select((entry, index) => (entry.Component, index))
+            .ToDictionary(x => x.Component, x => x.index);
+
         var rendererGroups = new List<(HashSet<Renderer> renderers, HashSet<MaterialEditorComponent> components)>();
-        foreach (var (component, assignments) in componentTargets)
+        foreach (var (component, assignments) in componentTargets.Values)
         {
             var renderers = assignments.Select(a => a.SlotId.Renderer).ToHashSet();
             var overlappingIndices = rendererGroups
@@ -86,106 +114,244 @@ internal class MaterialEditorPreview : IRenderFilter
                 }
             }
         }
-        return rendererGroups.Select(r => RenderGroup.For(r.renderers).WithData(new PassingData(root, r.components))).ToList();
+        return rendererGroups
+            .Select(r => RenderGroup.For(r.renderers).WithData(new PassingData(
+                r.components
+                    .OrderBy(component => componentOrder[component])
+                    .ToImmutableArray()
+            )))
+            .ToArray();
     }
 
-    // GetTargetGroupsは上流のInstantiateの影響を受けないので、詳細な適用対象はPassingDataではなく、Instantiate内で決定する
+    record PassingData(ImmutableArray<MaterialEditorComponent> Components)
+    {
+        public virtual bool Equals(PassingData other) => CollectionEquality.SequenceEquals(Components, other.Components);
+        public override int GetHashCode() => CollectionEquality.GetSequenceHashCode(Components);
+    }
+
     Task<IRenderFilterNode> IRenderFilter.Instantiate(RenderGroup group, IEnumerable<(Renderer, Renderer)> proxyPairs, ComputeContext context)
     {
         try
         {
-            var data = group.GetData<PassingData>();
-            var root = data.Root;
-            var components = data.Components;
-
-            using var _1 = DictionaryPool<Renderer, Renderer>.Get(out var proxyToOriginal);
-            foreach (var (original, proxy) in proxyPairs) proxyToOriginal[proxy] = original;
-
-            var observeContext = new NDMFObserveContext(context);
-
-            var materialTargeting = new DefaultMaterialTargeting();
-            using var _3 = HashSetPool<MaterialAssignment>.Get(out var proxyMaterialAssignments);
-            foreach (var (original, proxy) in proxyPairs)
-            {
-                proxyMaterialAssignments.UnionWith(materialTargeting.GetAssignments(proxy));
-            }
-
-            // 代わりにここでIsEffectiveを監視する
-            var effectiveComponents = components.Where(c => MaterialEditorProcessor.IsEffective(c, observeContext));
-
-            var proxyOverridePlans = MaterialEditorProcessor.BuildOverridePlans(effectiveComponents, proxyMaterialAssignments, 
-                Utils.OriginalReferenceEquals, RendererCompare, observeContext);
-
-            bool RendererCompare(Renderer a, Renderer b) =>
-                a == b || (proxyToOriginal.TryGetValue(a, out var o) && o == b)
-                    || (proxyToOriginal.TryGetValue(b, out var o2) && o2 == a);
-
-            // proxyのmaterial参照は重要ではなく、sharedMaterialsの置き換えはSlotIDで十分
-            // proxyの参照は不確実なので、original rendererのSlotIDを用いる
-            var replacements = new Dictionary<MaterialSlotId, Material>();
-            var proxyReplacements = MaterialEditorProcessor.CloneAndApplyOverrides(proxyOverridePlans, m => Utils.CloneAndRegister(m));
-            foreach (var (proxyAssignment, material) in proxyReplacements)
-            {
-                var originalRenderer = proxyToOriginal[proxyAssignment.SlotId.Renderer];
-                var originalSlotId = new MaterialSlotId(originalRenderer, proxyAssignment.SlotId.MaterialIndex);
-
-                replacements[originalSlotId] = material;
-            }
-
-            return Task.FromResult<IRenderFilterNode>(new MaterialEditorNode(replacements));
+            var components = group.GetData<PassingData>().Components;
+            return Node.Create(proxyPairs, context, components);
         }
         catch (Exception e)
         {
-            Debug.LogError(e.Message);
-            return Task.FromResult<IRenderFilterNode>(new EmptyNode());
+            Debug.LogException(e);
+            return Task.FromResult<IRenderFilterNode>(new EmptyNode(0));
         }
     }
 
-    record PassingData(GameObject Root, HashSet<MaterialEditorComponent> Components);
-
-    class MaterialEditorNode : IRenderFilterNode
+    class Node : IRenderFilterNode
     {
-        RenderAspects IRenderFilterNode.WhatChanged => RenderAspects.Material;
-        private readonly Dictionary<MaterialSlotId, Material> _replacements;
+        private readonly ImmutableArray<MaterialEditorComponent> _components;
+        private OverridePlans _currentPlans;
+    
+        // proxyの参照に依存せずoriginalのSlotIDを用いる
+        private Dictionary<MaterialSlotId, Material> _replacements;
 
-        public MaterialEditorNode(Dictionary<MaterialSlotId, Material> replacements)
+        public RenderAspects WhatChanged { get; private set; } = RenderAspects.Material;
+
+        private Node(ImmutableArray<MaterialEditorComponent> components, OverridePlans plans, 
+            Dictionary<MaterialSlotId, Material> replacements)
         {
+            _components = components;
+            _currentPlans = plans;
             _replacements = replacements;
         }
 
-        void IRenderFilterNode.OnFrame(Renderer original, Renderer proxy)
+        public static Task<IRenderFilterNode> Create(IEnumerable<(Renderer, Renderer)> proxyPairs, ComputeContext context,
+            ImmutableArray<MaterialEditorComponent> components)
+        {
+            try
+            {
+                using var _1 = ListPool<(Renderer Original, Renderer Proxy)>.Get(out var proxyPairsList);
+                foreach (var (original, proxy) in proxyPairs) proxyPairsList.Add((original, proxy));
+
+                var plans = ComputeOverridePlans(context, proxyPairsList, components);
+                var replacements = BuildReplacements(proxyPairsList, plans);
+                return Task.FromResult<IRenderFilterNode>(new Node(components, plans, replacements));
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return Task.FromResult<IRenderFilterNode>(new EmptyNode(0));
+            }
+        }
+
+        public Task<IRenderFilterNode> Refresh(IEnumerable<(Renderer, Renderer)> proxyPairs, ComputeContext context, RenderAspects updatedAspects)
+        {
+            var materialChanged = updatedAspects.HasFlag(RenderAspects.Material);
+            var definitelyIrrelevant = updatedAspects != 0 && !materialChanged;
+
+            if (definitelyIrrelevant) 
+            {
+                WhatChanged = 0;
+                return Task.FromResult<IRenderFilterNode>(this);
+            }
+
+            try
+            {
+                using var _1 = ListPool<(Renderer Original, Renderer Proxy)>.Get(out var proxyPairsList);
+                foreach (var (original, proxy) in proxyPairs) proxyPairsList.Add((original, proxy));
+
+                var plans = ComputeOverridePlans(context, proxyPairsList, _components);
+                var plansChanged = !_currentPlans.Equals(plans);
+
+                if (!plansChanged && !materialChanged)
+                {
+                    WhatChanged = 0;
+                    return Task.FromResult<IRenderFilterNode>(this);
+                }
+
+                var replacements = BuildReplacements(proxyPairsList, plans);
+                return Task.FromResult<IRenderFilterNode>(new Node(_components, plans, replacements));
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                // 前回から変更したのか分からないので安全側に寄せる
+                return Task.FromResult<IRenderFilterNode>(new EmptyNode(RenderAspects.Material));
+            }
+        }
+
+        public void OnFrame(Renderer original, Renderer proxy)
         {
             var materials = proxy.sharedMaterials;
             var modified = false;
-            for (int i = 0; i < materials.Length; i++)
+
+            for (var i = 0; i < materials.Length; i++)
             {
-                // original rendererのSlotIDを用いる
                 var slotId = new MaterialSlotId(original, i);
-                if (_replacements.TryGetValue(slotId, out var replacement))
-                {
-                    materials[i] = replacement;
-                    modified = true;
-                }
+                if (!_replacements.TryGetValue(slotId, out var replacement)) continue;
+
+                materials[i] = replacement;
+                modified = true;
             }
+
             if (modified)
             {
                 proxy.sharedMaterials = materials;
             }
         }
 
-        void IDisposable.Dispose()
+        public void Dispose()
         {
-            foreach (var replacement in _replacements.Values)
+            foreach (var material in _replacements.Values)
             {
-                Object.DestroyImmediate(replacement);
+                if (material == null) continue;
+                Object.DestroyImmediate(material);
             }
             _replacements.Clear();
         }
+
+        // proxyの参照に依存せずoriginalのSlotIDを用いる
+        record OverridePlans(Dictionary<MaterialSlotId, MaterialOverrideSettings> Values)
+        {
+            public virtual bool Equals(OverridePlans other) => CollectionEquality.DictionaryEquals(Values, other.Values, (a, b) => a.Equals(b));
+            public override int GetHashCode() => CollectionEquality.GetDictionaryHashCode(Values, a => a.GetHashCode());
+        }
+
+        private static OverridePlans ComputeOverridePlans(ComputeContext context, IReadOnlyList<(Renderer Original, Renderer Proxy)> proxyPairs,
+            ImmutableArray<MaterialEditorComponent> components)
+        {
+            var effectiveComponents = components.Where(c => MaterialEditorProcessor.IsEffective(c, context));
+            using var _1 = DictionaryPool<Renderer, Renderer>.Get(out var originalByProxy);
+            FillOriginalByProxyMap(proxyPairs, originalByProxy);
+
+            var materialTargeting = new DefaultMaterialTargeting(null); // proxyに対する監視は不要
+            using var _2 = HashSetPool<MaterialAssignment>.Get(out var proxyAssignments);
+            foreach (var proxy in originalByProxy.Keys)
+            {
+                proxyAssignments.UnionWith(materialTargeting.GetAssignments(proxy));
+            }
+            
+            var proxyOverridePlans = MaterialEditorProcessor.BuildOverridePlans(effectiveComponents, proxyAssignments,
+                Utils.OriginalReferenceEquals, RendererCompare, context);
+
+            bool RendererCompare(Renderer a, Renderer b) =>
+                a == b || (originalByProxy.TryGetValue(a, out var o) && o == b)
+                    || (originalByProxy.TryGetValue(b, out var o2) && o2 == a);
+
+            var originalOverridePlans = new Dictionary<MaterialSlotId, MaterialOverrideSettings>(proxyOverridePlans.Count);
+            foreach (var (proxyAssignment, settings) in proxyOverridePlans)
+            {
+                originalOverridePlans[RemapSlot(proxyAssignment.SlotId, originalByProxy)] = settings;
+            }
+
+            return new OverridePlans(originalOverridePlans);
+        }
+
+        private static Dictionary<MaterialSlotId, Material> BuildReplacements(IReadOnlyList<(Renderer Original, Renderer Proxy)> proxyPairs, 
+            OverridePlans plans)
+        {
+            using var _1 = DictionaryPool<Renderer, Renderer>.Get(out var originalByProxy);
+            FillOriginalByProxyMap(proxyPairs, originalByProxy);
+            using var _2 = DictionaryPool<Renderer, Renderer>.Get(out var proxyByOriginal);
+            FillProxyByOriginalMap(proxyPairs, proxyByOriginal);
+            using var _3 = DictionaryPool<Renderer, Material[]>.Get(out var materialsByProxy);
+
+            using var _4 = DictionaryPool<MaterialAssignment, MaterialOverrideSettings>.Get(out var replacementsInput);
+            foreach (var (originalSlotId, settings) in plans.Values)
+            {
+                var originalRenderer = originalSlotId.Renderer;
+                var materialIndex = originalSlotId.MaterialIndex;
+
+                if (!proxyByOriginal.TryGetValue(originalRenderer, out var proxy)) continue;
+
+                if (!materialsByProxy.TryGetValue(proxy, out var materials))
+                {
+                    materials = proxy.sharedMaterials;
+                    materialsByProxy[proxy] = materials;
+                }
+
+                if (materialIndex < 0 || materialIndex >= materials.Length) continue;
+
+                var material = materials[materialIndex];
+                if (material == null) continue;
+
+                var proxySlotId = RemapSlot(originalSlotId, proxyByOriginal);
+                replacementsInput[new MaterialAssignment(proxySlotId, material)] = settings;
+            }
+
+            var proxyReplacements = MaterialEditorProcessor.CloneAndApplyOverrides(replacementsInput, Utils.CloneAndRegister);
+
+            var replacements = new Dictionary<MaterialSlotId, Material>(proxyReplacements.Count);
+            foreach (var (proxyAssignment, material) in proxyReplacements)
+            {
+                replacements[RemapSlot(proxyAssignment.SlotId, originalByProxy)] = material;
+            }
+
+            return replacements;
+        }
+
+        private static void FillOriginalByProxyMap(IReadOnlyList<(Renderer Original, Renderer Proxy)> proxyPairs,
+            Dictionary<Renderer, Renderer> originalByProxy)
+        {
+            foreach (var (original, proxy) in proxyPairs) originalByProxy[proxy] = original;
+        }
+
+        private static void FillProxyByOriginalMap(IReadOnlyList<(Renderer Original, Renderer Proxy)> proxyPairs,
+            Dictionary<Renderer, Renderer> proxyByOriginal)
+        {
+            foreach (var (original, proxy) in proxyPairs) proxyByOriginal[original] = proxy;
+        }
+
+        private static MaterialSlotId RemapSlot(MaterialSlotId slotId, IReadOnlyDictionary<Renderer, Renderer> rendererMap)
+            => new(rendererMap[slotId.Renderer], slotId.MaterialIndex);
     }
 
     class EmptyNode : IRenderFilterNode
     {
-        RenderAspects IRenderFilterNode.WhatChanged => 0;
+        private readonly RenderAspects _whatChanged;
+
+        public EmptyNode(RenderAspects whatChanged)
+        {
+            _whatChanged = whatChanged;
+        }
+
+        RenderAspects IRenderFilterNode.WhatChanged => _whatChanged;
         void IRenderFilterNode.OnFrame(Renderer original, Renderer proxy) { }
     }
 }
