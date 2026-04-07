@@ -31,6 +31,7 @@ internal static partial class MaterialEditorProcessor
         Func<Renderer, Renderer, bool>? rendererCompare = null,
         ComputeContext? observeContext = null)
     {
+        observeContext ??= ComputeContext.NullContext;
         var plans = new Dictionary<MaterialAssignment, MaterialOverrideSettings>();
         var emptySettings = MaterialOverrideSettings.Empty;
         foreach (var component in components)
