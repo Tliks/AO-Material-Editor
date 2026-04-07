@@ -236,9 +236,9 @@ internal static class MaterialUtility
     {
         editableMaterial.parent = null;
 
-        if (PoiyomiMaterialUtility.IsPoiyomiMaterial(editableMaterial))
+        if (PoiyomiShaderUtility.IsPoiyomiMaterial(editableMaterial))
         {
-            PoiyomiMaterialUtility.Unlock(editableMaterial, sourceMaterial);
+            PoiyomiShaderUtility.Unlock(editableMaterial, sourceMaterial);
         }
     }
 }

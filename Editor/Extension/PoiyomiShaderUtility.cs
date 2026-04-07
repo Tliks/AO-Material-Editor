@@ -4,7 +4,7 @@ using EditorMaterialProperty = UnityEditor.MaterialProperty;
 
 namespace Aoyon.MaterialEditor.Extension;
 
-internal static class PoiyomiMaterialUtility
+internal static class PoiyomiShaderUtility
 {
     private const BindingFlags StaticBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
     private const string OriginalShaderTag = "OriginalShader";
