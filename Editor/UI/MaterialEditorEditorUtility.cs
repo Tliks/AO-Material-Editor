@@ -22,6 +22,9 @@ internal class MaterialEditorEditorUtility
         DrawReplaceTexture(recordingMaterial);
         DrawMaterialDiff(recordingSourceMaterial);
         DrawMaterialVariantDiff();
+#if ME_LILTOON
+        DrawConvertToLilToonCustomShader(recordingMaterial);
+#endif
     }
 
     private bool _showReplaceTexture = false;
@@ -134,4 +137,43 @@ internal class MaterialEditorEditorUtility
         }
     }
 
+#if ME_LILTOON
+    private bool _showConvertToLilToonCustomShader = false;
+    private int _selectedLilToonInspectorIndex = 0;
+    private string[] _lilToonInspectorNames = LiltoonShaderUtility.LilToonInspectorTypes.Select(type => type.Name).ToArray();
+    private void DrawConvertToLilToonCustomShader(Material recordingMaterial)
+    {
+        _showConvertToLilToonCustomShader = EditorGUILayout.Foldout(_showConvertToLilToonCustomShader, "Convert to lilToon Custom Shader", true);
+        if (!_showConvertToLilToonCustomShader) return;
+        if (_lilToonInspectorNames != null && _lilToonInspectorNames.Length > 0)
+        {
+            _selectedLilToonInspectorIndex = EditorGUILayout.Popup("Custom Shader", _selectedLilToonInspectorIndex, _lilToonInspectorNames);
+            if (GUILayout.Button("Run"))
+            {
+                ProcessConvertToLilToonCustomShader();
+            }
+        }
+        else
+        {
+            EditorGUILayout.HelpBox("No lilToon custom shaders found.", MessageType.Info);
+        }
+
+        void ProcessConvertToLilToonCustomShader()
+        {
+            if (_selectedLilToonInspectorIndex < 0 || _selectedLilToonInspectorIndex >= _lilToonInspectorNames.Length) return;
+            var selectedInspectorType = LiltoonShaderUtility.LilToonInspectorTypes[_selectedLilToonInspectorIndex];
+
+            var temporaryMaterial = new Material(recordingMaterial);
+            if (!LiltoonShaderUtility.TryConvertToLilToonCustomShader(temporaryMaterial, selectedInspectorType))
+            {
+                throw new Exception("Failed to convert to lilToon custom shader.");
+            }
+
+            var overrides = MaterialUtility.GetOverrides(recordingMaterial, temporaryMaterial, false, true);
+            _applyOverrides(overrides);
+
+            Object.DestroyImmediate(temporaryMaterial);
+        }
+    }
+#endif
 }
