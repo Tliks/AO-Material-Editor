@@ -29,6 +29,8 @@ internal class MaterialEditorEditor : Editor
     private MaterialOverrideSettings _afterOverrides = MaterialOverrideSettings.Empty;
     private MaterialOverrideSettings? _pendingSelfCommittedOverrides;
 
+    private MaterialEditorEditorUtility _materialEditorEditorUtility = null!;
+
     private const string RecordingMaterialName = "Recording…";
 
     private void OnEnable()
@@ -57,6 +59,8 @@ internal class MaterialEditorEditor : Editor
         }
         _materialEditor = (UnityEditor.MaterialEditor)CreateEditor(_recordingMaterial, typeof(UnityEditor.MaterialEditor));
         InternalEditorUtility.SetIsInspectorExpanded(_recordingMaterial, true); // 初期状態でEditorを展開しておく
+
+        _materialEditorEditorUtility = new MaterialEditorEditorUtility(ApplyExtractedOverridesToComponent);
 
         ObjectChangeEvents.changesPublished += OnObjectChanged;
         MaterialEditoEditorContext.StartRecording(
@@ -138,7 +142,7 @@ internal class MaterialEditorEditor : Editor
                 }
                 DrawRecordingSourceMaterial();
                 using (new EditorGUI.IndentLevelScope()) {
-                    DrawOverrideUtility();
+                    _materialEditorEditorUtility.DrawOverrideUtility(_recordingMaterial, _recordingSourceMaterial);
                 }
                 GUIHelper.DrawFullWidthHorizontalLine(new Color(0.35f, 0.35f, 0.35f));
                 EditorGUILayout.Space();
@@ -565,122 +569,6 @@ internal class MaterialEditorEditor : Editor
 
         DebugLog("ConsumeSelfCommittedOverrideEcho, frame: " + Time.frameCount);
         return true;
-    }
-
-    // OverrideUtilityGUI
-    private bool _showOverrideUtility = false;
-    private bool _showReplaceTexture = false;
-    private bool _showMaterialDiff = false;
-    private bool _showMaterialVariantDiff = false;
-    private Texture? _sourceTexture = null;
-    private Texture? _destinationTexture = null;
-    private Material? _originalMaterial = null;
-    private Material? _overrideMaterial = null;
-    private Material? _variantMaterial = null;
-    private void DrawOverrideUtility()
-    {
-        _showOverrideUtility = EditorGUILayout.Foldout(_showOverrideUtility, "overrideUtility.title".LS(), true);
-        if (!_showOverrideUtility) return;
-
-        using var indent = new EditorGUI.IndentLevelScope();
-
-        // Replace Texture Foldout
-        _showReplaceTexture = EditorGUILayout.Foldout(_showReplaceTexture, "overrideUtility.replaceTexture.title".LS(), true);
-        if (_showReplaceTexture)
-        {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                _sourceTexture = EditorGUILayout.ObjectField("overrideUtility.replaceTexture.source".LS(), _sourceTexture, typeof(Texture), false, GUILayout.Height(18f)) as Texture;
-                TextureSelector.Draw(() => MaterialUtility.EnumerateTextures(_recordingMaterial).Distinct().ToArray(), (t, _) => { _sourceTexture = t; });
-            }
-            _destinationTexture = EditorGUILayout.ObjectField("overrideUtility.replaceTexture.destination".LS(), _destinationTexture, typeof(Texture), false, GUILayout.Height(18f)) as Texture;
-            using (new EditorGUI.DisabledGroupScope(_sourceTexture == null || _destinationTexture == null))
-            {
-                if (GUILayout.Button("overrideUtility.replaceTexture.title".LS()))
-                {
-                    ProcessReplaceTexture();
-                }
-            }
-        }
-
-        // Material Diff Foldout
-        _showMaterialDiff = EditorGUILayout.Foldout(_showMaterialDiff, "overrideUtility.materialDiff.title".LS(), true);
-        if (_showMaterialDiff)
-        {
-            _originalMaterial ??= _recordingSourceMaterial;
-            _originalMaterial = EditorGUILayout.ObjectField("overrideUtility.materialDiff.original".LS(), _originalMaterial, typeof(Material), false) as Material;
-            _overrideMaterial = EditorGUILayout.ObjectField("overrideUtility.materialDiff.modified".LS(), _overrideMaterial, typeof(Material), false) as Material;
-        
-            using (new EditorGUI.DisabledGroupScope(_originalMaterial == null || _overrideMaterial == null))
-            {
-                if (GUILayout.Button("overrideUtility.addChanges".LS()))
-                {
-                    ProcessMaterialDiff(true);
-                }
-                if (GUILayout.Button("overrideUtility.addChangesExcludeTexture".LS()))
-                {
-                    ProcessMaterialDiff(false);
-                }
-            }
-        }
-
-        // Material Variant Diff Foldout
-        _showMaterialVariantDiff = EditorGUILayout.Foldout(_showMaterialVariantDiff, "overrideUtility.variantDiff.title".LS(), true);
-        if (_showMaterialVariantDiff)
-        {
-            _variantMaterial = EditorGUILayout.ObjectField("overrideUtility.variantDiff.material".LS(), _variantMaterial, typeof(Material), false) as Material;
-            if (_variantMaterial != null && !_variantMaterial.isVariant)
-            {
-                EditorGUILayout.HelpBox("overrideUtility.variantDiff.notVariant".LS(), MessageType.Info);
-            }
-        
-            using (new EditorGUI.DisabledGroupScope(_variantMaterial == null || !_variantMaterial.isVariant))
-            {
-                if (GUILayout.Button("overrideUtility.addChanges".LS()))
-                {
-                    ProcessMaterialVariantDiff(true);
-                }
-                if (GUILayout.Button("overrideUtility.addChangesExcludeTexture".LS()))
-                {
-                    ProcessMaterialVariantDiff(false);
-                }
-            }
-        }
-
-        return;
-
-        void ProcessReplaceTexture()
-        {
-            if (_sourceTexture == null || _destinationTexture == null) return;
-
-            var overrides = MaterialUtility.GetTextureReplacementOverrides(_recordingMaterial, _sourceTexture, _destinationTexture);
-            ApplyExtractedOverridesToComponent(overrides);
-
-            _sourceTexture = null;
-            _destinationTexture = null;
-        }
-
-        void ProcessMaterialDiff(bool includeTexture)
-        {
-            if (_originalMaterial == null || _overrideMaterial == null) return;
-
-            var overrides = MaterialUtility.GetOverrides(_originalMaterial, _overrideMaterial, false, true, includeTexture);
-            ApplyExtractedOverridesToComponent(overrides);
-
-            _originalMaterial = null;
-            _overrideMaterial = null;
-        }
-
-        void ProcessMaterialVariantDiff(bool includeTexture)
-        {
-            if (_variantMaterial == null || !_variantMaterial.isVariant) return;
-
-            var overrides = MaterialUtility.GetVariantOverrides(_variantMaterial, includeTexture);
-            ApplyExtractedOverridesToComponent(overrides);
-
-            _variantMaterial = null;
-        
-        }
     }
 
     private void ApplyExtractedOverridesToComponent(MaterialOverrideSettings extractedOverrides)

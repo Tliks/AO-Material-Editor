@@ -9,9 +9,7 @@ internal static class LiltoonShaderUtility
 
     private static Type[]? _lilToonInspectorTypes;
     public static Type[] LilToonInspectorTypes => _lilToonInspectorTypes ??= GetDerivedTypesOfLilToonInspector();
-    private static string[]? _lilToonInspectorNames;
-    public static string[] LilToonInspectorNames => _lilToonInspectorNames ??= LilToonInspectorTypes.Select(type => type.Name).ToArray();
-
+    
     private static Type[] GetDerivedTypesOfLilToonInspector()
     {
         return TypeCache.GetTypesDerivedFrom<lilToon.lilToonInspector>()
