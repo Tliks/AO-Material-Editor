@@ -7,28 +7,43 @@ namespace Aoyon.MaterialEditor.Processor;
 
 internal class MaterialEditorPreview : IRenderFilter
 {
-    private readonly PropCache<GameObject, ComponentTargets> _originalComponentTargetsCache = new(
-        "MaterialEditorPreview.OriginalComponentTargets", AnalyzeOriginalComponentTargets, (a, b) => a.Equals(b));
+    private readonly PropCache<int, TargetGroups> _originalTargetGroupsCache = new(
+        "MaterialEditorPreview.OriginalTargetGroups", (ctx, _) => AnalyzeOriginalTargetGroups(ctx), (a, b) => a.Equals(b));
 
     ImmutableList<RenderGroup> IRenderFilter.GetTargetGroups(ComputeContext context)
     {
+        var targetGroups = _originalTargetGroupsCache.Get(context, 0);
+        var groups = ImmutableList.CreateBuilder<RenderGroup>();
+        foreach (var (_, componentTargets) in targetGroups.Values)
+        {
+            groups.AddRange(BuildRenderGroups(componentTargets));
+        }
+        return groups.ToImmutable();
+    }
+
+    private static TargetGroups AnalyzeOriginalTargetGroups(ComputeContext context)
+    {
         try
         {
-            var groups = ImmutableList.CreateBuilder<RenderGroup>();
+            var targetGroups = ImmutableDictionary.CreateBuilder<GameObject, ComponentTargets>();
             foreach (var root in context.GetAvatarRoots().Distinct())
             {
-                var componentTargets = _originalComponentTargetsCache.Get(context, root);
-                if (componentTargets.Values.Length == 0) continue;
-
-                groups.AddRange(BuildRenderGroups(componentTargets));
+                var componentTargets = AnalyzeOriginalComponentTargets(context, root);
+                targetGroups[root] = componentTargets;
             }
-            return groups.ToImmutable();
+            return new(targetGroups.ToImmutable());
         }
         catch (Exception e)
         {
             Debug.LogError(e.Message);
-            return ImmutableList<RenderGroup>.Empty;
+            return new(ImmutableDictionary<GameObject, ComponentTargets>.Empty);
         }
+    }
+
+    record TargetGroups(ImmutableDictionary<GameObject, ComponentTargets> Values)
+    {
+        public virtual bool Equals(TargetGroups other) => CollectionEquality.DictionaryEquals(Values, other.Values, (a, b) => a.Equals(b));
+        public override int GetHashCode() => CollectionEquality.GetDictionaryHashCode(Values, a => a.GetHashCode());
     }
 
     private static ComponentTargets AnalyzeOriginalComponentTargets(ComputeContext context, GameObject root)
