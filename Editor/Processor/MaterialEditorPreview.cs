@@ -85,38 +85,26 @@ internal class MaterialEditorPreview : IRenderFilter
             .Select((entry, index) => (entry.Component, index))
             .ToDictionary(x => x.Component, x => x.index);
 
-        var rendererGroups = new List<(HashSet<Renderer> renderers, HashSet<MaterialEditorComponent> components)>();
+        var componentsByRenderer = new Dictionary<Renderer, HashSet<MaterialEditorComponent>>();
         foreach (var (component, assignments) in componentTargets.Values)
         {
             var renderers = assignments.Select(a => a.SlotId.Renderer).ToHashSet();
-            var overlappingIndices = rendererGroups
-                .Select((r, i) => (r.renderers.Overlaps(renderers), i))
-                .Where(t => t.Item1)
-                .Select(t => t.i)
-                .OrderByDescending(i => i)
-                .ToList();
-
-            if (overlappingIndices.Count == 0)
+            foreach (var renderer in renderers)
             {
-                rendererGroups.Add((renderers, new HashSet<MaterialEditorComponent> { component }));
-            }
-            else
-            {
-                var (mergeIntoRenderers, mergeIntoComponents) = rendererGroups[overlappingIndices[^1]];
-                mergeIntoRenderers.UnionWith(renderers);
-                mergeIntoComponents.Add(component);
-                foreach (var idx in overlappingIndices.SkipLast(1))
+                if (!componentsByRenderer.TryGetValue(renderer, out var components))
                 {
-                    var (otherRenderers, otherComponents) = rendererGroups[idx];
-                    mergeIntoRenderers.UnionWith(otherRenderers);
-                    mergeIntoComponents.UnionWith(otherComponents);
-                    rendererGroups.RemoveAt(idx);
+                    components = new HashSet<MaterialEditorComponent>();
+                    componentsByRenderer[renderer] = components;
                 }
+
+                components.Add(component);
             }
         }
-        return rendererGroups
-            .Select(r => RenderGroup.For(r.renderers).WithData(new PassingData(
-                r.components
+
+        return componentsByRenderer
+            .OrderBy(entry => entry.Key.GetInstanceID())
+            .Select(entry => RenderGroup.For(entry.Key).WithData(new PassingData(
+                entry.Value
                     .OrderBy(component => componentOrder[component])
                     .ToImmutableArray()
             )))
