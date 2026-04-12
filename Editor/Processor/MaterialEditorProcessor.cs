@@ -60,7 +60,7 @@ internal static partial class MaterialEditorProcessor
         return plans;
     }
 
-    public static Dictionary<MaterialAssignment, Material> CloneAndApplyOverrides(
+    public static Dictionary<MaterialAssignment, Material> BuildReplacements(
         IReadOnlyDictionary<MaterialAssignment, MaterialOverrideSettings> plans,
         Func<Material, Material> clone)
     {

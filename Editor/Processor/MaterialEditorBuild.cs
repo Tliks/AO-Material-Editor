@@ -37,7 +37,7 @@ internal class MaterialEditorBuild : Pass<MaterialEditorBuild>
         var overridePlans = MaterialEditorProcessor.BuildOverridePlans(effectiveComponents, 
             allAssignments, Utils.OriginalReferenceEquals, Utils.OriginalReferenceEquals);
 
-        var replacements = MaterialEditorProcessor.CloneAndApplyOverrides(overridePlans, 
+        var replacements = MaterialEditorProcessor.BuildReplacements(overridePlans, 
             Utils.CloneAndRegister);
 
         materialTargeting.ApplyReplacements(replacements);

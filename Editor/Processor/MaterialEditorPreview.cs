@@ -149,8 +149,8 @@ internal class MaterialEditorPreview : IRenderFilter
     class Node : IRenderFilterNode
     {
         private readonly ImmutableArray<MaterialEditorComponent> _components;
+        
         private OverridePlans _currentPlans;
-    
         // proxyの参照に依存せずoriginalのSlotIDを用いる
         private Dictionary<MaterialSlotId, Material> _replacements;
 
@@ -318,7 +318,7 @@ internal class MaterialEditorPreview : IRenderFilter
                 replacementsInput[new MaterialAssignment(proxySlotId, material)] = settings;
             }
 
-            var proxyReplacements = MaterialEditorProcessor.CloneAndApplyOverrides(replacementsInput, Utils.CloneAndRegister);
+            var proxyReplacements = MaterialEditorProcessor.BuildReplacements(replacementsInput, Utils.CloneAndRegister);
 
             var replacements = new Dictionary<MaterialSlotId, Material>(proxyReplacements.Count);
             foreach (var (proxyAssignment, material) in proxyReplacements)
