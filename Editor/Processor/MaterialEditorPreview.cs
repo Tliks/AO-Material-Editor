@@ -7,48 +7,29 @@ namespace Aoyon.MaterialEditor.Processor;
 
 internal class MaterialEditorPreview : IRenderFilter
 {
-    private readonly PropCache<int, TargetGroups> _originalTargetGroupsCache = new(
-        "MaterialEditorPreview.OriginalTargetGroups", (ctx, _) => AnalyzeOriginalTargetGroups(ctx), (a, b) => a.Equals(b));
-
     ImmutableList<RenderGroup> IRenderFilter.GetTargetGroups(ComputeContext context)
-    {
-        var targetGroups = _originalTargetGroupsCache.Get(context, 0);
-        var groups = ImmutableList.CreateBuilder<RenderGroup>();
-        foreach (var (_, componentTargets) in targetGroups.Values)
-        {
-            groups.AddRange(BuildRenderGroups(componentTargets));
-        }
-        return groups.ToImmutable();
-    }
-
-    private static TargetGroups AnalyzeOriginalTargetGroups(ComputeContext context)
     {
         try
         {
-            var targetGroups = ImmutableDictionary.CreateBuilder<GameObject, ComponentTargets>();
+            var groups = ImmutableList.CreateBuilder<RenderGroup>();
             foreach (var root in context.GetAvatarRoots().Distinct())
             {
                 var componentTargets = AnalyzeOriginalComponentTargets(context, root);
-                targetGroups[root] = componentTargets;
+                var renderGroups = BuildRenderGroups(componentTargets);
+                groups.AddRange(renderGroups);
             }
-            return new(targetGroups.ToImmutable());
+            return groups.ToImmutable();
         }
         catch (Exception e)
         {
-            Debug.LogError(e.Message);
-            return new(ImmutableDictionary<GameObject, ComponentTargets>.Empty);
+            Debug.LogException(e);
+            return ImmutableList<RenderGroup>.Empty;
         }
     }
 
-    record TargetGroups(ImmutableDictionary<GameObject, ComponentTargets> Values)
+    private static List<(MaterialEditorComponent, HashSet<MaterialAssignment>)> AnalyzeOriginalComponentTargets(ComputeContext context, GameObject root)
     {
-        public virtual bool Equals(TargetGroups other) => CollectionEquality.DictionaryEquals(Values, other.Values, (a, b) => a.Equals(b));
-        public override int GetHashCode() => CollectionEquality.GetDictionaryHashCode(Values, a => a.GetHashCode());
-    }
-
-    private static ComponentTargets AnalyzeOriginalComponentTargets(ComputeContext context, GameObject root)
-    {
-        var componentTargets = ImmutableArray.CreateBuilder<(MaterialEditorComponent, ImmutableHashSet<MaterialAssignment>)>();
+        var componentTargets = new List<(MaterialEditorComponent, HashSet<MaterialAssignment>)>();
 
         var renderers = MaterialEditorProcessor.GetTargetRenderers(root, context);
         var allAssignments = new DefaultMaterialTargeting(context).GetAssignments(renderers).ToHashSet();
@@ -64,44 +45,20 @@ internal class MaterialEditorPreview : IRenderFilter
             var targetAssignments = MaterialEditorProcessor.SelectTargetAssignments(allAssignments, component, null, null, context);
             if (targetAssignments.Count == 0) continue;
 
-            componentTargets.Add((component, targetAssignments.ToImmutableHashSet()));
+            componentTargets.Add((component, targetAssignments));
         }
 
-        return new ComponentTargets(componentTargets.ToImmutable());
+        return componentTargets;
     }
 
-    record ComponentTargets(ImmutableArray<(MaterialEditorComponent Component, ImmutableHashSet<MaterialAssignment> Assignments)> Values)
+    private static RenderGroup[] BuildRenderGroups(List<(MaterialEditorComponent, HashSet<MaterialAssignment>)> componentTargets)
     {
-        public virtual bool Equals(ComponentTargets other)
-        {
-            if (Values.Length != other.Values.Length) return false;
-            for (var i = 0; i < Values.Length; i++)
-            {
-                if (Values[i].Component != other.Values[i].Component) return false;
-                if (!CollectionEquality.SetEquals(Values[i].Assignments, other.Values[i].Assignments)) return false;
-            }
-            return true;
-        }
-
-        public override int GetHashCode()
-        {
-            var hash = 0;
-            foreach (var (component, assignments) in Values)
-            {
-                hash = HashCode.Combine(hash, component, CollectionEquality.GetSetHashCode(assignments));
-            }
-            return HashCode.Combine(Values.Length, hash);
-        }
-    }
-
-    private static RenderGroup[] BuildRenderGroups(ComponentTargets componentTargets)
-    {
-        var componentOrder = componentTargets.Values
-            .Select((entry, index) => (entry.Component, index))
-            .ToDictionary(x => x.Component, x => x.index);
+        var componentOrder = componentTargets
+            .Select((entry, index) => (entry.Item1, index))
+            .ToDictionary(x => x.Item1, x => x.index);
 
         var componentsByRenderer = new Dictionary<Renderer, HashSet<MaterialEditorComponent>>();
-        foreach (var (component, assignments) in componentTargets.Values)
+        foreach (var (component, assignments) in componentTargets)
         {
             var renderers = assignments.Select(a => a.SlotId.Renderer).ToHashSet();
             foreach (var renderer in renderers)
@@ -117,26 +74,21 @@ internal class MaterialEditorPreview : IRenderFilter
         }
 
         return componentsByRenderer
-            .OrderBy(entry => entry.Key.GetInstanceID())
-            .Select(entry => RenderGroup.For(entry.Key).WithData(new PassingData(
-                entry.Value
-                    .OrderBy(component => componentOrder[component])
-                    .ToImmutableArray()
-            )))
+            .Select(kvp => BuildRenderGroup(kvp.Key, kvp.Value))
             .ToArray();
-    }
-
-    record PassingData(ImmutableArray<MaterialEditorComponent> Components)
-    {
-        public virtual bool Equals(PassingData other) => CollectionEquality.SequenceEquals(Components, other.Components);
-        public override int GetHashCode() => CollectionEquality.GetSequenceHashCode(Components);
+        
+        RenderGroup BuildRenderGroup(Renderer renderer, HashSet<MaterialEditorComponent> components)
+        {
+            var sortedComponents = components.OrderBy(component => componentOrder[component]).ToImmutableArray();
+            return RenderGroup.For(renderer).WithData<ImmutableArray<MaterialEditorComponent>>(sortedComponents, (a, b) => a.SequenceEqual(b));
+        }
     }
 
     Task<IRenderFilterNode> IRenderFilter.Instantiate(RenderGroup group, IEnumerable<(Renderer, Renderer)> proxyPairs, ComputeContext context)
     {
         try
         {
-            var components = group.GetData<PassingData>().Components;
+            var components = group.GetData<ImmutableArray<MaterialEditorComponent>>();
             return Node.Create(proxyPairs, context, components);
         }
         catch (Exception e)
