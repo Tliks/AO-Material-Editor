@@ -80,7 +80,7 @@ internal class MaterialEditorPreview : IRenderFilter
         RenderGroup BuildRenderGroup(Renderer renderer, HashSet<MaterialEditorComponent> components)
         {
             var sortedComponents = components.OrderBy(component => componentOrder[component]).ToImmutableArray();
-            return RenderGroup.For(renderer).WithData<ImmutableArray<MaterialEditorComponent>>(sortedComponents, (a, b) => a.SequenceEqual(b));
+            return RenderGroup.For(renderer).WithData<ImmutableArray<MaterialEditorComponent>>(sortedComponents, (a, b) => Enumerable.SequenceEqual(a, b));
         }
     }
 
