@@ -31,6 +31,7 @@ internal static partial class MaterialEditorProcessor
         Func<Renderer, Renderer, bool>? rendererCompare = null,
         ComputeContext? observeContext = null)
     {
+        observeContext ??= ComputeContext.NullContext;
         var plans = new Dictionary<MaterialAssignment, MaterialOverrideSettings>();
         var emptySettings = MaterialOverrideSettings.Empty;
         foreach (var component in components)
@@ -59,7 +60,7 @@ internal static partial class MaterialEditorProcessor
         return plans;
     }
 
-    public static Dictionary<MaterialAssignment, Material> CloneAndApplyOverrides(
+    public static Dictionary<MaterialAssignment, Material> BuildReplacements(
         IReadOnlyDictionary<MaterialAssignment, MaterialOverrideSettings> plans,
         Func<Material, Material> clone)
     {
