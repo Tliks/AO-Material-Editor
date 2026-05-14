@@ -28,7 +28,9 @@ internal static class MenuItems
     // Tools
     private const string ToolsPath = "Tools/AO Material Editor";
 
-    private const string EnableMaterialEditorPatcherPath = ToolsPath + "/Enable Material Editor Patcher";
+    private const string SettingsPath = ToolsPath + "/Settings";
+
+    private const string EnableMaterialEditorPatcherPath = SettingsPath + "/Enable Material Editor Patcher";
 
     [MenuItem(EnableMaterialEditorPatcherPath, true)]
     private static bool ValidateEnableMaterialEditorPatcher()
@@ -44,7 +46,7 @@ internal static class MenuItems
         InternalEditorUtility.RepaintAllViews();
     }
 
-    private const string ShowInspectorDescriptionPath = ToolsPath + "/Show Inspector Description";
+    private const string ShowInspectorDescriptionPath = SettingsPath + "/Show Inspector Description";
 
     [MenuItem(ShowInspectorDescriptionPath, true)]
     private static bool ValidateShowInspectorDescription()
