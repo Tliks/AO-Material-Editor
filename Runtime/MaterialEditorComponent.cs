@@ -2,7 +2,7 @@ using UnityEngine.Animations;
 
 namespace Aoyon.MaterialEditor
 {
-    [AddComponentMenu("AO Material Editor/AO Material Editor")]
+    [AddComponentMenu($"{Constants.DisplayName}/{Constants.DisplayName}")]
     internal class MaterialEditorComponent : MaterialEditorComponentBase
     {
         [NotKeyable]

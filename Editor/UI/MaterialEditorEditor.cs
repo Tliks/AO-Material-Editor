@@ -29,7 +29,8 @@ internal class MaterialEditorEditor : Editor
     private MaterialOverrideSettings _afterOverrides = MaterialOverrideSettings.Empty;
     private MaterialOverrideSettings? _pendingSelfCommittedOverrides;
 
-    private const string RecordingMaterialName = "Recording…";
+    private const string RecordingMaterialName = "Recording… (Cloned)";
+    private const float EditorHelpBoxLeftPadding = 4f;
 
     private void OnEnable()
     {
@@ -87,7 +88,7 @@ internal class MaterialEditorEditor : Editor
     {
         serializedObject.Update();
 
-        Localization.DrawLanguageSwitcher();
+        DrawHeaderSettings();
         if (!Migrator.CheckAndDrawMigrationButton(_target)) {
             return;
         }
@@ -95,10 +96,44 @@ internal class MaterialEditorEditor : Editor
         EditorGUILayout.Space();
         DrawEntrySettings();
         EditorGUILayout.Space();
-        EditorGUILayout.Space(); 
         DrawEditor();
 
         serializedObject.ApplyModifiedProperties();
+    }
+
+    private void DrawHeaderSettings()
+    {
+        using var scope = new EditorGUILayout.HorizontalScope();
+        DrawLanguageSelector();
+        DrawDescriptionToggle();
+    }
+
+    private void DrawLanguageSelector()
+    {
+        var label = new GUIContent("Language");
+        var labelWidth = EditorStyles.label.CalcSize(label).x + 2f;
+        GUILayout.Label(label, GUILayout.Width(labelWidth));
+        Localization.DrawLanguagePopupWithoutLabel(GUILayout.ExpandWidth(true));
+    }
+
+    private void DrawDescriptionToggle()
+    {
+        var label = "editor.showDescription".LG();
+        var options = new[]
+        {
+            "common.on".LG(),
+            "common.off".LG()
+        };
+        var labelWidth = EditorStyles.label.CalcSize(label).x + 2f;
+        var itemWidth = options.Max(option => EditorStyles.toolbarButton.CalcSize(option).x) + 6f;
+        var toolbarWidth = itemWidth * options.Length;
+        var selected = MaterialEditorSettings.ShowInspectorDescription ? 0 : 1;
+
+        GUILayout.Label(label, GUILayout.Width(labelWidth));
+        MaterialEditorSettings.ShowInspectorDescription = GUILayout.Toolbar(
+            selected,
+            options,
+            GUILayout.Width(toolbarWidth)) == 0;
     }
 
     private void DrawInformationGUI()
@@ -119,46 +154,63 @@ internal class MaterialEditorEditor : Editor
 
     private void DrawEntrySettings()
     {
-        var label = $"# {"targetSettings.title".LS()}";
+        var label = "targetSettings.title".LS();
         EditorGUILayout.PropertyField(_targetSettings, new GUIContent(label));
     }
 
     private void DrawEditor()
     {
-        EditorGUILayout.LabelField("# " + "editor.title".LS(), EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("editor.title".LS(), EditorStyles.boldLabel);
 
         if (_recordingSourceMaterial != null && _materialEditor != null)
         {
             _materialEditor.DrawHeader();
             if (_materialEditor.isVisible) {
-                DrawOverridesGUI();
-                if (MaterialEditorSettings.ShowInspectorDescription)
-                {
-                    EditorGUILayout.HelpBox("editor.help".LS(), MessageType.Info);
-                }
+                DrawOverridesGUI("overrideSettings.help.visibleEditor");
+                DrawOverrideUtility();
                 DrawRecordingSourceMaterial();
-                using (new EditorGUI.IndentLevelScope()) {
-                    DrawOverrideUtility();
-                }
+                DrawEditorHelp();
                 GUIHelper.DrawFullWidthHorizontalLine(new Color(0.35f, 0.35f, 0.35f));
                 EditorGUILayout.Space();
                 _materialEditor.OnInspectorGUI();
             }
             else {
-                DrawOverridesGUI();
+                DrawOverridesGUI("overrideSettings.help.hiddenEditor");
             }
         }
         else 
         {
             EditorGUILayout.HelpBox("editor.noMaterialSelected.help".LS(), MessageType.Warning, true);
-            DrawOverridesGUI();
+            DrawOverridesGUI("overrideSettings.help.noMaterial");
         }
     }
 
-    private void DrawOverridesGUI()
+    private void DrawOverridesGUI(string helpKey)
     {
-        var count = _target.OverrideSettings.OverrideCount;
-        EditorGUILayout.PropertyField(_overrideSettings, new GUIContent(string.Format("overrideSettings.count".LS(), count)));
+        using (MaterialOverrideSettingsDrawer.HelpKeyScope(helpKey))
+        {
+            EditorGUILayout.PropertyField(_overrideSettings);
+        }
+    }
+
+    private void DrawEditorHelp()
+    {
+        if (!MaterialEditorSettings.ShowInspectorDescription)
+        {
+            return;
+        }
+
+        var text = "editor.help".LS();
+        var height = GUIHelper.GetHelpBoxHeight(text, MessageType.Info);
+        var position = EditorGUILayout.GetControlRect(false, height);
+        if (GUIHelper.TryGetMarginX(out var marginX))
+        {
+            var offset = position.xMin - marginX;
+            position.x = marginX + EditorHelpBoxLeftPadding;
+            position.width += offset - EditorHelpBoxLeftPadding;
+        }
+
+        GUIHelper.HelpBox(position, text, MessageType.Info);
     }
     
     private HashSet<Material> UpdateTargetMaterials()
@@ -173,11 +225,17 @@ internal class MaterialEditorEditor : Editor
     {
         if (_targetMaterials.Count < 2) return;
 
-        using var _ = new EditorGUILayout.HorizontalScope();
-        using (new EditorGUI.DisabledGroupScope(true)) {
-            EditorGUILayout.ObjectField("editor.recordingSourceMaterial".LS(), _recordingSourceMaterial, typeof(Material), false);
+        var position = EditorGUILayout.GetControlRect();
+        GUIHelper.SplitRectHorizontallyForLeft(position, EditorGUIUtility.labelWidth, out var labelRect, out var fieldPosition);
+        EditorGUI.LabelField(labelRect, "editor.recordingSourceMaterial".LG());
+        var selectorWidth = MaterialSelector.GetSize().x;
+        GUIHelper.SplitRectHorizontallyForLeft(fieldPosition, selectorWidth, out var selectorRect, out var objectFieldRect);
+
+        MaterialSelector.Draw(selectorRect, () => _targetMaterials.ToArray(), (m, i) => { _recordingSourceMaterial = m; OnRecordingSourceMaterialChanged(); });
+        using (new EditorGUI.DisabledGroupScope(true))
+        {
+            EditorGUI.ObjectField(objectFieldRect, GUIContent.none, _recordingSourceMaterial, typeof(Material), false);
         }
-        MaterialSelector.Draw(() => _targetMaterials.ToArray(), (m, i) => { _recordingSourceMaterial = m; OnRecordingSourceMaterialChanged(); });
     }
 
     private Material? AutoSelectRecordingSourceMaterial()
@@ -569,42 +627,20 @@ internal class MaterialEditorEditor : Editor
 
     // OverrideUtilityGUI
     private bool _showOverrideUtility = false;
-    private bool _showReplaceTexture = false;
     private bool _showMaterialDiff = false;
     private bool _showMaterialVariantDiff = false;
-    private Texture? _sourceTexture = null;
-    private Texture? _destinationTexture = null;
     private Material? _originalMaterial = null;
     private Material? _overrideMaterial = null;
     private Material? _variantMaterial = null;
     private void DrawOverrideUtility()
     {
-        _showOverrideUtility = EditorGUILayout.Foldout(_showOverrideUtility, "overrideUtility.title".LS(), true);
+        _showOverrideUtility = GUIHelper.Foldout(_showOverrideUtility, "overrideUtility.title".LG());
         if (!_showOverrideUtility) return;
 
         using var indent = new EditorGUI.IndentLevelScope();
 
-        // Replace Texture Foldout
-        _showReplaceTexture = EditorGUILayout.Foldout(_showReplaceTexture, "overrideUtility.replaceTexture.title".LS(), true);
-        if (_showReplaceTexture)
-        {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                _sourceTexture = EditorGUILayout.ObjectField("overrideUtility.replaceTexture.source".LS(), _sourceTexture, typeof(Texture), false, GUILayout.Height(18f)) as Texture;
-                TextureSelector.Draw(() => MaterialUtility.EnumerateTextures(_recordingMaterial).Distinct().ToArray(), (t, _) => { _sourceTexture = t; });
-            }
-            _destinationTexture = EditorGUILayout.ObjectField("overrideUtility.replaceTexture.destination".LS(), _destinationTexture, typeof(Texture), false, GUILayout.Height(18f)) as Texture;
-            using (new EditorGUI.DisabledGroupScope(_sourceTexture == null || _destinationTexture == null))
-            {
-                if (GUILayout.Button("overrideUtility.replaceTexture.title".LS()))
-                {
-                    ProcessReplaceTexture();
-                }
-            }
-        }
-
         // Material Diff Foldout
-        _showMaterialDiff = EditorGUILayout.Foldout(_showMaterialDiff, "overrideUtility.materialDiff.title".LS(), true);
+        _showMaterialDiff = GUIHelper.Foldout(_showMaterialDiff, "overrideUtility.materialDiff.title".LG());
         if (_showMaterialDiff)
         {
             _originalMaterial ??= _recordingSourceMaterial;
@@ -625,7 +661,7 @@ internal class MaterialEditorEditor : Editor
         }
 
         // Material Variant Diff Foldout
-        _showMaterialVariantDiff = EditorGUILayout.Foldout(_showMaterialVariantDiff, "overrideUtility.variantDiff.title".LS(), true);
+        _showMaterialVariantDiff = GUIHelper.Foldout(_showMaterialVariantDiff, "overrideUtility.variantDiff.title".LG());
         if (_showMaterialVariantDiff)
         {
             _variantMaterial = EditorGUILayout.ObjectField("overrideUtility.variantDiff.material".LS(), _variantMaterial, typeof(Material), false) as Material;
@@ -648,17 +684,6 @@ internal class MaterialEditorEditor : Editor
         }
 
         return;
-
-        void ProcessReplaceTexture()
-        {
-            if (_sourceTexture == null || _destinationTexture == null) return;
-
-            var overrides = MaterialUtility.GetTextureReplacementOverrides(_recordingMaterial, _sourceTexture, _destinationTexture);
-            ApplyExtractedOverridesToComponent(overrides);
-
-            _sourceTexture = null;
-            _destinationTexture = null;
-        }
 
         void ProcessMaterialDiff(bool includeTexture)
         {

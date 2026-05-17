@@ -8,5 +8,5 @@ Modular Material Modification Component
 Add Component via `AO Material Editor/AO Material Editor`
 
 Dependencies
-- [NDMF](https://github.com/bdunderscore/ndmf) >= 1.9.0
+- [NDMF](https://github.com/bdunderscore/ndmf) >= 1.13.0
 - [Modular Avatar](https://github.com/bdunderscore/modular-avatar) >= 1.15.0

@@ -6,31 +6,45 @@ namespace Aoyon.MaterialEditor.UI;
 // based on https://github.com/lilxyzw/lilycalInventory/blob/52763ab539d59609e63d6974493948ab0614f7c2/Editor/Helper/GUIHelper.ReorderableList.cs
 internal static partial class GUIHelper
 {
-    public readonly record struct ListMiddleContentOptions(Action<Rect> Draw, Func<float> GetHeight);
+    public readonly record struct ListContentOptions(Action<Rect> Draw, Func<float> GetHeight);
 
     public readonly struct ListOptions
     {
         public FoldoutOptions Foldout { get; }
         public bool Nest { get; }
         public float? MaxVisibleListHeight { get; }
-        public ListMiddleContentOptions? MiddleContent { get; }
+        public ListContentOptions? MiddleContent { get; }
+        public ListContentOptions? TailContent { get; }
 
-        public ListOptions() : this(null, true, null, null) { }
+        public ListOptions() : this(null, true, null, null, null) { }
 
         public ListOptions(
             FoldoutOptions? foldout = null,
             bool nest = true,
             float? maxVisibleListHeight = null,
-            ListMiddleContentOptions? middleContent = null)
+            ListContentOptions? middleContent = null,
+            ListContentOptions? tailContent = null)
         {
             Foldout = foldout ?? new FoldoutOptions();
             Nest = nest;
             MaxVisibleListHeight = maxVisibleListHeight;
             MiddleContent = middleContent;
+            TailContent = tailContent;
         }
     }
 
-    private static readonly GUIStyle buttonStyle = EditorStyles.miniButton;
+    private static readonly Texture AddIcon = EditorGUIUtility.IconContent("d_Toolbar Plus").image;
+    private static readonly Texture RemoveIcon = EditorGUIUtility.IconContent("d_Toolbar Minus").image;
+    private static readonly GUIContent AddContent = new GUIContent("") { image = AddIcon };
+    private static readonly GUIContent RemoveContent = new GUIContent("") { image = RemoveIcon };
+    private static readonly GUIStyle buttonStyle = new(EditorStyles.miniButton)
+    {
+        alignment = TextAnchor.MiddleCenter,
+        imagePosition = ImagePosition.ImageOnly,
+        padding = new RectOffset(0, 0, 0, 0),
+        margin = new RectOffset(0, 0, 0, 0)
+    };
+    private const float FooterButtonWidth = 26f;
     private static readonly Dictionary<string, Vector2> listScrollPositions = new();
     private static readonly ReorderableList.FooterCallbackDelegate emptyFooterCallback = _ => { };
     public static float DefaultScrollableListHeight => 110f;
@@ -57,6 +71,7 @@ internal static partial class GUIHelper
         var drawFoldout = foldoutOptions.Draw;
         var shouldNest = resolvedOptions.Nest;
         var middleContent = resolvedOptions.MiddleContent;
+        var tailContent = resolvedOptions.TailContent;
         var foldoutRect = position.SetSingleHeight();
         // ReorderableList 用の foldout は、右端の IntField/ボタン領域をクリック対象から除外する
         var isExpanded = Foldout(foldoutRect, property, content, foldoutOptions);
@@ -68,6 +83,7 @@ internal static partial class GUIHelper
         var reorderableList = PropertyHandlerWrap.GetOrSet(property, initializeFunction);
         reorderableList.drawFooterCallback = emptyFooterCallback;
         var middleContentHeight = middleContent?.GetHeight.Invoke() ?? 0f;
+        var tailContentHeight = tailContent?.GetHeight.Invoke() ?? 0f;
 
         var fullListHeight = reorderableList.GetHeight();
         var visibleListHeight = ApplyHeightLimit(fullListHeight, resolvedOptions.MaxVisibleListHeight);
@@ -89,6 +105,13 @@ internal static partial class GUIHelper
             reorderableList.DoList(new Rect(position.x, position.y, position.width, fullListHeight));
         }
 
+        if (tailContentHeight > 0f)
+        {
+            position.NewLine();
+            position.height = tailContentHeight;
+            tailContent?.Draw.Invoke(position);
+        }
+
         DrawFooter(foldoutRect, reorderableList);
         position.NewLine();
         position.SetSingleHeight();
@@ -97,7 +120,7 @@ internal static partial class GUIHelper
 
     private static Rect GetListHeaderClickableRect(Rect position, SerializedProperty property)
     {
-        CalcFooterSize("common.add".LG(), "common.remove".LG(), buttonStyle, position, out var rectNum, out _, out var rectAdd, out _);
+        CalcFooterSize(position, out var rectNum, out _, out var rectAdd, out _);
         if (property.isExpanded)
         {
             return new Rect(position.x, position.y, rectAdd.x - EditorGUIUtility.standardVerticalSpacing - position.x, position.height);
@@ -125,6 +148,8 @@ internal static partial class GUIHelper
         var headerSpacing = isExpanded ? GUI_SPACE : 0f;
         var middleContentHeight = isExpanded ? resolvedOptions.MiddleContent?.GetHeight.Invoke() ?? 0f : 0f;
         var middleContentSpacing = middleContentHeight > 0f ? GUI_SPACE : 0f;
+        var tailContentHeight = isExpanded ? resolvedOptions.TailContent?.GetHeight.Invoke() ?? 0f : 0f;
+        var tailContentSpacing = tailContentHeight > 0f ? GUI_SPACE : 0f;
 
         float listHeight;
         var list = PropertyHandlerWrap.GetOrSet(property);
@@ -133,7 +158,7 @@ internal static partial class GUIHelper
             ? ApplyHeightLimit(list.GetHeight(), resolvedOptions.MaxVisibleListHeight)
             : 0f;
         
-        return listHeight + middleContentHeight + middleContentSpacing + headerHeight + headerSpacing;
+        return listHeight + middleContentHeight + middleContentSpacing + tailContentHeight + tailContentSpacing + headerHeight + headerSpacing;
     }
 
     private static ReorderableList CreateReorderableList(SerializedProperty property, Action<SerializedProperty>? initializeFunction = null)
@@ -217,9 +242,7 @@ internal static partial class GUIHelper
         bool isOverMaxMultiEditLimit = serializedProperty.minArraySize > serializedProperty.serializedObject.maxArraySizeForMultiEditing &&
             serializedProperty.serializedObject.isEditingMultipleObjects;
 
-        var addContent = "common.add".LG();
-        var deleteContent = "common.remove".LG();
-        CalcFooterSize(addContent, deleteContent, buttonStyle, rect, out var rectNum, out var rectRem, out var rectAdd, out var rectBack);
+        CalcFooterSize(rect, out var rectNum, out var rectRem, out var rectAdd, out var rectBack);
 
         // Foldoutのラベルと重なることを防ぐために上からRectを描画
         EditorGUI.DrawRect(rectBack, EditorGUIUtility.isProSkin ? new Color(0.219f,0.219f,0.219f,1) : new Color(0.784f,0.784f,0.784f,1));
@@ -236,7 +259,7 @@ internal static partial class GUIHelper
             using(new EditorGUI.DisabledScope(cantAdd))
             {
                 EditorGUI.DrawRect(rectAdd, new Color(0,0,0,0.1f));
-                if(GUI.Button(rectAdd, addContent, buttonStyle))
+                if(GUI.Button(rectAdd, AddContent, buttonStyle))
                 {
                     if(list.onAddDropdownCallback != null) list.onAddDropdownCallback(rectAdd, list);
                     else if(list.onAddCallback != null) list.onAddCallback(list);
@@ -253,7 +276,7 @@ internal static partial class GUIHelper
             using(new EditorGUI.DisabledScope(cantRemove))
             {
                 EditorGUI.DrawRect(rectRem, new Color(0,0,0,0.1f));
-                if(GUI.Button(rectRem, deleteContent, buttonStyle) || GUI.enabled && (bool?)m_scheduleRemove?.GetValue(list) == true)
+                if(GUI.Button(rectRem, RemoveContent, buttonStyle) || GUI.enabled && (bool?)m_scheduleRemove?.GetValue(list) == true)
                 {
                     if(list.onRemoveCallback == null) ReorderableList.defaultBehaviours.DoRemoveButton(list);
                     else list.onRemoveCallback(list);
@@ -268,12 +291,9 @@ internal static partial class GUIHelper
         m_scheduleRemove?.SetValue(list, false);
     }
 
-    private static void CalcFooterSize(GUIContent addContent, GUIContent deleteContent, GUIStyle buttonStyle, Rect rect, out Rect rectNum, out Rect rectRem, out Rect rectAdd, out Rect rectBack)
+    private static void CalcFooterSize(Rect rect, out Rect rectNum, out Rect rectRem, out Rect rectAdd, out Rect rectBack)
     {
-        var addSize     = buttonStyle.CalcSize(addContent);
-        var deleteSize  = buttonStyle.CalcSize(deleteContent);
-
-        var buttonSize = Mathf.Max(addSize.x, deleteSize.x) + 8f;
+        var buttonSize = FooterButtonWidth;
         
         var spacing = EditorGUIUtility.standardVerticalSpacing;
 
@@ -311,7 +331,7 @@ internal static partial class GUIHelper
     {
         if(property == null || !property.isArray || property.hasMultipleDifferentValues) return;
 
-        CalcFooterSize("common.add".LG(), "common.remove".LG(), buttonStyle, rect, out var rectNum, out _, out _, out _);
+        CalcFooterSize(rect, out var rectNum, out _, out _, out _);
 
         EditorGUI.BeginChangeCheck();
         var size = EditorGUI.IntField(rectNum, property.arraySize);

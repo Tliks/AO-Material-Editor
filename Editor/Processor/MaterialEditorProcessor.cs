@@ -16,12 +16,17 @@ internal static partial class MaterialEditorProcessor
         return true;
     }
 
+    public static bool IsTargetRenderer(Renderer renderer)
+    {
+        return renderer is SkinnedMeshRenderer or MeshRenderer;
+    }
+
     public static List<Renderer> GetTargetRenderers(GameObject gameObject, ComputeContext? observeContext = null)
     {
         observeContext ??= ComputeContext.NullContext;
         var renderers = new List<Renderer>();
         observeContext.GetComponentsInChildren<Renderer>(gameObject, true, renderers);
-        renderers.RemoveAll(r => r is not (SkinnedMeshRenderer or MeshRenderer));
+        renderers.RemoveAll(r => !IsTargetRenderer(r));
         return renderers;
     }
 
@@ -39,6 +44,7 @@ internal static partial class MaterialEditorProcessor
             var targetAssignments = SelectTargetAssignments(allAssignments, component, materialCompare, rendererCompare, observeContext);
             if (targetAssignments.Count == 0) continue;
 
+            // read only
             var observed = observeContext.Observe(component, c => c.OverrideSettings.Clone(), (a, b) => a.Equals(b));
             if (observed.Equals(emptySettings)) continue;
 
@@ -46,13 +52,11 @@ internal static partial class MaterialEditorProcessor
             {
                 if (!plans.TryGetValue(assignment, out var existingSettings))
                 {
-                    // Extractした設定はクローンされているが、それをNDMFが持っている
-                    // この関数内のマージで値を変えてしまうので、NDMF側に波及してループに陥らないように複製
-                    plans[assignment] = observed.Clone();
+                    plans[assignment] = observed.Clone(); // read onlyなのでマージされる方は複製
                 }
                 else
                 {
-                    // observed(source)はread only
+                    // source(observed)はread only
                     MaterialOverrideSettings.MergeInto(observed, existingSettings);
                 }
             }

@@ -14,14 +14,17 @@ internal static class MaterialEditorPatcher
         if (MaterialEditorSettings.EnableMaterialEditorPatcher)
             ApplyPatches();
 
-        MaterialEditorSettings.EnableMaterialEditorPatcherChanged += (enabled) => {
-            if (enabled) {
-                ApplyPatches();
-            }
-            else {
-                UnapplyPatches();
-            }
-        };
+        MaterialEditorSettings.EnableMaterialEditorPatcherChanged += OnEnabledChanged;
+    }
+
+    private static void OnEnabledChanged(bool enabled)
+    {
+        if (enabled) {
+            ApplyPatches();
+        }
+        else {
+            UnapplyPatches();
+        }
     }
 
     private static void ApplyPatches()
@@ -31,6 +34,7 @@ internal static class MaterialEditorPatcher
         try
         {
             PatchMaterialEditor(harmony);
+            PatchMaterialProperty(harmony);
             PatchGUILabel(harmony);
             PatchPoiyomiLayout(harmony);
         }
@@ -98,6 +102,24 @@ internal static class MaterialEditorPatcher
             postfixName: nameof(PropertyPostfix));
     }
 
+    private static void PatchMaterialProperty(Harmony harmony)
+    {
+        var propertyDataType = AccessTools.TypeByName("UnityEditor.MaterialProperty+PropertyData");
+        if (propertyDataType == null)
+        {
+            Debug.LogWarning("MaterialProperty.PropertyData type not found; lock action patch skipped.");
+            return;
+        }
+
+        PatchMethod(harmony, propertyDataType, "DoLockAction",
+            new[] { typeof(UnityEngine.Object[]) },
+            prefixName: nameof(MaterialPropertyDoLockActionPrefix));
+    }
+
+    private static bool MaterialPropertyDoLockActionPrefix()
+    {
+        return !MaterialEditoEditorContext.IsRecording;
+    }
 
     private static void PatchGUILabel(Harmony harmony)
     {
@@ -298,11 +320,36 @@ internal static class MaterialEditorPatcher
             BUTTON_SIZE
         );
 
-        if (GUI.Button(buttonRect, RevertButtonContent, IconButtonStyle)) {
+        if (RevertButton(buttonRect))
+        {
             RevertProperty(component, propertyName);
             if (MaterialEditoEditorContext.ComponentToMaterialEditor.TryGetValue(component, out var materialEditor) && materialEditor != null)
                 EditorApplication.delayCall += () => materialEditor.Repaint();
+            GUIUtility.ExitGUI();
         }
+    }
+
+    private static bool RevertButton(Rect rect)
+    {
+        var current = Event.current;
+        if (current == null) return false;
+
+        switch (current.type)
+        {
+            case EventType.MouseDown:
+                if (GUI.enabled && current.button == 0 && rect.Contains(current.mousePosition))
+                {
+                    current.Use();
+                    return true;
+                }
+                break;
+
+            case EventType.Repaint:
+                IconButtonStyle.Draw(rect, RevertButtonContent, false, false, false, false);
+                break;
+        }
+
+        return false;
     }
 
     private static void RevertProperty(MaterialEditorComponent component, string propertyName)

@@ -83,6 +83,8 @@ internal static class LocalizedPopup
 
 internal static class LocalizedToolbar
 {
+    private static GUIStyle Style => StyleHelper.LowerCenteredToolbarStyle;
+
     public static int Draw(int selectedIndex, IEnumerable<string> optionKeys, string? labelKey = null, params GUILayoutOption[] layoutOptions)
     {
         var contents = optionKeys.Select(k => k.LG()).ToArray();
@@ -90,11 +92,11 @@ internal static class LocalizedToolbar
         {
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.PrefixLabel(labelKey.LG(), GUI.skin.button);
-            selectedIndex = GUILayout.Toolbar(selectedIndex, contents, layoutOptions);
+            selectedIndex = GUILayout.Toolbar(selectedIndex, contents, Style, layoutOptions);
             EditorGUILayout.EndHorizontal();
             return selectedIndex;
         }
-        return GUILayout.Toolbar(selectedIndex, contents, layoutOptions);
+        return GUILayout.Toolbar(selectedIndex, contents, Style, layoutOptions);
     }
 
     public static int Draw(Rect position, int selectedIndex, IEnumerable<string> optionKeys, string? labelKey = null)
@@ -104,7 +106,7 @@ internal static class LocalizedToolbar
         {
             position = EditorGUI.PrefixLabel(position, labelKey.LG());
         }
-        return GUI.Toolbar(position, selectedIndex, contents);
+        return GUI.Toolbar(position, selectedIndex, contents, Style);
     }
 
     public static void Field(Rect position, SerializedProperty enumProperty, IEnumerable<string> optionKeys, string? labelKey = null, Action<int>? onValueChanged = null)

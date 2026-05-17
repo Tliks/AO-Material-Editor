@@ -9,6 +9,7 @@ internal static class Localization
     private const string LocalizationFolderGUID = "4658d62f77f5742458abe601082a1418";
     private const string DefaultLanguage = "en-US";
     private static readonly string[] SupportedLanguages = new string[] { "en-US", "ja-JP" };
+    private static readonly Dictionary<string, string> LocaleNativeNameCache = new();
 
     private static Localizer? _ndmfLocalizer;
     public static Localizer NdmfLocalizer => _ndmfLocalizer ??= InitializeLocalizer();
@@ -57,7 +58,48 @@ internal static class Localization
     public static void LocalizeUIElements(VisualElement element) => NdmfLocalizer.LocalizeUIElements(element);
 
     public static void DrawLanguageSwitcher() => LanguageSwitcher.DrawImmediate();
+    public static void DrawLanguagePopupWithoutLabel(params GUILayoutOption[] options)
+    {
+        _ = NdmfLocalizer;
+        var languages = LanguagePrefs.RegisteredLanguages
+            .Where(lang => lang.Contains("-") ||
+                           LanguagePrefs.RegisteredLanguages.All(l2 => !l2.StartsWith(lang + "-")))
+            .ToArray();
+        if (languages.Length == 0) return;
+
+        var currentIndex = Array.IndexOf(languages, LanguagePrefs.Language);
+        if (currentIndex < 0) currentIndex = 0;
+
+        var displayNames = languages.Select(GetLocaleNativeName).ToArray();
+        var newIndex = EditorGUILayout.Popup(currentIndex, displayNames, options);
+        if (newIndex != currentIndex)
+        {
+            LanguagePrefs.Language = languages[newIndex];
+        }
+    }
+
     public static VisualElement CreateLanguageSwitcher() => new LanguageSwitcher();
+
+    private static string GetLocaleNativeName(string locale)
+    {
+        locale = locale.ToLowerInvariant();
+        if (LocaleNativeNameCache.TryGetValue(locale, out var cachedName))
+        {
+            return cachedName;
+        }
+
+        try
+        {
+            cachedName = System.Globalization.CultureInfo.CreateSpecificCulture(locale).NativeName;
+        }
+        catch (Exception)
+        {
+            cachedName = locale;
+        }
+
+        LocaleNativeNameCache[locale] = cachedName;
+        return cachedName;
+    }
 }
 
 internal static class LocalizationExtensions

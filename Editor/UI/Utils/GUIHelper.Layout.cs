@@ -4,18 +4,13 @@ internal static partial class GUIHelper
 {
     public static readonly float GUI_SPACE = EditorGUIUtility.standardVerticalSpacing;
     public static readonly float propertyHeight = EditorGUIUtility.singleLineHeight;
+    public const float LayoutSpace = 6f;
     private const float INDENT_WIDTH = 15f;
 
     // 高さを1行ぶんにセット
     internal static Rect SetSingleHeight(this ref Rect position)
     {
         position.height = propertyHeight;
-        return position;
-    }
-
-    internal static Rect SetHeight(this ref Rect position, SerializedProperty property)
-    {
-        position.height = EditorGUI.GetPropertyHeight(property);
         return position;
     }
 
@@ -26,10 +21,9 @@ internal static partial class GUIHelper
         return position;
     }
 
-    internal static Rect NewLineWithSingleHeight(this ref Rect position)
+    internal static Rect Space(this ref Rect position)
     {
-        position.y = position.yMax + GUI_SPACE;
-        position.height = propertyHeight;
+        position.y += LayoutSpace + GUI_SPACE;
         return position;
     }
 

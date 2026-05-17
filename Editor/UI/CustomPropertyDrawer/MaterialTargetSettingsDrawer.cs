@@ -1,36 +1,62 @@
-using Aoyon.MaterialEditor.Processor;
-using nadena.dev.modular_avatar.core;
-
 namespace Aoyon.MaterialEditor.UI;
 
 [CustomPropertyDrawer(typeof(MaterialTargetSettings))]
 internal class MaterialTargetSettingsDrawer : PropertyDrawer
 {
+    private const float SettingsBackgroundTopSpacing = 2f;
+
+    private static readonly string[] ModeOptionKeys =
+    {
+        "targetSettings.mode.singleMaterial",
+        "targetSettings.mode.bulkEdit",
+        "targetSettings.mode.slotTargets",
+    };
+
+    private static readonly string[] BulkModeOptionKeys =
+    {
+        "targetSettings.mode.bulkMaterials",
+        "targetSettings.mode.allMaterials",
+    };
+
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
+        using var propertyScope = new EditorGUI.PropertyScope(position, label, property);
         position.SetSingleHeight();
 
-        using (new EditorGUI.PropertyScope(position, label, property))
-        {
-            EditorGUI.LabelField(position, label, EditorStyles.boldLabel);
-            position.NewLine();
-        }
-
-        position.y += GUIHelper.GUI_SPACE;
-        
-        var helpBoxRect = position;
-        helpBoxRect.height = GetInnerHeight(property);
-        helpBoxRect = new RectOffset(5, 3, 5, 5).Add(helpBoxRect);
-        EditorGUI.LabelField(helpBoxRect, GUIContent.none, EditorStyles.helpBox);
+        EditorGUI.LabelField(position, "targetSettings.mode.label".LS(), EditorStyles.boldLabel);
+        position.NewLine();
 
         var mode = property.FindPropertyRelative(nameof(MaterialTargetSettings.Mode));
-        LocalizedPopup.Field(position, mode, "targetSettings.mode.label", LocalizedUI.GetEnumOptionKeys("targetSettings.mode", typeof(MaterialTargetSettings.SelectionMode)));
+        DrawModeToolbar(position, mode);
         position.NewLine();
 
         var selectionMode = (MaterialTargetSettings.SelectionMode)mode.enumValueIndex;
-        if (ShouldShowHelpBox(selectionMode))
+        if (ShouldShowMainModeHelpBox())
         {
-            position = GUIHelper.HelpBox(position, GetHelpKey(selectionMode).LS(), MessageType.Info);
+            position = GUIHelper.HelpBox(position, GetMainModeHelpKey(selectionMode).LS(), MessageType.Info);
+        }
+
+        position.Space();
+
+        EditorGUI.LabelField(position, label, EditorStyles.boldLabel);
+        position.NewLine();
+        position.y += SettingsBackgroundTopSpacing;
+
+        var settingsBackgroundRect = position;
+        settingsBackgroundRect.height = GetTargetSettingsHeaderHeight(property) + GetTargetSettingsHeight(property);
+        settingsBackgroundRect = new RectOffset(4, 3, 3, 3).Add(settingsBackgroundRect);
+        EditorGUI.LabelField(settingsBackgroundRect, GUIContent.none, EditorStyles.helpBox);
+
+        if (IsBulkEditMode(selectionMode))
+        {
+            DrawBulkModeToolbar(position, mode);
+            position.NewLine();
+            selectionMode = (MaterialTargetSettings.SelectionMode)mode.enumValueIndex;
+        }
+
+        if (ShouldShowBulkModeHelpBox(selectionMode))
+        {
+            position = GUIHelper.HelpBox(position, GetBulkModeHelpKey(selectionMode).LS(), MessageType.Info);
         }
 
         var settingsProperty = GetModeSettingsProperty(property, selectionMode);
@@ -42,31 +68,101 @@ internal class MaterialTargetSettingsDrawer : PropertyDrawer
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
-        var height = GUIHelper.propertyHeight;
-        height += GUIHelper.GUI_SPACE;
-        height += GetInnerHeight(property);
+        var height = GUIHelper.propertyHeight; // モードラベル
+        height += GUIHelper.GUI_SPACE + GUIHelper.propertyHeight; // モードツールバー
+        height += GetMainModeHelpHeight(property);
+        height += GUIHelper.GUI_SPACE + GUIHelper.LayoutSpace; // セクション間の余白
+        height += GUIHelper.propertyHeight + GUIHelper.GUI_SPACE; // 編集対象ラベル
+        height += SettingsBackgroundTopSpacing;
+        height += GetTargetSettingsHeaderHeight(property);
+        height += GetTargetSettingsHeight(property);
+        height += 3; // 背景のオフセット分
         return height;
     }
 
-    private static float GetInnerHeight(SerializedProperty property)
+    private static float GetTargetSettingsHeaderHeight(SerializedProperty property)
     {
         var height = 0f;
         var mode = property.FindPropertyRelative(nameof(MaterialTargetSettings.Mode));
-        height += EditorGUI.GetPropertyHeight(mode);
         var selectionMode = (MaterialTargetSettings.SelectionMode)mode.enumValueIndex;
-        if (ShouldShowHelpBox(selectionMode))
+        if (IsBulkEditMode(selectionMode))
         {
-            height += GUIHelper.GUI_SPACE;
-            height += GUIHelper.GetHelpBoxHeight(GetHelpKey(selectionMode).LS(), MessageType.Info);
+            height += GUIHelper.propertyHeight + GUIHelper.GUI_SPACE;
         }
-
-        var settingsProperty = GetModeSettingsProperty(property, selectionMode);
-        if (settingsProperty != null)
+        if (ShouldShowBulkModeHelpBox(selectionMode))
         {
+            height += GUIHelper.GetHelpBoxHeight(GetBulkModeHelpKey(selectionMode).LS(), MessageType.Info);
             height += GUIHelper.GUI_SPACE;
-            height += EditorGUI.GetPropertyHeight(settingsProperty, includeChildren: true);
         }
         return height;
+    }
+
+    private static float GetMainModeHelpHeight(SerializedProperty property)
+    {
+        var mode = property.FindPropertyRelative(nameof(MaterialTargetSettings.Mode));
+        var selectionMode = (MaterialTargetSettings.SelectionMode)mode.enumValueIndex;
+        if (!ShouldShowMainModeHelpBox()) return 0f;
+
+        return GUIHelper.GetHelpBoxHeight(GetMainModeHelpKey(selectionMode).LS(), MessageType.Info)
+            + GUIHelper.GUI_SPACE;
+    }
+
+    private static float GetTargetSettingsHeight(SerializedProperty property)
+    {
+        var mode = property.FindPropertyRelative(nameof(MaterialTargetSettings.Mode));
+        var selectionMode = (MaterialTargetSettings.SelectionMode)mode.enumValueIndex;
+        var settingsProperty = GetModeSettingsProperty(property, selectionMode);
+        return settingsProperty != null ? EditorGUI.GetPropertyHeight(settingsProperty, includeChildren: true) : 0f;
+    }
+
+    private static void DrawModeToolbar(Rect position, SerializedProperty mode)
+    {
+        using var scope = new EditorGUI.PropertyScope(position, "targetSettings.mode.label".LG(), mode);
+
+        var currentMode = (MaterialTargetSettings.SelectionMode)mode.enumValueIndex;
+        var currentIndex = GetModeToolbarIndex(currentMode);
+        var newIndex = LocalizedToolbar.Draw(position, currentIndex, ModeOptionKeys);
+        if (newIndex == currentIndex) return;
+
+        mode.enumValueIndex = (int)(newIndex switch
+        {
+            0 => MaterialTargetSettings.SelectionMode.SingleMaterial,
+            1 => IsBulkEditMode(currentMode) ? currentMode : MaterialTargetSettings.SelectionMode.BulkMaterials,
+            2 => MaterialTargetSettings.SelectionMode.SlotTargets,
+            _ => currentMode,
+        });
+    }
+
+    private static void DrawBulkModeToolbar(Rect position, SerializedProperty mode)
+    {
+        using var scope = new EditorGUI.PropertyScope(position, "targetSettings.mode.label".LG(), mode);
+
+        var currentMode = (MaterialTargetSettings.SelectionMode)mode.enumValueIndex;
+        var currentIndex = currentMode == MaterialTargetSettings.SelectionMode.AllMaterials ? 1 : 0;
+        var newIndex = LocalizedToolbar.Draw(position, currentIndex, BulkModeOptionKeys, "targetSettings.mode.label");
+        if (newIndex == currentIndex) return;
+
+        mode.enumValueIndex = (int)(newIndex == 1
+            ? MaterialTargetSettings.SelectionMode.AllMaterials
+            : MaterialTargetSettings.SelectionMode.BulkMaterials);
+    }
+
+    private static int GetModeToolbarIndex(MaterialTargetSettings.SelectionMode mode)
+    {
+        return mode switch
+        {
+            MaterialTargetSettings.SelectionMode.SingleMaterial => 0,
+            MaterialTargetSettings.SelectionMode.BulkMaterials => 1,
+            MaterialTargetSettings.SelectionMode.AllMaterials => 1,
+            MaterialTargetSettings.SelectionMode.SlotTargets => 2,
+            _ => 0,
+        };
+    }
+
+    private static bool IsBulkEditMode(MaterialTargetSettings.SelectionMode mode)
+    {
+        return mode == MaterialTargetSettings.SelectionMode.BulkMaterials
+            || mode == MaterialTargetSettings.SelectionMode.AllMaterials;
     }
 
     private static SerializedProperty? GetModeSettingsProperty(SerializedProperty property, MaterialTargetSettings.SelectionMode mode)
@@ -81,23 +177,35 @@ internal class MaterialTargetSettingsDrawer : PropertyDrawer
         };
     }
 
-    private static bool ShouldShowHelpBox(MaterialTargetSettings.SelectionMode mode)
+    private static bool ShouldShowMainModeHelpBox()
     {
-        return MaterialEditorSettings.ShowInspectorDescription && (
-            mode == MaterialTargetSettings.SelectionMode.BulkMaterials
-            || mode == MaterialTargetSettings.SelectionMode.SlotTargets
-            || mode == MaterialTargetSettings.SelectionMode.AllMaterials);
+        return MaterialEditorSettings.ShowInspectorDescription;
     }
 
-    private static string GetHelpKey(MaterialTargetSettings.SelectionMode mode)
+    private static bool ShouldShowBulkModeHelpBox(MaterialTargetSettings.SelectionMode mode)
+    {
+        return MaterialEditorSettings.ShowInspectorDescription
+            && mode == MaterialTargetSettings.SelectionMode.AllMaterials;
+    }
+
+    private static string GetMainModeHelpKey(MaterialTargetSettings.SelectionMode mode)
     {
         return mode switch
         {
             MaterialTargetSettings.SelectionMode.SingleMaterial => "targetSettings.mode.singleMaterial.help",
-            MaterialTargetSettings.SelectionMode.BulkMaterials => "targetSettings.mode.bulkMaterials.help",
+            MaterialTargetSettings.SelectionMode.BulkMaterials => "targetSettings.mode.bulkEdit.help",
             MaterialTargetSettings.SelectionMode.SlotTargets => "targetSettings.mode.slotTargets.help",
+            MaterialTargetSettings.SelectionMode.AllMaterials => "targetSettings.mode.bulkEdit.help",
+            _ => string.Empty,
+        };
+    }
+
+    private static string GetBulkModeHelpKey(MaterialTargetSettings.SelectionMode mode)
+    {
+        return mode switch
+        {
             MaterialTargetSettings.SelectionMode.AllMaterials => "targetSettings.mode.allMaterials.help",
-            _ => "targetSettings.mode.singleMaterial.help",
+            _ => string.Empty,
         };
     }
 }
@@ -108,48 +216,35 @@ internal class SingleMaterialTargetSettingsDrawer : PropertyDrawer
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
         var material = property.FindPropertyRelative(nameof(SingleMaterialTargetSettings.TargetMaterial));
-        var useExclusions = property.FindPropertyRelative(nameof(SingleMaterialTargetSettings.UseSlotExclusions));
         var excludedSlots = property.FindPropertyRelative(nameof(SingleMaterialTargetSettings.ExcludedSlots));
         var excludedSlotsListOptions = new GUIHelper.ListOptions(
             foldout: new GUIHelper.FoldoutOptions(
-                Draw: false,
+                Draw: true,
                 RectStrict: true),
             maxVisibleListHeight: GUIHelper.DefaultScrollableListHeight,
-            middleContent: new GUIHelper.ListMiddleContentOptions(
+            tailContent: new GUIHelper.ListContentOptions(
                 rect => MaterialSlotReferenceCollectionUI.DrawAddSlotsSelector(rect, excludedSlots, () => GetUsageSlots(material, excludedSlots), "targetSettings.exclusions.selectUsageSlots".LS()),
                 () => GUIHelper.propertyHeight));
 
         position.SetSingleHeight();
         LocalizedUI.PropertyField(position, material, "targetSettings.material.label");
         position.NewLine();
-        (var isExpanded, var isEnabled) = GUIHelper.FoldoutAndToggleLeft(position, useExclusions, "targetSettings.exclusions.useSlots".LG(), true);
+        var isExpanded = GUIHelper.Foldout(position, property, "targetSettings.exclusions.options".LG(), new(RectStrict: true));
 
         if (!isExpanded) return;
         position.Indent();
 
-        var hasTargetMaterial = material.objectReferenceValue != null;
-
-        if (!hasTargetMaterial)
+        if (MaterialEditorSettings.ShowInspectorDescription)
         {
             position.NewLine();
-            position.height = GUIHelper.GetHelpBoxHeight("editor.noMaterialSelected.help".LS(), MessageType.Warning);
-            GUIHelper.HelpBox(position, "editor.noMaterialSelected.help".LS(), MessageType.Warning);
+            position.height = GUIHelper.GetHelpBoxHeight("targetSettings.exclusions.useSlots.help".LS(), MessageType.Info);
+            GUIHelper.HelpBox(position, "targetSettings.exclusions.useSlots.help".LS(), MessageType.Info);
         }
 
-        using (new EditorGUI.DisabledScope(!isEnabled || !hasTargetMaterial))
-        {
-            if (MaterialEditorSettings.ShowInspectorDescription)
-            {
-                position.NewLine();
-                position.height = GUIHelper.GetHelpBoxHeight("targetSettings.exclusions.useSlots.help".LS(), MessageType.Info);
-                GUIHelper.HelpBox(position, "targetSettings.exclusions.useSlots.help".LS(), MessageType.Info);
-            }
-
-            position.NewLine();
-            position.SetSingleHeight();
-            position.height = MaterialSlotReferenceCollectionUI.GetHeight(excludedSlots, GUIContent.none, excludedSlotsListOptions);
-            MaterialSlotReferenceCollectionUI.Draw(position, excludedSlots, "targetSettings.exclusions.slots".LG(), excludedSlotsListOptions);
-        }
+        position.NewLine();
+        position.SetSingleHeight();
+        position.height = MaterialSlotReferenceCollectionUI.GetHeight(excludedSlots, GUIContent.none, excludedSlotsListOptions, null);
+        MaterialSlotReferenceCollectionUI.Draw(position, excludedSlots, "targetSettings.exclusions.slots".LG(), excludedSlotsListOptions, null);
     }
 
     private static MaterialSlotReference[] GetUsageSlots(SerializedProperty materialProperty, SerializedProperty excludedSlotsProperty)
@@ -164,28 +259,23 @@ internal class SingleMaterialTargetSettingsDrawer : PropertyDrawer
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
         var material = property.FindPropertyRelative(nameof(SingleMaterialTargetSettings.TargetMaterial));
-        var useExclusions = property.FindPropertyRelative(nameof(SingleMaterialTargetSettings.UseSlotExclusions));
         var excludedSlots = property.FindPropertyRelative(nameof(SingleMaterialTargetSettings.ExcludedSlots));
         var excludedSlotsListOptions = new GUIHelper.ListOptions(
             foldout: new GUIHelper.FoldoutOptions(
-                Draw: false,
+                Draw: true,
                 RectStrict: true),
             maxVisibleListHeight: GUIHelper.DefaultScrollableListHeight,
-            middleContent: new GUIHelper.ListMiddleContentOptions(_ => { }, () => GUIHelper.propertyHeight));
+            tailContent: new GUIHelper.ListContentOptions(_ => { }, () => GUIHelper.propertyHeight));
 
         var height = EditorGUI.GetPropertyHeight(material);
-        height += GUIHelper.GUI_SPACE + EditorGUI.GetPropertyHeight(useExclusions);
-        if (useExclusions.isExpanded)
+        height += GUIHelper.GUI_SPACE + GUIHelper.propertyHeight;
+        if (property.isExpanded)
         {
-            if (material.objectReferenceValue == null)
-            {
-                height += GUIHelper.GUI_SPACE + GUIHelper.GetHelpBoxHeight("editor.noMaterialSelected.help".LS(), MessageType.Warning);
-            }
             if (MaterialEditorSettings.ShowInspectorDescription)
             {
                 height += GUIHelper.GUI_SPACE + GUIHelper.GetHelpBoxHeight("targetSettings.exclusions.useSlots.help".LS(), MessageType.Info);
             }
-            height += GUIHelper.GUI_SPACE + MaterialSlotReferenceCollectionUI.GetHeight(excludedSlots, GUIContent.none, excludedSlotsListOptions);
+            height += GUIHelper.GUI_SPACE + MaterialSlotReferenceCollectionUI.GetHeight(excludedSlots, GUIContent.none, excludedSlotsListOptions, null);
         }
         return height;
     }
@@ -197,62 +287,38 @@ internal class BulkMaterialTargetSettingsDrawer : PropertyDrawer
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
         var materials = property.FindPropertyRelative(nameof(BulkMaterialTargetSettings.TargetMaterials));
-        var useExclusions = property.FindPropertyRelative(nameof(BulkMaterialTargetSettings.UseSlotExclusions));
         var excludedSlots = property.FindPropertyRelative(nameof(BulkMaterialTargetSettings.ExcludedSlots));
         var maxVisibleListHeight = GUIHelper.DefaultScrollableListHeight;
         var materialsListOptions = new GUIHelper.ListOptions(
             foldout: new GUIHelper.FoldoutOptions(Draw: false),
             maxVisibleListHeight: maxVisibleListHeight);
         var excludedSlotsListOptions = new GUIHelper.ListOptions(
-            foldout: new GUIHelper.FoldoutOptions(Draw: false, RectStrict: true),
+            foldout: new GUIHelper.FoldoutOptions(Draw: true, RectStrict: true),
             maxVisibleListHeight: maxVisibleListHeight,
-            middleContent: new GUIHelper.ListMiddleContentOptions(
+            tailContent: new GUIHelper.ListContentOptions(
                 rect => MaterialSlotReferenceCollectionUI.DrawAddSlotsSelector(rect, excludedSlots, () => GetUsageSlots(materials, excludedSlots), "targetSettings.exclusions.selectUsageSlots".LS()),
                 () => GUIHelper.propertyHeight));
 
-        position.height = MaterialCollectionUI.GetHeight(materials, GUIContent.none, materialsListOptions);
-        MaterialCollectionUI.Draw(position, materials, "targetSettings.materials.label".LG(), materialsListOptions);
+        position.height = MaterialCollectionUI.GetHeight(materials, GUIContent.none, materialsListOptions, MaterialCollectionUI.MaterialOrRendererDropHandler);
+        MaterialCollectionUI.Draw(position, materials, "targetSettings.materials.label".LG(), materialsListOptions, MaterialCollectionUI.MaterialOrRendererDropHandler);
         position.NewLine();
         position.SetSingleHeight();
-        (var isExpanded, var isEnabled) = GUIHelper.FoldoutAndToggleLeft(position, useExclusions, "targetSettings.exclusions.useSlots".LG(), true);
+        var isExpanded = GUIHelper.Foldout(position, property, "targetSettings.exclusions.options".LG(), new(RectStrict: true));
 
         if (!isExpanded) return;
         position.Indent();
 
-        var hasTargetMaterials = HasTargetMaterials(materials);
-
-        if (!hasTargetMaterials)
+        if (MaterialEditorSettings.ShowInspectorDescription)
         {
             position.NewLine();
-            position.height = GUIHelper.GetHelpBoxHeight("editor.noMaterialSelected.help".LS(), MessageType.Warning);
-            GUIHelper.HelpBox(position, "editor.noMaterialSelected.help".LS(), MessageType.Warning);
+            position.height = GUIHelper.GetHelpBoxHeight("targetSettings.exclusions.useSlots.help".LS(), MessageType.Info);
+            GUIHelper.HelpBox(position, "targetSettings.exclusions.useSlots.help".LS(), MessageType.Info);
         }
 
-        using (new EditorGUI.DisabledScope(!isEnabled || !hasTargetMaterials))
-        {
-            if (MaterialEditorSettings.ShowInspectorDescription)
-            {
-                position.NewLine();
-                position.height = GUIHelper.GetHelpBoxHeight("targetSettings.exclusions.useSlots.help".LS(), MessageType.Info);
-                GUIHelper.HelpBox(position, "targetSettings.exclusions.useSlots.help".LS(), MessageType.Info);
-            }
-
-            position.NewLine();
-            position.SetSingleHeight();
-            position.height = MaterialSlotReferenceCollectionUI.GetHeight(excludedSlots, GUIContent.none, excludedSlotsListOptions);
-            MaterialSlotReferenceCollectionUI.Draw(position, excludedSlots, "targetSettings.exclusions.slots".LG(), excludedSlotsListOptions);
-        }
-    }
-
-    private static bool HasTargetMaterials(SerializedProperty materialsProperty)
-    {
-        for (int i = 0; i < materialsProperty.arraySize; i++)
-        {
-            var material = materialsProperty.GetArrayElementAtIndex(i).objectReferenceValue as Material;
-            if (material == null) continue;
-            return true;
-        }
-        return false;
+        position.NewLine();
+        position.SetSingleHeight();
+        position.height = MaterialSlotReferenceCollectionUI.GetHeight(excludedSlots, GUIContent.none, excludedSlotsListOptions, null);
+        MaterialSlotReferenceCollectionUI.Draw(position, excludedSlots, "targetSettings.exclusions.slots".LG(), excludedSlotsListOptions, null);
     }
 
     private static MaterialSlotReference[] GetUsageSlots(SerializedProperty materialsProperty, SerializedProperty excludedSlotsProperty)
@@ -275,31 +341,77 @@ internal class BulkMaterialTargetSettingsDrawer : PropertyDrawer
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
         var materials = property.FindPropertyRelative(nameof(BulkMaterialTargetSettings.TargetMaterials));
-        var useExclusions = property.FindPropertyRelative(nameof(BulkMaterialTargetSettings.UseSlotExclusions));
         var excludedSlots = property.FindPropertyRelative(nameof(BulkMaterialTargetSettings.ExcludedSlots));
         var maxVisibleListHeight = GUIHelper.DefaultScrollableListHeight;
         var materialsListOptions = new GUIHelper.ListOptions(
             foldout: new GUIHelper.FoldoutOptions(Draw: false),
             maxVisibleListHeight: maxVisibleListHeight);
         var excludedSlotsListOptions = new GUIHelper.ListOptions(
-            foldout: new GUIHelper.FoldoutOptions(Draw: false, RectStrict: true),
+            foldout: new GUIHelper.FoldoutOptions(Draw: true, RectStrict: true),
             maxVisibleListHeight: maxVisibleListHeight,
-            middleContent: new GUIHelper.ListMiddleContentOptions(_ => { }, () => GUIHelper.propertyHeight));
+            tailContent: new GUIHelper.ListContentOptions(_ => { }, () => GUIHelper.propertyHeight));
 
-        var height = MaterialCollectionUI.GetHeight(materials, GUIContent.none, materialsListOptions);
-        height += GUIHelper.GUI_SPACE + EditorGUI.GetPropertyHeight(useExclusions);
-        if (useExclusions.isExpanded)
+        var height = MaterialCollectionUI.GetHeight(materials, GUIContent.none, materialsListOptions, MaterialCollectionUI.MaterialOrRendererDropHandler);
+        height += GUIHelper.GUI_SPACE + GUIHelper.propertyHeight;
+        if (property.isExpanded)
         {
-            if (!HasTargetMaterials(materials))
-            {
-                height += GUIHelper.GUI_SPACE + GUIHelper.GetHelpBoxHeight("editor.noMaterialSelected.help".LS(), MessageType.Warning);
-            }
             if (MaterialEditorSettings.ShowInspectorDescription)
             {
                 height += GUIHelper.GUI_SPACE + GUIHelper.GetHelpBoxHeight("targetSettings.exclusions.useSlots.help".LS(), MessageType.Info);
             }
-            height += GUIHelper.GUI_SPACE + MaterialSlotReferenceCollectionUI.GetHeight(excludedSlots, GUIContent.none, excludedSlotsListOptions);
+            height += GUIHelper.GUI_SPACE + MaterialSlotReferenceCollectionUI.GetHeight(excludedSlots, GUIContent.none, excludedSlotsListOptions, null);
         }
+        return height;
+    }
+}
+
+[CustomPropertyDrawer(typeof(AllMaterialSettings))]
+internal class AllMaterialSettingsDrawer : PropertyDrawer
+{
+    public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+    {
+        var excludedMaterials = property.FindPropertyRelative(nameof(AllMaterialSettings.ExcludedMaterials));
+        var excludedSlots = property.FindPropertyRelative(nameof(AllMaterialSettings.ExcludedSlots));
+        var excludedObjects = property.FindPropertyRelative(nameof(AllMaterialSettings.ExcludedObjects));
+
+        position.SetSingleHeight();
+        var isExpanded = GUIHelper.Foldout(position, property, "targetSettings.exclusions.options".LG(), new(RectStrict: true));
+        if (!isExpanded) return;
+
+        position.Indent();
+
+        var maxVisibleListHeight = GUIHelper.DefaultScrollableListHeight;
+        var listOptions = new GUIHelper.ListOptions(
+            foldout: new GUIHelper.FoldoutOptions(RectStrict: true),
+            maxVisibleListHeight: maxVisibleListHeight);
+
+        position.NewLine();
+        position.height = MaterialCollectionUI.GetHeight(excludedMaterials, GUIContent.none, listOptions);
+        MaterialCollectionUI.Draw(position, excludedMaterials, "targetSettings.exclusions.materials".LG(), listOptions);
+        position.NewLine();
+        position.height = MaterialSlotReferenceCollectionUI.GetHeight(excludedSlots, GUIContent.none, listOptions);
+        MaterialSlotReferenceCollectionUI.Draw(position, excludedSlots, "targetSettings.exclusions.slots".LG(), listOptions);
+        position.NewLine();
+        position.height = AvatarObjectReferenceCollectionUI.GetHeight(excludedObjects, GUIContent.none, listOptions);
+        AvatarObjectReferenceCollectionUI.Draw(position, excludedObjects, "targetSettings.exclusions.objects".LG(), listOptions);
+    }
+
+    public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+    {
+        var excludedMaterials = property.FindPropertyRelative(nameof(AllMaterialSettings.ExcludedMaterials));
+        var excludedSlots = property.FindPropertyRelative(nameof(AllMaterialSettings.ExcludedSlots));
+        var excludedObjects = property.FindPropertyRelative(nameof(AllMaterialSettings.ExcludedObjects));
+
+        var height = GUIHelper.propertyHeight;
+        if (!property.isExpanded) return height;
+
+        var maxVisibleListHeight = GUIHelper.DefaultScrollableListHeight;
+        var listOptions = new GUIHelper.ListOptions(
+            foldout: new GUIHelper.FoldoutOptions(RectStrict: true),
+            maxVisibleListHeight: maxVisibleListHeight);
+        height += GUIHelper.GUI_SPACE + MaterialCollectionUI.GetHeight(excludedMaterials, GUIContent.none, listOptions);
+        height += GUIHelper.GUI_SPACE + MaterialSlotReferenceCollectionUI.GetHeight(excludedSlots, GUIContent.none, listOptions);
+        height += GUIHelper.GUI_SPACE + AvatarObjectReferenceCollectionUI.GetHeight(excludedObjects, GUIContent.none, listOptions);
         return height;
     }
 }
@@ -319,139 +431,7 @@ internal class SlotTargetSettingsDrawer : PropertyDrawer
     {
         return new GUIHelper.ListOptions(
             foldout: new GUIHelper.FoldoutOptions(Draw: false),
-            maxVisibleListHeight: GUIHelper.DefaultScrollableListHeight,
-            middleContent: new GUIHelper.ListMiddleContentOptions(
-                rect => DrawMiddleContent(rect, slotsProperty),
-                () => GetMiddleContentHeight(slotsProperty)));
-    }
-
-    private static void DrawMiddleContent(Rect position, SerializedProperty slotsProperty)
-    {
-        position.SetSingleHeight();
-        var isExpanded = GUIHelper.Foldout(position, slotsProperty, "targetSettings.slotTargets.add.title".LG(), new(RectStrict: true));
-        if (!isExpanded) return;
-
-        position.NewLine();
-        position.Indent();
-
-        position = new RectOffset(0, -4, 0, 0).Add(position); // 少し狭める
-
-        var helpboxHeight = GUIHelper.GetHelpBoxHeight("targetSettings.slotTargets.add.help".LS(), MessageType.Info);
-
-        var backGroundRect = position;
-        backGroundRect.height = GUIHelper.propertyHeight * 4 + GUIHelper.GUI_SPACE * 3;
-        if (MaterialEditorSettings.ShowInspectorDescription) backGroundRect.height += GUIHelper.GUI_SPACE + helpboxHeight;
-        backGroundRect = new RectOffset(5, 4, 3, 3).Add(backGroundRect);
-        EditorGUI.LabelField(backGroundRect, GUIContent.none, EditorStyles.helpBox);
-
-        EditorGUI.LabelField(position, "targetSettings.slotTargets.add.byGameObject".LG());
-        position.NewLine();
-        position.Indent();
-        DrawAddSlotsUnderGameObjectField(position, slotsProperty);
-        position.NewLine();
-        position.Back();
-        
-        EditorGUI.LabelField(position, "targetSettings.slotTargets.add.byMaterial".LG());
-        position.NewLine();
-        position.Indent();
-        DrawAddMaterialField(position, slotsProperty);
-        position.NewLine();
-        position.Back();
-
-        if (MaterialEditorSettings.ShowInspectorDescription)
-        {
-            position.height = helpboxHeight;
-            GUIHelper.HelpBox(position, "targetSettings.slotTargets.add.help".LS(), MessageType.Info);
-        }
-    }
-
-    private static void DrawAddSlotsUnderGameObjectField(Rect position, SerializedProperty slotsProperty)
-    {
-        using var check = new EditorGUI.ChangeCheckScope();
-        var gameObject = EditorGUI.ObjectField(position, GUIContent.none, null, typeof(GameObject), true) as GameObject;
-        if (!check.changed || gameObject == null) return;
-
-        foreach (var slot in GetSlotsUnderGameObject(slotsProperty, gameObject))
-        {
-            MaterialSlotReferenceCollectionUI.AppendSlot(slotsProperty, slot);
-        }
-
-        slotsProperty.serializedObject.ApplyModifiedProperties();
-    }
-
-    private static void DrawAddMaterialField(Rect position, SerializedProperty slotsProperty)
-    {
-        var selectorWidth = MaterialSelector.GetSize().x;
-        GUIHelper.SplitRectHorizontallyForRight(position, selectorWidth, out var fieldRect, out var selectorRect);
-
-        using (var check = new EditorGUI.ChangeCheckScope())
-        {
-            var selectedMaterial = EditorGUI.ObjectField(fieldRect, GUIContent.none, null, typeof(Material), false) as Material;
-            if (check.changed && selectedMaterial != null) AddMaterialUsageSlots(slotsProperty, selectedMaterial);
-        }
-
-        MaterialSelector.Draw(selectorRect, () => Utils.GetAllTargetMaterialsInAvatar(slotsProperty),
-            (material, _) => { if (material != null) AddMaterialUsageSlots(slotsProperty, material); });
-    }
-
-
-    private static void AddMaterialUsageSlots(SerializedProperty slotsProperty, Material material)
-    {
-        foreach (var slot in GetMaterialUsageSlots(slotsProperty, material))
-        {
-            MaterialSlotReferenceCollectionUI.AppendSlot(slotsProperty, slot);
-        }
-
-        slotsProperty.serializedObject.ApplyModifiedProperties();
-    }
-
-    private static MaterialSlotReference[] GetSlotsUnderGameObject(SerializedProperty slotsProperty, GameObject target)
-    {
-        if (!slotsProperty.TryGetGameObject(out var gameObject)) return Array.Empty<MaterialSlotReference>();
-
-        var root = Utils.FindAvatarInParents(gameObject);
-        if (root == null || !target.transform.IsChildOf(root.transform)) return Array.Empty<MaterialSlotReference>();
-
-        var renderers = MaterialEditorProcessor
-            .GetTargetRenderers(root)
-            .Where(renderer => renderer != null && renderer.transform.IsChildOf(target.transform))
-            .ToList();
-
-        return new DefaultMaterialTargeting()
-            .GetAssignments(renderers)
-            .Select(assignment => new MaterialSlotReference
-            {
-                RendererReference = new AvatarObjectReference(assignment.SlotId.Renderer.gameObject),
-                MaterialIndex = assignment.SlotId.MaterialIndex,
-            })
-            .Where(slot => !MaterialSlotReferenceCollectionUI.ContainsSlot(slotsProperty, slot))
-            .ToArray();
-    }
-
-    private static MaterialSlotReference[] GetMaterialUsageSlots(SerializedProperty slotsProperty, Material material)
-    {
-        if (!slotsProperty.TryGetGameObject(out var gameObject)) return Array.Empty<MaterialSlotReference>();
-
-        return MaterialSlotReferenceCollectionUI
-            .EnumerateMaterialUsages(gameObject, material)
-            .Where(slot => !MaterialSlotReferenceCollectionUI.ContainsSlot(slotsProperty, slot))
-            .ToArray();
-    }
-
-    private static float GetMiddleContentHeight(SerializedProperty slotsProperty)
-    {
-        if (!slotsProperty.isExpanded)
-        {
-            return GUIHelper.propertyHeight;
-        }
-
-        var height = GUIHelper.propertyHeight * 5 + GUIHelper.GUI_SPACE * 4;
-        if (MaterialEditorSettings.ShowInspectorDescription)
-        {
-            height += GUIHelper.GUI_SPACE + GUIHelper.GetHelpBoxHeight("targetSettings.slotTargets.add.help".LS(), MessageType.Info);
-        }
-        height += GUIHelper.GUI_SPACE * 2; // 背景をHeloBoxで描画する分スペースを多めにとる
-        return height;
+            maxVisibleListHeight: GUIHelper.DefaultScrollableListHeight);
     }
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
@@ -459,61 +439,5 @@ internal class SlotTargetSettingsDrawer : PropertyDrawer
         var slots = property.FindPropertyRelative(nameof(SlotTargetSettings.TargetSlots));
         var listOptions = CreateListOptions(slots);
         return MaterialSlotReferenceCollectionUI.GetHeight(slots, GUIContent.none, listOptions);
-    }
-}
-
-[CustomPropertyDrawer(typeof(AllMaterialSettings))]
-internal class AllMaterialSettingsDrawer : PropertyDrawer
-{
-    public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
-    {
-        var useExclusions = property.FindPropertyRelative(nameof(AllMaterialSettings.UseExclusions));
-        var excludedMaterials = property.FindPropertyRelative(nameof(AllMaterialSettings.ExcludedMaterials));
-        var excludedSlots = property.FindPropertyRelative(nameof(AllMaterialSettings.ExcludedSlots));
-        var excludedObjects = property.FindPropertyRelative(nameof(AllMaterialSettings.ExcludedObjects));
-
-        position.SetSingleHeight();
-        (var isExpanded, var isEnabled) = GUIHelper.FoldoutAndToggleLeft(position, useExclusions, "targetSettings.exclusions.use".LG(), true);
-        if (!isExpanded) return;
-
-        using (new EditorGUI.DisabledScope(!isEnabled))
-        {
-            position.Indent();
-
-            var maxVisibleListHeight = GUIHelper.DefaultScrollableListHeight;
-            var listOptions = new GUIHelper.ListOptions(
-                foldout: new GUIHelper.FoldoutOptions(RectStrict: true),
-                maxVisibleListHeight: maxVisibleListHeight);
-
-            position.NewLine();
-            position.height = MaterialCollectionUI.GetHeight(excludedMaterials, GUIContent.none, listOptions);
-            MaterialCollectionUI.Draw(position, excludedMaterials, "targetSettings.exclusions.materials".LG(), listOptions);
-            position.NewLine();
-            position.height = MaterialSlotReferenceCollectionUI.GetHeight(excludedSlots, GUIContent.none, listOptions);
-            MaterialSlotReferenceCollectionUI.Draw(position, excludedSlots, "targetSettings.exclusions.slots".LG(), listOptions);
-            position.NewLine();
-            position.height = AvatarObjectReferenceCollectionUI.GetHeight(excludedObjects, GUIContent.none, listOptions);
-            AvatarObjectReferenceCollectionUI.Draw(position, excludedObjects, "targetSettings.exclusions.objects".LG(), listOptions);
-        }
-    }
-
-    public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
-    {
-        var useExclusions = property.FindPropertyRelative(nameof(AllMaterialSettings.UseExclusions));
-        var excludedMaterials = property.FindPropertyRelative(nameof(AllMaterialSettings.ExcludedMaterials));
-        var excludedSlots = property.FindPropertyRelative(nameof(AllMaterialSettings.ExcludedSlots));
-        var excludedObjects = property.FindPropertyRelative(nameof(AllMaterialSettings.ExcludedObjects));
-
-        var height = GUIHelper.propertyHeight;
-        if (!useExclusions.isExpanded) return height;
-
-        var maxVisibleListHeight = GUIHelper.DefaultScrollableListHeight;
-        var listOptions = new GUIHelper.ListOptions(
-            foldout: new GUIHelper.FoldoutOptions(RectStrict: true),
-            maxVisibleListHeight: maxVisibleListHeight);
-        height += GUIHelper.GUI_SPACE + MaterialCollectionUI.GetHeight(excludedMaterials, GUIContent.none, listOptions);
-        height += GUIHelper.GUI_SPACE + MaterialSlotReferenceCollectionUI.GetHeight(excludedSlots, GUIContent.none, listOptions);
-        height += GUIHelper.GUI_SPACE + AvatarObjectReferenceCollectionUI.GetHeight(excludedObjects, GUIContent.none, listOptions);
-        return height;
     }
 }

@@ -27,11 +27,14 @@ msgstr "Texture"
 msgid "common.materialSlot"
 msgstr "Material Slot"
 
-msgid "common.allMaterials"
-msgstr "All Materials"
+msgid "common.allMaterialSlots"
+msgstr "All Slots"
 
-msgid "common.edit"
-msgstr "Edit"
+msgid "common.on"
+msgstr "On"
+
+msgid "common.off"
+msgstr "Off"
 
 msgid "common.shader"
 msgstr "Shader"
@@ -40,56 +43,69 @@ msgid "common.renderQueue"
 msgstr "Render Queue"
 
 msgid "common.dragAndDropAdd"
-msgstr "Bulk Add by Drag and Drop"
+msgstr "Drop here to add"
+
+# generator
+msgid "generator.noTargetRenderers.warning"
+msgstr "{0} could not be created. Select a GameObject that has a Skinned Mesh Renderer or Mesh Renderer."
+
+msgid "generator.noTargetMaterials.warning"
+msgstr "{0} could not be created. The selected Renderer has no material assigned. Assign a material, then try again."
 
 # target settings
 msgid "targetSettings.title"
-msgstr "Set Materials to Edit"
+msgstr "Set Edit Targets"
 
 msgid "targetSettings.mode.label"
 msgstr "Mode"
 
 msgid "targetSettings.mode.singleMaterial"
-msgstr "Edit One"
+msgstr "Simple"
 
 msgid "targetSettings.mode.singleMaterial.help"
-msgstr "Edit a single material. If needed, you can exclude specific usage slots."
+msgstr "A basic mode for editing one material."
 
-msgid "targetSettings.mode.bulkMaterials"
-msgstr "Edit Multiple"
+msgid "targetSettings.mode.bulkEdit"
+msgstr "Bulk Edit"
 
-msgid "targetSettings.mode.bulkMaterials.help"
+msgid "targetSettings.mode.bulkEdit.help"
 msgstr "Apply the same edits to multiple materials at once.\nThis is useful when you want to match their appearance and settings."
 
+msgid "targetSettings.mode.bulkMaterials"
+msgstr "Normal"
+
 msgid "targetSettings.mode.slotTargets"
-msgstr "Specify by Material Slot"
+msgstr "Slot"
 
 msgid "targetSettings.mode.slotTargets.help"
-msgstr "Specify targets by material slot instead of by material.\nThis is useful when you want to edit by usage location or specify targets by path.\nYou can select multiple material slots at once, and the same edits will be applied to each of them. If a single slot can contain multiple materials, such as through animation, the same edits will be applied to all of them."
+msgstr "Specify material slots instead of materials.\nThis is useful when you want to edit each usage location separately, or when you want to specify targets using paths.\nYou can specify multiple slots together, and the same edits will be applied to each of them. If multiple materials are assigned to a single slot, such as through animation, the same edits will also be applied to each of them."
 
 msgid "targetSettings.mode.allMaterials"
-msgstr "Edit All"
+msgstr "All"
 
 msgid "targetSettings.mode.allMaterials.help"
-msgstr "Apply the same edits to all materials at once.\nThis is useful when you want to match their appearance and settings."
+msgstr "Target all materials. If needed, exclude targets from Options."
 
 msgid "targetSettings.material.label"
-msgstr "Material"
+msgstr "Target Material"
 
 msgid "targetSettings.materials.label"
-msgstr "Materials"
+msgstr "Target Materials"
 
 msgid "targetSettings.slotTargets.label"
-msgstr "Material Slots"
+msgstr "Target Material Slots"
 
 msgid "targetSettings.exclusions.use"
-msgstr "Exclude"
+msgstr "Exclude Targets"
 
 msgid "targetSettings.exclusions.useSlots"
 msgstr "Exclude Some Usage Slots"
 
+msgid "targetSettings.exclusions.options"
+msgstr "Options"
+
 msgid "targetSettings.exclusions.useSlots.help"
-msgstr "If a target material is used in multiple slots, you can exclude some of them to apply edits only to specific ones."
+msgstr "If a target material is used in multiple places, you can exclude some of them so edits are applied only to specific usage slots."
 
 msgid "targetSettings.exclusions.materials"
 msgstr "Materials to Exclude"
@@ -103,17 +119,8 @@ msgstr "GameObjects to Exclude"
 msgid "targetSettings.exclusions.selectUsageSlots"
 msgstr "Select Usage Slots to Exclude"
 
-msgid "targetSettings.slotTargets.add.title"
-msgstr "Bulk Add"
-
-msgid "targetSettings.slotTargets.add.byGameObject"
-msgstr "Material Slots Under GameObject"
-
-msgid "targetSettings.slotTargets.add.byMaterial"
-msgstr "Usage Slots for Material"
-
-msgid "targetSettings.slotTargets.add.help"
-msgstr "You can also bulk add by selecting multiple materials or meshes and dragging them here."
+msgid "targetSettings.dragAndDropAdd"
+msgstr "Drop here to add\n(Materials / GameObjects / Meshes)"
 
 # editor
 msgid "editor.title"
@@ -122,24 +129,33 @@ msgstr "Edit Materials"
 msgid "editor.help"
 msgstr "You can edit the material from the editing screen below.\nYour edits are recorded automatically and saved to this component."
 
+msgid "editor.showDescription"
+msgstr "Help"
+
 msgid "editor.noAvatarRoot.help"
 msgstr "This component is currently disabled.\nIt is only active when placed under the avatar hierarchy."
 
 msgid "editor.notEffective.help"
-msgstr "This component is currently disabled.\nIt will not be applied when the component checkbox is off or when it is set to EditorOnly."
+msgstr "This component is currently disabled.\nIt will not be applied when this component's checkbox is off, or when this GameObject is EditorOnly."
 
 msgid "editor.noMaterialSelected.help"
 msgstr "No material to edit was found. Configure it above."
 
 msgid "editor.recordingSourceMaterial"
-msgstr "Displayed Material"
+msgstr "Display Material"
 
 # override settings
 msgid "overrideSettings.count"
-msgstr "Saved Edits: {0} entries"
+msgstr "Saved Edits: {0} items"
 
-msgid "overrideSettings.help"
-msgstr "Saved edits are shown here.\nChanges made in the normal material editing screen below are reflected automatically, so you usually do not need to edit this directly.\nThese edits are applied to the material during preview and build."
+msgid "overrideSettings.help.visibleEditor"
+msgstr "Saved edits are shown here. Changes made in the editing screen below are reflected automatically, so you usually do not need to edit this directly."
+
+msgid "overrideSettings.help.hiddenEditor"
+msgstr "Saved edits are shown here. Expand the editing screen above to edit materials."
+
+msgid "overrideSettings.help.noMaterial"
+msgstr "Saved edits are shown here. The normal editing screen is hidden because no target material was found."
 
 msgid "overrideSettings.properties"
 msgstr "Properties"
@@ -149,16 +165,16 @@ msgstr "Reset"
 
 # override utility
 msgid "overrideUtility.title"
-msgstr "Utilities"
+msgstr "Utility Tools"
 
 msgid "overrideUtility.replaceTexture.title"
 msgstr "Replace Texture"
 
 msgid "overrideUtility.replaceTexture.source"
-msgstr "Texture to replace"
+msgstr "Texture to Replace"
 
 msgid "overrideUtility.replaceTexture.destination"
-msgstr "New texture"
+msgstr "New Texture to Use"
 
 msgid "overrideUtility.materialDiff.title"
 msgstr "Import Material Changes"
@@ -193,7 +209,7 @@ msgstr "Scale"
 
 # material slot
 msgid "materialSlot.noRenderer"
-msgstr "Select a mesh."
+msgstr "Select a mesh"
 
 # migration
 msgid "migration.required"

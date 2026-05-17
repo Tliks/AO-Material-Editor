@@ -2,41 +2,17 @@ using nadena.dev.modular_avatar.core;
 
 namespace Aoyon.MaterialEditor.Processor.Extension;
 
-internal class ModularAvatarMaterialTargeting : IMaterialTargeting
+internal class ModularAvatarMaterialTargeting : MaterialTargeting
 {
-    private readonly IMaterialTargeting[] _materialTargetings;
+    public ModularAvatarMaterialTargeting(GameObject root) : base(GetMaterialTargetings(root)) { } 
 
-    public ModularAvatarMaterialTargeting(GameObject root)
+    private static IMaterialTargeting[] GetMaterialTargetings(GameObject Root)
     {
-        _materialTargetings = new IMaterialTargeting[]
+        return new IMaterialTargeting[]
         {
-            new ModularAvatarMaterialSetterTargeting(root),
-            new ModularAvatarMaterialSwapTargeting(root),
+            new ModularAvatarMaterialSetterTargeting(Root),
+            new ModularAvatarMaterialSwapTargeting(Root)
         };
-    }
-
-    public IEnumerable<MaterialAssignment> GetAssignments(IEnumerable<Renderer> renderers)
-    {
-        foreach (var materialTargeting in _materialTargetings)
-        {
-            foreach (var assignment in materialTargeting.GetAssignments(renderers))
-            {
-                yield return assignment;
-            }
-        }
-    }
-
-    public IEnumerable<MaterialAssignment> GetAssignments(Renderer renderer)
-    {
-        return GetAssignments(new[] { renderer });
-    }
-
-    public void ApplyReplacements(IReadOnlyDictionary<MaterialAssignment, Material> replacements)
-    {
-        foreach (var materialTargeting in _materialTargetings)
-        {
-            materialTargeting.ApplyReplacements(replacements);
-        }
     }
 }
 

@@ -27,11 +27,14 @@ msgstr "テクスチャ"
 msgid "common.materialSlot"
 msgstr "マテリアルスロット"
 
-msgid "common.allMaterials"
-msgstr "すべてのマテリアル"
+msgid "common.allMaterialSlots"
+msgstr "すべてのスロット"
 
-msgid "common.edit"
-msgstr "編集する"
+msgid "common.on"
+msgstr "オン"
+
+msgid "common.off"
+msgstr "オフ"
 
 msgid "common.shader"
 msgstr "シェーダー"
@@ -40,53 +43,66 @@ msgid "common.renderQueue"
 msgstr "レンダーキュー"
 
 msgid "common.dragAndDropAdd"
-msgstr "ドラッグ&ドロップで一括追加"
+msgstr "ここにドロップして追加"
+
+# generator
+msgid "generator.noTargetRenderers.warning"
+msgstr "{0}を作成できませんでした。Skinned Mesh RendererまたはMesh Rendererを持つGameObjectを選択してください。"
+
+msgid "generator.noTargetMaterials.warning"
+msgstr "{0}を作成できませんでした。選択したRendererにマテリアルが割り当てられていません。マテリアルを割り当ててから、もう一度実行してください。"
 
 # target settings
 msgid "targetSettings.title"
-msgstr "編集するマテリアルを設定"
+msgstr "編集対象を設定"
 
 msgid "targetSettings.mode.label"
 msgstr "モード"
 
 msgid "targetSettings.mode.singleMaterial"
-msgstr "1つを編集"
+msgstr "シンプル"
 
 msgid "targetSettings.mode.singleMaterial.help"
-msgstr "1つのマテリアルを編集します。必要なときだけ、一部の使用箇所を除外できます。"
+msgstr "一つのマテリアルを編集する、基本的なモードです。"
 
-msgid "targetSettings.mode.bulkMaterials"
-msgstr "複数をまとめて編集"
+msgid "targetSettings.mode.bulkEdit"
+msgstr "一括編集"
 
-msgid "targetSettings.mode.bulkMaterials.help"
+msgid "targetSettings.mode.bulkEdit.help"
 msgstr "複数のマテリアルへ同じ編集内容を一括適用します。質感や設定を揃えたいときに便利です。"
 
+msgid "targetSettings.mode.bulkMaterials"
+msgstr "通常"
+
 msgid "targetSettings.mode.slotTargets"
-msgstr "マテリアルスロットで指定"
+msgstr "スロット"
 
 msgid "targetSettings.mode.slotTargets.help"
-msgstr "マテリアルではなく、マテリアルスロットごとに編集対象を指定します。\n使用箇所ごとに編集したい場合や、パスで指定したいときに便利です。\n複数のマテリアルスロットをまとめて指定でき、それぞれに同じ編集内容が適用されます。アニメーションなどで1つのスロットに複数のマテリアルが割り当てられる場合も、それらすべてに同じ編集内容が適用されます。"
+msgstr "マテリアルではなく、マテリアルスロットを指定します。\n使用箇所ごとに編集したい場合や、対象をパスを用いて指定したいときに便利です。\n複数のスロットをまとめて指定でき、それぞれに同じ編集内容が適用されます。アニメーションなどで1つのスロットに複数のマテリアルが割り当てられる場合も、それぞれに同じ編集内容が適用されます。"
 
 msgid "targetSettings.mode.allMaterials"
-msgstr "すべてをまとめて編集"
+msgstr "全て"
 
 msgid "targetSettings.mode.allMaterials.help"
-msgstr "すべてのマテリアルへ同じ編集内容を一括適用します。質感や設定を揃えたいときに便利です。"
+msgstr "アバター内の全てのマテリアルを対象にします。必要に応じて、オプションから対象を除外してください。"
 
 msgid "targetSettings.material.label"
-msgstr "マテリアル"
+msgstr "対象のマテリアル"
 
 msgid "targetSettings.materials.label"
-msgstr "マテリアル"
+msgstr "対象のマテリアル"
 
 msgid "targetSettings.slotTargets.label"
-msgstr "マテリアルスロット"
+msgstr "対象のマテリアルスロット"
 
 msgid "targetSettings.exclusions.use"
 msgstr "除外する"
 
 msgid "targetSettings.exclusions.useSlots"
 msgstr "一部の使用箇所を除外"
+
+msgid "targetSettings.exclusions.options"
+msgstr "オプション"
 
 msgid "targetSettings.exclusions.useSlots.help"
 msgstr "対象のマテリアルが複数箇所で使われている場合は、除外することで一部だけに編集を適用できます。"
@@ -95,7 +111,7 @@ msgid "targetSettings.exclusions.materials"
 msgstr "除外するマテリアル"
 
 msgid "targetSettings.exclusions.slots"
-msgstr "除外する場所"
+msgstr "除外するスロット"
 
 msgid "targetSettings.exclusions.objects"
 msgstr "除外する GameObject"
@@ -103,17 +119,8 @@ msgstr "除外する GameObject"
 msgid "targetSettings.exclusions.selectUsageSlots"
 msgstr "除外する使用箇所を選択"
 
-msgid "targetSettings.slotTargets.add.title"
-msgstr "一括追加"
-
-msgid "targetSettings.slotTargets.add.byGameObject"
-msgstr "GameObject 以下のマテリアルスロット"
-
-msgid "targetSettings.slotTargets.add.byMaterial"
-msgstr "マテリアルの使用箇所"
-
-msgid "targetSettings.slotTargets.add.help"
-msgstr "マテリアルやメッシュを複数選択し、ここにドラッグ&ドロップすることでも一括追加できます。"
+msgid "targetSettings.dragAndDropAdd"
+msgstr "ここにドロップして追加\n(マテリアル・GameObject・メッシュ)"
 
 # editor
 msgid "editor.title"
@@ -122,24 +129,33 @@ msgstr "マテリアルを編集"
 msgid "editor.help"
 msgstr "画面下の編集画面からマテリアルを編集できます。\n編集内容は自動記録され、このコンポーネントに保存されます。"
 
+msgid "editor.showDescription"
+msgstr "解説"
+
 msgid "editor.noAvatarRoot.help"
 msgstr "このコンポーネントは現在無効化されています。\nアバター以下にある場合のみ有効です。"
 
 msgid "editor.notEffective.help"
-msgstr "このコンポーネントは現在無効化されています。\nコンポーネントのチェックボックスがオフ、または EditorOnly の場合は適用されません。"
+msgstr "このコンポーネントは現在無効化されています。\nこのコンポーネントのチェックボックスがオフ、またはこの GameObject が EditorOnly の場合は適用されません。"
 
 msgid "editor.noMaterialSelected.help"
-msgstr "編集対象のマテリアルが見つかりません。上部から設定してください。"
+msgstr "編集対象のマテリアルが見つかりません。画面上から設定してください。"
 
 msgid "editor.recordingSourceMaterial"
 msgstr "表示用のマテリアル"
 
 # override settings
 msgid "overrideSettings.count"
-msgstr "保存された編集内容: {0}箇所"
+msgstr "保存された編集内容: {0} 箇所"
 
-msgid "overrideSettings.help"
-msgstr "保存された編集内容がここに表示されます。\n画面下の通常のマテリアル編集画面からマテリアルを編集すると自動反映されるため、通常はここを直接編集する必要はありません。\nプレビュー時やビルド時に、この編集内容がマテリアルに適用されます。"
+msgid "overrideSettings.help.visibleEditor"
+msgstr "保存された編集内容がここに表示されます。画面下の編集画面から編集すると自動反映されるため、通常はここを直接編集する必要はありません。"
+
+msgid "overrideSettings.help.hiddenEditor"
+msgstr "保存された編集内容がここに表示されます。画面上の編集画面を展開すると編集できます。"
+
+msgid "overrideSettings.help.noMaterial"
+msgstr "保存された編集内容がここに表示されます。編集対象のマテリアルが見つからないため、通常の編集画面は表示されません。"
 
 msgid "overrideSettings.properties"
 msgstr "プロパティ"
@@ -164,7 +180,7 @@ msgid "overrideUtility.materialDiff.title"
 msgstr "マテリアルの変更点を取り込む"
 
 msgid "overrideUtility.materialDiff.original"
-msgstr "元のマテリアル"
+msgstr "変更前のマテリアル"
 
 msgid "overrideUtility.materialDiff.modified"
 msgstr "変更後のマテリアル"

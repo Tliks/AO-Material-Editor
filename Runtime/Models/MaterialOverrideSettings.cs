@@ -35,26 +35,28 @@ internal class MaterialOverrideSettings : IEquatable<MaterialOverrideSettings>
             target.RenderQueueValue = source.RenderQueueValue;
         }
 
-        using var _1 = DictionaryPool<string, MaterialProperty>.Get(out var srcDict);
-        foreach (var p in source.PropertyOverrides) srcDict[p.PropertyName] = p;
-        using var _2 = HashSetPool<string>.Get(out var targetKeys);
-
-        var result = new List<MaterialProperty>(target.PropertyOverrides.Count + source.PropertyOverrides.Count);
-
-        foreach (var p in target.PropertyOverrides)
         {
-            targetKeys.Add(p.PropertyName); 
-            result.Add(srcDict.TryGetValue(p.PropertyName, out var s) ? s : p);
-        }
+            using var _1 = DictionaryPool<string, MaterialProperty>.Get(out var srcDict);
+            foreach (var p in source.PropertyOverrides) srcDict[p.PropertyName] = p;
+            using var _2 = HashSetPool<string>.Get(out var targetKeys);
 
-        foreach (var p in source.PropertyOverrides)
-        {
-            if (targetKeys.Add(p.PropertyName)) {
-                result.Add(srcDict[p.PropertyName]);
+            var result = new List<MaterialProperty>(target.PropertyOverrides.Count + source.PropertyOverrides.Count);
+
+            foreach (var p in target.PropertyOverrides)
+            {
+                targetKeys.Add(p.PropertyName); 
+                result.Add(srcDict.TryGetValue(p.PropertyName, out var s) ? s : p);
             }
-        }
 
-        target.PropertyOverrides = result;
+            foreach (var p in source.PropertyOverrides)
+            {
+                if (targetKeys.Add(p.PropertyName)) {
+                    result.Add(srcDict[p.PropertyName]);
+                }
+            }
+
+            target.PropertyOverrides = result;
+        }
     }
 
     public int OverrideCount

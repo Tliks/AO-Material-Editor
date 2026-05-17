@@ -5,19 +5,17 @@ namespace Aoyon.MaterialEditor
 {
     internal class MaterialEditorComponentBase : MonoBehaviour, INDMFEditorOnly
     {
-        public const int CurrentDataVersion = 1;
-
         [NotKeyable, HideInInspector]
         public int DataVersion = 0;
 
         void Reset()
         {
-            DataVersion = CurrentDataVersion;
+            DataVersion = Constants.CurrentDataVersion;
         }
 
         public bool IsLatestDataVersion()
         {
-            return DataVersion == CurrentDataVersion;
+            return DataVersion == Constants.CurrentDataVersion;
         }
     }
 }
