@@ -37,6 +37,47 @@ internal static class Utils
             .Distinct();
     }
 
+    public static IEnumerable<Renderer> GetTargetRenderersUnderInAvatar(GameObject marker, GameObject target)
+    {
+        var root = FindAvatarInParents(marker);
+        if (root == null) return Array.Empty<Renderer>();
+        if (!target.transform.IsChildOf(root.transform)) return Array.Empty<Renderer>();
+
+        return MaterialEditorProcessor.GetTargetRenderers(target);
+    }
+
+    public static IEnumerable<Material> GetAllTargetMaterialsInAvatar(GameObject marker, Object source)
+    {
+        switch (source)
+        {
+            case Material material:
+                yield return material;
+                yield break;
+
+            case Renderer renderer:
+                var root = FindAvatarInParents(marker);
+                if (root == null) yield break;
+                if (!renderer.transform.IsChildOf(root.transform)) yield break;
+                if (!MaterialEditorProcessor.IsTargetRenderer(renderer)) yield break;
+
+                foreach (var material in renderer.sharedMaterials.SkipDestroyed())
+                {
+                    yield return material;
+                }
+                yield break;
+
+            case GameObject target:
+                foreach (var material in GetTargetRenderersUnderInAvatar(marker, target)
+                             .SelectMany(renderer => renderer.sharedMaterials)
+                             .SkipDestroyed()
+                             .Distinct())
+                {
+                    yield return material;
+                }
+                yield break;
+        }
+    }
+
     public static Material[] GetAllTargetMaterialsInAvatar(GameObject marker)
     {
         var root = FindAvatarInParents(marker);

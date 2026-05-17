@@ -10,11 +10,23 @@ internal class MaterialSelectorDrawer : PropertyDrawer
         position.SetSingleHeight();
 
         var selectorWidth = MaterialSelector.GetSize().x;
+        var fieldAreaRect = position;
+        if (label != GUIContent.none)
+        {
+            var labelWidth = GetLabelWidth(label, selectorWidth);
+            GUIHelper.SplitRectHorizontallyForLeft(position, labelWidth, out var labelRect, out fieldAreaRect);
+            EditorGUI.LabelField(labelRect, label);
+        }
+        GUIHelper.SplitRectHorizontallyForLeft(fieldAreaRect, selectorWidth, out var selectorRect, out var objectFieldRect);
 
-        GUIHelper.SplitRectHorizontallyForRight(position, selectorWidth, out var objectFieldRect, out var selectorRect);
-
-        property.objectReferenceValue = EditorGUI.ObjectField(objectFieldRect, label, property.objectReferenceValue, typeof(Material), true);
         MaterialSelector.Draw(selectorRect, () => Utils.GetAllTargetMaterialsInAvatar(property), (m, i) => OnSelected(property, m, i));
+        property.objectReferenceValue = EditorGUI.ObjectField(objectFieldRect, GUIContent.none, property.objectReferenceValue, typeof(Material), true);
+    }
+
+    private static float GetLabelWidth(GUIContent label, float selectorWidth)
+    {
+        var preferredWidth = EditorStyles.label.CalcSize(label).x;
+        return Mathf.Max(preferredWidth, EditorGUIUtility.labelWidth - selectorWidth / 2f);
     }
 
     private static void OnSelected(SerializedProperty property, Material? material, int index)

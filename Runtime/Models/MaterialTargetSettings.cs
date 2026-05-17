@@ -84,7 +84,7 @@ internal class SingleMaterialTargetSettings : IEquatable<SingleMaterialTargetSet
 {
     [MaterialSelector]
     public Material? TargetMaterial = null;
-    public bool UseSlotExclusions = false;
+    [Obsolete] public bool UseSlotExclusions = false;
     public List<MaterialSlotReference> ExcludedSlots = new();
 
     public SingleMaterialTargetSettings Clone()
@@ -92,7 +92,6 @@ internal class SingleMaterialTargetSettings : IEquatable<SingleMaterialTargetSet
         return new SingleMaterialTargetSettings
         {
             TargetMaterial = TargetMaterial,
-            UseSlotExclusions = UseSlotExclusions,
             ExcludedSlots = new List<MaterialSlotReference>(ExcludedSlots.Select(s => s.Clone())),
         };
     }
@@ -110,9 +109,6 @@ internal class SingleMaterialTargetSettings : IEquatable<SingleMaterialTargetSet
         if (other is null) return false;
         if (ReferenceEquals(this, other)) return true;
         if (TargetMaterial != other.TargetMaterial) return false;
-        if (!UseSlotExclusions && !other.UseSlotExclusions) return true;
-        if (!UseSlotExclusions) return other.ExcludedSlots.Count == 0;
-        if (!other.UseSlotExclusions) return ExcludedSlots.Count == 0;
         return ExcludedSlots.SequenceEqual(other.ExcludedSlots);
     }
 
@@ -120,7 +116,7 @@ internal class SingleMaterialTargetSettings : IEquatable<SingleMaterialTargetSet
     {
         var hash = new HashCode();
         hash.Add(TargetMaterial);
-        if (UseSlotExclusions) foreach (var slot in ExcludedSlots) hash.Add(slot);
+        foreach (var slot in ExcludedSlots) hash.Add(slot);
         return hash.ToHashCode();
     }
 }
@@ -130,7 +126,7 @@ internal class BulkMaterialTargetSettings : IEquatable<BulkMaterialTargetSetting
 {
     [MaterialSelector]
     public List<Material> TargetMaterials = new();
-    public bool UseSlotExclusions = false;
+    [Obsolete] public bool UseSlotExclusions = false;
     public List<MaterialSlotReference> ExcludedSlots = new();
 
     public BulkMaterialTargetSettings Clone()
@@ -138,7 +134,6 @@ internal class BulkMaterialTargetSettings : IEquatable<BulkMaterialTargetSetting
         return new BulkMaterialTargetSettings
         {
             TargetMaterials = new List<Material>(TargetMaterials),
-            UseSlotExclusions = UseSlotExclusions,
             ExcludedSlots = new List<MaterialSlotReference>(ExcludedSlots.Select(s => s.Clone())),
         };
     }
@@ -156,9 +151,6 @@ internal class BulkMaterialTargetSettings : IEquatable<BulkMaterialTargetSetting
         if (other is null) return false;
         if (ReferenceEquals(this, other)) return true;
         if (!TargetMaterials.SequenceEqual(other.TargetMaterials)) return false;
-        if (!UseSlotExclusions && !other.UseSlotExclusions) return true;
-        if (!UseSlotExclusions) return other.ExcludedSlots.Count == 0;
-        if (!other.UseSlotExclusions) return ExcludedSlots.Count == 0;
         return ExcludedSlots.SequenceEqual(other.ExcludedSlots);
     }
 
@@ -166,7 +158,7 @@ internal class BulkMaterialTargetSettings : IEquatable<BulkMaterialTargetSetting
     {
         var hash = new HashCode();
         foreach (var material in TargetMaterials) hash.Add(material);
-        if (UseSlotExclusions) foreach (var slot in ExcludedSlots) hash.Add(slot);
+        foreach (var slot in ExcludedSlots) hash.Add(slot);
         return hash.ToHashCode();
     }
 }
@@ -210,7 +202,7 @@ internal class SlotTargetSettings : IEquatable<SlotTargetSettings>
 [Serializable]
 internal class AllMaterialSettings : IEquatable<AllMaterialSettings>
 {
-    public bool UseExclusions = false;
+    [Obsolete] public bool UseExclusions = false;
     [MaterialSelector]
     public List<Material> ExcludedMaterials = new();
     public List<MaterialSlotReference> ExcludedSlots = new();
@@ -220,7 +212,6 @@ internal class AllMaterialSettings : IEquatable<AllMaterialSettings>
     {
         return new AllMaterialSettings
         {
-            UseExclusions = UseExclusions,
             ExcludedMaterials = new List<Material>(ExcludedMaterials),
             ExcludedSlots = new List<MaterialSlotReference>(ExcludedSlots.Select(s => s.Clone())),
             ExcludedObjects = new List<AvatarObjectReference>(ExcludedObjects.Select(o => o.Clone())),
@@ -244,8 +235,7 @@ internal class AllMaterialSettings : IEquatable<AllMaterialSettings>
     {
         if (other is null) return false;
         if (ReferenceEquals(this, other)) return true;
-        return UseExclusions == other.UseExclusions
-            && ExcludedMaterials.SequenceEqual(other.ExcludedMaterials)
+        return ExcludedMaterials.SequenceEqual(other.ExcludedMaterials)
             && ExcludedSlots.SequenceEqual(other.ExcludedSlots)
             && ExcludedObjects.SequenceEqual(other.ExcludedObjects);
     }
@@ -253,13 +243,9 @@ internal class AllMaterialSettings : IEquatable<AllMaterialSettings>
     public override int GetHashCode()
     {
         var hash = new HashCode();
-        hash.Add(UseExclusions);
-        if (UseExclusions)
-        {
-            foreach (var material in ExcludedMaterials) hash.Add(material);
-            foreach (var slot in ExcludedSlots) hash.Add(slot);
-            foreach (var obj in ExcludedObjects) hash.Add(obj);
-        }
+        foreach (var material in ExcludedMaterials) hash.Add(material);
+        foreach (var slot in ExcludedSlots) hash.Add(slot);
+        foreach (var obj in ExcludedObjects) hash.Add(obj);
         return hash.ToHashCode();
     }
 }

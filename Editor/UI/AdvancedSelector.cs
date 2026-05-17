@@ -147,7 +147,7 @@ internal class AdvancedSelector<T>
     }
 
     private static GUIContent DefaultContent => "common.select".LG();
-    private static GUIStyle DefaultStyle => StyleHelper.CenteredPopupStyle;
+    private static GUIStyle DefaultStyle => StyleHelper.LowerCenteredPopupStyle;
 
     private static string GetDefaultSelectLabel()
     {

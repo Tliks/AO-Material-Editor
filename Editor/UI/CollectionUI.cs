@@ -5,7 +5,21 @@ namespace Aoyon.MaterialEditor.UI;
 
 internal static class AvatarObjectReferenceCollectionUI
 {
+    public static GUIHelper.DropHandler DropHandler { get; } = new(
+        o => o is GameObject,
+        OnItemsDropped);
+
     public static void Draw(Rect position, SerializedProperty property, GUIContent label, GUIHelper.ListOptions? options)
+    {
+        Draw(position, property, label, options, DropHandler);
+    }
+
+    public static void Draw(
+        Rect position,
+        SerializedProperty property,
+        GUIContent label,
+        GUIHelper.ListOptions? options,
+        GUIHelper.DropHandler? dropHandler)
     {
         if (!property.isArray) {
             EditorGUI.PropertyField(position, property, label);
@@ -14,7 +28,15 @@ internal static class AvatarObjectReferenceCollectionUI
 
         GUIHelper.DragAndDropList(position, property, label, prop => {
             prop.CopyFrom(new AvatarObjectReference());
-        },o => o is GameObject, OnItemsDropped, options ?? new GUIHelper.ListOptions());
+        }, dropHandler, options ?? new GUIHelper.ListOptions());
+    }
+
+    public static float GetHeight(SerializedProperty property, GUIContent label, GUIHelper.ListOptions? options)
+    {
+        if (!property.isArray) {
+            return EditorGUI.GetPropertyHeight(property, GUIContent.none);
+        }
+        return GUIHelper.GetDragAndDropListHeight(property, options ?? new GUIHelper.ListOptions(), DropHandler);
     }
 
     private static void OnItemsDropped(SerializedProperty property, Object[] items)
@@ -31,19 +53,30 @@ internal static class AvatarObjectReferenceCollectionUI
 
         property.serializedObject.ApplyModifiedProperties();
     }
-
-    public static float GetHeight(SerializedProperty property, GUIContent label, GUIHelper.ListOptions? options)
-    {
-        if (!property.isArray) {
-            return EditorGUI.GetPropertyHeight(property, GUIContent.none);
-        }
-        return GUIHelper.GetListHeight(property, options ?? new GUIHelper.ListOptions());
-    }
 }
 
 internal static class MaterialCollectionUI
 {
+    public static GUIHelper.DropHandler DefaultDropHandler { get; } = new(
+        o => o is Material,
+        OnItemsDropped);
+
+    public static GUIHelper.DropHandler MaterialOrRendererDropHandler { get; } = new(
+        IsMaterialOrRendererSource,
+        OnMaterialsOrRenderersDropped,
+        "targetSettings.dragAndDropAdd");
+
     public static void Draw(Rect position, SerializedProperty property, GUIContent label, GUIHelper.ListOptions? options)
+    {
+        Draw(position, property, label, options, DefaultDropHandler);
+    }
+
+    public static void Draw(
+        Rect position,
+        SerializedProperty property,
+        GUIContent label,
+        GUIHelper.ListOptions? options,
+        GUIHelper.DropHandler? dropHandler)
     {
         if (!property.isArray)
         {
@@ -54,23 +87,38 @@ internal static class MaterialCollectionUI
         GUIHelper.DragAndDropList(position, property, label, prop =>
         {
             prop.objectReferenceValue = null;
-        }, o => o is Material, OnItemsDropped, options ?? new GUIHelper.ListOptions());
+        }, dropHandler, options ?? new GUIHelper.ListOptions());
+    }
+
+    public static float GetHeight(SerializedProperty property, GUIContent label, GUIHelper.ListOptions? options)
+    {
+        return GetHeight(property, label, options, DefaultDropHandler);
+    }
+
+    public static float GetHeight(
+        SerializedProperty property,
+        GUIContent label,
+        GUIHelper.ListOptions? options,
+        GUIHelper.DropHandler? dropHandler)
+    {
+        if (!property.isArray)
+        {
+            return EditorGUI.GetPropertyHeight(property, GUIContent.none);
+        }
+        return GUIHelper.GetDragAndDropListHeight(property, options ?? new GUIHelper.ListOptions(), dropHandler);
     }
 
     private static void OnItemsDropped(SerializedProperty property, Object[] items)
     {
         foreach (var material in items.OfType<Material>())
         {
-            if (ContainsMaterial(property, material)) continue;
-
-            property.arraySize++;
-            property.GetArrayElementAtIndex(property.arraySize - 1).objectReferenceValue = material;
+            AppendMaterial(property, material);
         }
 
         property.serializedObject.ApplyModifiedProperties();
     }
 
-    private static bool ContainsMaterial(SerializedProperty property, Material material)
+    public static bool ContainsMaterial(SerializedProperty property, Material material)
     {
         for (int i = 0; i < property.arraySize; i++)
         {
@@ -82,19 +130,53 @@ internal static class MaterialCollectionUI
         return false;
     }
 
-    public static float GetHeight(SerializedProperty property, GUIContent label, GUIHelper.ListOptions? options)
+    public static void AppendMaterial(SerializedProperty property, Material material)
     {
-        if (!property.isArray)
+        if (ContainsMaterial(property, material)) return;
+
+        property.arraySize++;
+        property.GetArrayElementAtIndex(property.arraySize - 1).objectReferenceValue = material;
+    }
+
+    private static bool IsMaterialOrRendererSource(Object item)
+    {
+        return item is Material or Renderer or GameObject;
+    }
+
+    private static void OnMaterialsOrRenderersDropped(SerializedProperty property, Object[] items)
+    {
+        if (!property.TryGetGameObject(out var gameObject)) return;
+
+        var seen = new HashSet<Material>();
+        foreach (var material in items.SelectMany(item => Utils.GetAllTargetMaterialsInAvatar(gameObject, item)))
         {
-            return EditorGUI.GetPropertyHeight(property, GUIContent.none);
+            if (ContainsMaterial(property, material)) continue;
+            if (!seen.Add(material)) continue;
+            AppendMaterial(property, material);
         }
-        return GUIHelper.GetListHeight(property, options ?? new GUIHelper.ListOptions());
+
+        property.serializedObject.ApplyModifiedProperties();
     }
 }
 
 internal static class MaterialSlotReferenceCollectionUI
 {
+    public static GUIHelper.DropHandler DefaultDropHandler { get; } = new(
+        IsSlotSource,
+        OnItemsDropped,
+        "targetSettings.dragAndDropAdd");
+
     public static void Draw(Rect position, SerializedProperty property, GUIContent label, GUIHelper.ListOptions? options)
+    {
+        Draw(position, property, label, options, DefaultDropHandler);
+    }
+
+    public static void Draw(
+        Rect position,
+        SerializedProperty property,
+        GUIContent label,
+        GUIHelper.ListOptions? options,
+        GUIHelper.DropHandler? dropHandler)
     {
         if (!property.isArray)
         {
@@ -105,16 +187,25 @@ internal static class MaterialSlotReferenceCollectionUI
         GUIHelper.DragAndDropList(position, property, label, prop =>
         {
             prop.CopyFrom(new MaterialSlotReference());
-        }, o => o is Material || (o is GameObject go && go.TryGetComponent<Renderer>(out _)), OnItemsDropped, options ?? new GUIHelper.ListOptions());
+        }, dropHandler, options ?? new GUIHelper.ListOptions());
     }
 
     public static float GetHeight(SerializedProperty property, GUIContent label, GUIHelper.ListOptions? options)
+    {
+        return GetHeight(property, label, options, DefaultDropHandler);
+    }
+
+    public static float GetHeight(
+        SerializedProperty property,
+        GUIContent label,
+        GUIHelper.ListOptions? options,
+        GUIHelper.DropHandler? dropHandler)
     {
         if (!property.isArray)
         {
             return EditorGUI.GetPropertyHeight(property, GUIContent.none);
         }
-        return GUIHelper.GetListHeight(property, options ?? new GUIHelper.ListOptions());
+        return GUIHelper.GetDragAndDropListHeight(property, options ?? new GUIHelper.ListOptions(), dropHandler);
     }
 
     private static void OnItemsDropped(SerializedProperty property, Object[] items)
@@ -133,19 +224,39 @@ internal static class MaterialSlotReferenceCollectionUI
                     }
                     break;
 
-                case GameObject go when go.TryGetComponent<Renderer>(out _):
-                    var slotReference = new MaterialSlotReference
+                case Renderer renderer:
+                    if (gameObject == null) continue;
+                    if (!Utils.GetTargetRenderersUnderInAvatar(gameObject, renderer.gameObject).Contains(renderer)) continue;
+                    AppendRendererSlot(property, renderer);
+                    break;
+
+                case GameObject go:
+                    if (gameObject == null) continue;
+                    foreach (var renderer in Utils.GetTargetRenderersUnderInAvatar(gameObject, go))
                     {
-                        RendererReference = new AvatarObjectReference(go),
-                        MaterialIndex = -1,
-                    };
-                    if (ContainsSlot(property, slotReference)) continue;
-                    AppendSlot(property, slotReference);
+                        AppendRendererSlot(property, renderer);
+                    }
                     break;
             }
         }
 
         property.serializedObject.ApplyModifiedProperties();
+    }
+
+    private static bool IsSlotSource(Object item)
+    {
+        return item is Material or Renderer or GameObject;
+    }
+
+    private static void AppendRendererSlot(SerializedProperty property, Renderer renderer)
+    {
+        var slotReference = new MaterialSlotReference
+        {
+            RendererReference = new AvatarObjectReference(renderer.gameObject),
+            MaterialIndex = -1,
+        };
+        if (ContainsSlot(property, slotReference)) return;
+        AppendSlot(property, slotReference);
     }
 
     public static IEnumerable<MaterialSlotReference> EnumerateMaterialUsages(GameObject maker, Material material)

@@ -72,7 +72,7 @@ internal class MaterialSlotReferenceDrawer : PropertyDrawer
 
         private static string GetItemLabel(Material? material, int slotIndex)
         {
-            var name = slotIndex == -1 ? "common.allMaterials".LS() : GetDefaultItemLabel(material);
+            var name = slotIndex == -1 ? "common.allMaterialSlots".LS() : GetDefaultItemLabel(material);
             return string.Format("{0} : {1}", slotIndex, name);
         }
 

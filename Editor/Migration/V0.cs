@@ -41,8 +41,6 @@ internal class V0 : IMigrator
             case MaterialEntrySettings.ApplyMode.All:
                 migrated.Mode = MaterialTargetSettings.SelectionMode.AllMaterials;
                 var all = migrated.AllMaterials;
-                all.UseExclusions = legacy.AllMaterialTargetScope.ExcludeTargets.Count > 0
-                    || legacy.AllMaterialTargetScope.ExcludeObjectReferences.Count > 0;
 
                 foreach (var target in legacy.AllMaterialTargetScope.ExcludeTargets)
                 {

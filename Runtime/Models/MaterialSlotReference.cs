@@ -11,7 +11,7 @@ internal class MaterialSlotReference : IEquatable<MaterialSlotReference>
     // まあエッジケースなので0番目固定で良いでしょう…
     // public int RendererIndex = 0;
 
-    public int MaterialIndex = -1; // -1 means all slots
+    public int MaterialIndex = 0; // -1 means all slots
 
     public MaterialSlotReference Clone()
     {

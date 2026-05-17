@@ -1,203 +1,74 @@
 using Aoyon.MaterialEditor.Processor;
-using nadena.dev.modular_avatar.core;
 
 namespace Aoyon.MaterialEditor.UI;
 
-// Todo: リファクタするか直下のみを基準としないもっと良い感じの結合ロジック
 internal static class MaterialEditorGenerator
 {
-    public static void Generate(GameObject selected)
+    private const string UndoMessage = "Create " + Constants.DisplayName;
+
+    public static void Generate(IEnumerable<GameObject> selectedObjects)
     {
-        var selectedAssignments = CollectAssignments(selected).ToList();
-        if (selectedAssignments.Count == 0) throw new Exception("No materials found");
-
-        var allSlotsByMaterial = CollectAllSlotsByMaterial(selected, selectedAssignments);
-        var groups = BuildGroups(selected.transform, selectedAssignments);
-
-        var root = new GameObject("Material Editor");
-        root.transform.SetParent(selected.transform, false);
-
-        GameObject? firstCreated = null;
-        foreach (var group in groups)
+       var targetRenderers = selectedObjects
+            .SelectMany(s => s.GetComponents<Renderer>())
+            .Where(r => MaterialEditorProcessor.IsTargetRenderer(r))
+            .ToArray();
+        
+        if (targetRenderers.Length == 0)
         {
-            CreateGroupEntries(root.transform, group, allSlotsByMaterial, ref firstCreated);
+            Debug.LogWarning(string.Format("generator.noTargetRenderers.warning".LS(), Constants.DisplayName));
+            return;
         }
 
-        Undo.RegisterCreatedObjectUndo(root, "Create AO Material Editor");
-        EditorGUIUtility.PingObject(firstCreated != null ? firstCreated : root);
-        Selection.activeGameObject = firstCreated != null ? firstCreated : root;
-    }
-
-    private static IEnumerable<MaterialAssignment> CollectAssignments(GameObject scopeRoot)
-    {
-        var renderers = MaterialEditorProcessor.GetTargetRenderers(scopeRoot);
-        return new DefaultMaterialTargeting().GetAssignments(renderers);
-    }
-
-    private static Dictionary<Material, HashSet<MaterialSlotId>> CollectAllSlotsByMaterial(
-        GameObject selected,
-        IReadOnlyCollection<MaterialAssignment> selectedAssignments)
-    {
-        var targetMaterials = selectedAssignments.Select(a => a.Material).ToHashSet();
-        var searchRoot = Utils.FindAvatarInParents(selected) ?? selected;
-        var slotsByMaterial = new Dictionary<Material, HashSet<MaterialSlotId>>();
-
-        foreach (var assignment in CollectAssignments(searchRoot))
+        var targetMaterials = targetRenderers
+            .SelectMany(r => r.sharedMaterials)
+            .SkipDestroyed()
+            .Distinct()
+            .ToArray();
+        
+        if (targetMaterials.Length == 0)
         {
-            if (!targetMaterials.Contains(assignment.Material)) continue;
-            AddSlot(slotsByMaterial, assignment.Material, assignment.SlotId);
+            Debug.LogWarning(string.Format("generator.noTargetMaterials.warning".LS(), Constants.DisplayName));
+            return;
+        }
+        
+        var parent = targetRenderers[0].transform.parent;
+        if (targetMaterials.Length > 1) {
+            var transform = new GameObject("Material").transform;
+            transform.SetParent(parent, false);
+            Undo.RegisterCreatedObjectUndo(transform.gameObject, UndoMessage);
+            parent = transform;
         }
 
-        return slotsByMaterial;
-    }
-
-    private static List<AssignmentGroup> BuildGroups(Transform selectedTransform, IEnumerable<MaterialAssignment> assignments)
-    {
-        var directChildren = selectedTransform.Cast<Transform>().ToArray();
-        var rootAssignments = new List<MaterialAssignment>();
-        var assignmentsByDirectChild = directChildren.ToDictionary(child => child, _ => new List<MaterialAssignment>());
-
-        var rootSlotsByMaterial = new Dictionary<Material, HashSet<MaterialSlotId>>();
-        var objectSlotsByTransform = new Dictionary<Transform, Dictionary<Material, HashSet<MaterialSlotId>>>();
-
-        foreach (var assignment in assignments)
+        GameObject firstCreated = null!;
+        
+        foreach (var material in targetMaterials)
         {
-            var directChild = FindContainingDirectChild(assignment.SlotId.Renderer.transform);
-            if (directChild == null)
-            {
-                rootAssignments.Add(assignment);
-                continue;
-            }
-
-            assignmentsByDirectChild[directChild].Add(assignment);
-        }
-
-        foreach (var assignment in rootAssignments)
-        {
-            AddSlot(rootSlotsByMaterial, assignment.Material, assignment.SlotId);
-        }
-
-        foreach (var directChild in directChildren)
-        {
-            var directChildAssignments = assignmentsByDirectChild[directChild];
-            if (directChildAssignments.Count == 0) continue;
-
-            var slotsByMaterial = ShouldPlaceDirectChildGroupInRoot(directChild, directChildAssignments)
-                ? rootSlotsByMaterial
-                : GetOrCreateObjectGroup(directChild);
-
-            foreach (var assignment in directChildAssignments)
-            {
-                AddSlot(slotsByMaterial, assignment.Material, assignment.SlotId);
-            }
-        }
-
-        var groups = new List<AssignmentGroup>
-        {
-            new(null, rootSlotsByMaterial),
-        };
-
-        groups.AddRange(objectSlotsByTransform
-            .Select(x => new AssignmentGroup(x.Key.name, x.Value)));
-
-        return groups;
-
-        Transform? FindContainingDirectChild(Transform rendererTransform)
-        {
-            foreach (var directChild in directChildren)
-            {
-                if (rendererTransform == directChild) return directChild;
-                if (rendererTransform.IsChildOf(directChild)) return directChild;
-            }
-
-            return null;
-        }
-
-        bool ShouldPlaceDirectChildGroupInRoot(
-            Transform directChild,
-            IEnumerable<MaterialAssignment> childAssignments)
-        {
-            if (!directChild.TryGetComponent<Renderer>(out var renderer)) return false;
-            if (renderer is not (SkinnedMeshRenderer or MeshRenderer)) return false;
-
-            return childAssignments.All(a => a.SlotId.Renderer.transform == directChild);
-        }
-
-        Dictionary<Material, HashSet<MaterialSlotId>> GetOrCreateObjectGroup(Transform directChild)
-        {
-            if (!objectSlotsByTransform.TryGetValue(directChild, out var slotsByMaterial))
-            {
-                slotsByMaterial = new();
-                objectSlotsByTransform.Add(directChild, slotsByMaterial);
-            }
-
-            return slotsByMaterial;
-        }
-    }
-
-    private static void CreateGroupEntries(
-        Transform rootParent,
-        AssignmentGroup group,
-        IReadOnlyDictionary<Material, HashSet<MaterialSlotId>> allSlotsByMaterial,
-        ref GameObject? firstCreated)
-    {
-        var parent = rootParent;
-        if (!string.IsNullOrEmpty(group.Name))
-        {
-            var folder = new GameObject(group.Name);
-            folder.transform.SetParent(rootParent, false);
-            parent = folder.transform;
-        }
-
-        foreach (var (material, includedSlots) in group.SlotsByMaterial)
-        {
-            var entry = new GameObject(material.name);
+            var entry = GenerateImpl(material);
             entry.transform.SetParent(parent, false);
-
-            var component = entry.AddComponent<MaterialEditorComponent>();
-            component.TargetSettings.Mode = MaterialTargetSettings.SelectionMode.SingleMaterial;
-            component.TargetSettings.SingleMaterial.TargetMaterial = material;
-
-            var excludedSlots = allSlotsByMaterial[material]
-                .Where(slot => !includedSlots.Contains(slot))
-                .Select(slot => new MaterialSlotReference
-                {
-                    RendererReference = new AvatarObjectReference(slot.Renderer.gameObject),
-                    MaterialIndex = slot.MaterialIndex,
-                })
-                .ToList();
-
-            component.TargetSettings.SingleMaterial.UseSlotExclusions = excludedSlots.Count > 0;
-            component.TargetSettings.SingleMaterial.ExcludedSlots.Clear();
-            component.TargetSettings.SingleMaterial.ExcludedSlots.AddRange(excludedSlots);
-
             if (firstCreated == null) firstCreated = entry;
         }
+
+        EditorGUIUtility.PingObject(firstCreated);
+        Selection.activeGameObject = firstCreated;
     }
 
-    private static void AddSlot(
-        IDictionary<Material, HashSet<MaterialSlotId>> slotsByMaterial,
-        Material material,
-        MaterialSlotId slotId)
+    public static void Generate(Material material, Transform? parent = null)
     {
-        if (!slotsByMaterial.TryGetValue(material, out var slots))
-        {
-            slots = new HashSet<MaterialSlotId>();
-            slotsByMaterial.Add(material, slots);
-        }
+        var entry = GenerateImpl(material);
 
-        slots.Add(slotId);
+        if (parent != null) entry.transform.SetParent(parent, false);
+
+        EditorGUIUtility.PingObject(entry);
+        Selection.activeGameObject = entry;
     }
 
-    private sealed class AssignmentGroup
+    public static GameObject GenerateImpl(Material material)
     {
-        public string? Name { get; }
-        public Dictionary<Material, HashSet<MaterialSlotId>> SlotsByMaterial { get; }
-
-        public AssignmentGroup(string? name, Dictionary<Material, HashSet<MaterialSlotId>> slotsByMaterial)
-        {
-            Name = name;
-            SlotsByMaterial = slotsByMaterial;
-        }
+        var entry = new GameObject(material.name);
+        var component = entry.AddComponent<MaterialEditorComponent>();
+        component.TargetSettings.Mode = MaterialTargetSettings.SelectionMode.SingleMaterial;
+        component.TargetSettings.SingleMaterial.TargetMaterial = material;
+        Undo.RegisterCreatedObjectUndo(entry, UndoMessage);
+        return entry;
     }
 }

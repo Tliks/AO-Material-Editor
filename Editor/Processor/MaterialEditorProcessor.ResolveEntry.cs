@@ -40,10 +40,7 @@ internal static partial class MaterialEditorProcessor
                         }
                     }
 
-                    if (targetSettings.SingleMaterial.UseSlotExclusions)
-                    {
-                        ExcludeSlots(targets, targetSettings.SingleMaterial.ExcludedSlots);
-                    }
+                    ExcludeSlots(targets, targetSettings.SingleMaterial.ExcludedSlots);
                     break;
                 }
 
@@ -61,10 +58,7 @@ internal static partial class MaterialEditorProcessor
                         }
                     }
 
-                    if (targetSettings.BulkMaterials.UseSlotExclusions)
-                    {
-                        ExcludeSlots(targets, targetSettings.BulkMaterials.ExcludedSlots);
-                    }
+                    ExcludeSlots(targets, targetSettings.BulkMaterials.ExcludedSlots);
                     break;
                 }
 
@@ -86,8 +80,6 @@ internal static partial class MaterialEditorProcessor
                     {
                         targets.Add(materialSlot);
                     }
-
-                    if (!targetSettings.AllMaterials.UseExclusions) break;
 
                     foreach (var targetMaterial in targetSettings.AllMaterials.ExcludedMaterials)
                     {

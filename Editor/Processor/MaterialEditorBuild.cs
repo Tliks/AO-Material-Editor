@@ -7,7 +7,7 @@ namespace Aoyon.MaterialEditor.Processor;
 [DependsOnContext(typeof(AnimatorServicesContext))]
 internal class MaterialEditorBuild : Pass<MaterialEditorBuild>
 {
-    public override string QualifiedName => "aoyon.material-editor.build";
+    public override string QualifiedName => Constants.QualifiedName + ".build";
     public override string DisplayName => "Build";
 
     protected override void Execute(BuildContext context)

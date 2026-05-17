@@ -46,16 +46,46 @@ internal static partial class GUIHelper
         return Foldout(EditorGUILayout.GetControlRect(), prop, content, options);
     }
 
+    public static bool Foldout(
+        Rect position,
+        bool isExpanded,
+        GUIContent content,
+        FoldoutOptions? options = null)
+    {
+        var resolvedOptions = options ?? new FoldoutOptions();
+        if (!resolvedOptions.Draw)
+        {
+            EditorGUI.LabelField(position, content);
+            return true;
+        }
+
+        return DrawFoldout(position, isExpanded, content, resolvedOptions.ToggleOnLabelClick, resolvedOptions.RectStrict);
+    }
+
+    public static bool Foldout(
+        bool isExpanded,
+        GUIContent content,
+        FoldoutOptions? options = null)
+    {
+        return Foldout(EditorGUILayout.GetControlRect(), isExpanded, content, options);
+    }
+
     private static bool DrawFoldout(Rect position, SerializedProperty property, GUIContent label, bool toggleOnLabelClick, bool rectStrict)
     {
-        bool isExpanded;
+        var isExpanded = DrawFoldout(position, property.isExpanded, label, toggleOnLabelClick, rectStrict);
+        ApplyExpandedState(property, isExpanded);
+        return property.isExpanded;
+    }
+
+    private static bool DrawFoldout(Rect position, bool isExpanded, GUIContent label, bool toggleOnLabelClick, bool rectStrict)
+    {
         if (rectStrict)
         {
             var prevHierarchy = EditorGUIUtility.hierarchyMode;
             var prevIndent = EditorGUI.indentLevel;
             EditorGUIUtility.hierarchyMode = false;
             EditorGUI.indentLevel = 0;
-            try { isExpanded = EditorGUI.Foldout(position, property.isExpanded, label, toggleOnLabelClick); }
+            try { isExpanded = EditorGUI.Foldout(position, isExpanded, label, toggleOnLabelClick); }
             finally
             {
                 EditorGUI.indentLevel = prevIndent;
@@ -64,11 +94,10 @@ internal static partial class GUIHelper
         }
         else
         {
-            isExpanded = EditorGUI.Foldout(position, property.isExpanded, label, toggleOnLabelClick);
+            isExpanded = EditorGUI.Foldout(position, isExpanded, label, toggleOnLabelClick);
         }
 
-        ApplyExpandedState(property, isExpanded);
-        return property.isExpanded;
+        return isExpanded;
     }
 
     private static void ApplyExpandedState(SerializedProperty property, bool isExpanded)

@@ -3,43 +3,59 @@ namespace Aoyon.MaterialEditor.UI;
 [CustomPropertyDrawer(typeof(MaterialOverrideSettings))]
 internal class MaterialOverrideSettingsDrawer : PropertyDrawer
 {
+    private const string DefaultHelpKey = "overrideSettings.help.visibleEditor";
+
+    private static string _helpKey = DefaultHelpKey;
     private static GUIContent? _tooltipOverlayContent;
     private static GUIContent TooltipOverlayContent => _tooltipOverlayContent ??= new GUIContent("");
 
+    public static IDisposable HelpKeyScope(string helpKey)
+    {
+        return new HelpKeyScopeImpl(helpKey);
+    }
+
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
-        // using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, property);
-
-        position.SetSingleHeight();
-
-        var isExpanded = GUIHelper.Foldout(position, property, label);
-        if (!isExpanded) return;
-
-        position.NewLine();
-        // position.Indent();
-
-        var helpBoxRect = position;
-        helpBoxRect.height = GetInnerHeight(property);
-        helpBoxRect = new RectOffset(3, 3, 3, 3).Add(helpBoxRect);
-        EditorGUI.LabelField(helpBoxRect, GUIContent.none, EditorStyles.helpBox);
-
-        if (MaterialEditorSettings.ShowInspectorDescription)
-        {
-            position = GUIHelper.HelpBox(position, "overrideSettings.help".LS(), MessageType.Info);
-        }
-        if (GUI.Button(position, "overrideSettings.reset".LS()))
-        {
-            property.CopyFrom(MaterialOverrideSettings.Empty);
-        }
-        position.NewLine();
-        position.Indent();
+        using var propertyScope = new EditorGUI.PropertyScope(position, label, property);
 
         var overrideShader = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideShader));
         var targetShader = property.FindPropertyRelative(nameof(MaterialOverrideSettings.TargetShader));
         var overrideRenderQueue = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideRenderQueue));
         var renderQueueValue = property.FindPropertyRelative(nameof(MaterialOverrideSettings.RenderQueueValue));
         var propertyOverrides = property.FindPropertyRelative(nameof(MaterialOverrideSettings.PropertyOverrides));
-        var propertyOverridesListOptions = new GUIHelper.ListOptions(nest: false);
+
+        position.SetSingleHeight();
+        GUIHelper.SplitRectHorizontallyForRight(position, GetResetButtonWidth(), out var foldoutRect, out var resetRect);
+
+        var overrideCount = 0;
+        if (overrideShader.boolValue && targetShader.objectReferenceValue != null) overrideCount++;
+        if (overrideRenderQueue.boolValue) overrideCount++;
+        overrideCount += propertyOverrides.arraySize;
+
+        label = new GUIContent(string.Format("overrideSettings.count".LS(), overrideCount));
+
+        var isExpanded = GUIHelper.Foldout(foldoutRect, property, label);
+        using (new EditorGUI.DisabledGroupScope(overrideCount == 0))
+        {
+            if (GUI.Button(resetRect, "overrideSettings.reset".LG()))
+            {
+                property.CopyFrom(MaterialOverrideSettings.Empty);
+            }
+        }
+        if (!isExpanded) return;
+
+        position.NewLine();
+        // position.Indent();
+
+        // var helpBoxRect = position;
+        // helpBoxRect.height = GetInnerHeight(property);
+        // helpBoxRect = new RectOffset(3, 3, 3, 3).Add(helpBoxRect);
+        // EditorGUI.LabelField(helpBoxRect, GUIContent.none, EditorStyles.helpBox);
+
+        if (MaterialEditorSettings.ShowInspectorDescription)
+        {
+            position = GUIHelper.HelpBox(position, _helpKey.LS(), MessageType.Info);
+        }
 
         var component = property.serializedObject.targetObject as MaterialEditorComponent;
         var shaderLocked = component != null
@@ -49,17 +65,15 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
             && MaterialEditoEditorContext.ComponentToRenderQueueLocked.TryGetValue(component, out var isRenderQueueLocked)
             && isRenderQueueLocked;
 
-        var isExpandedShader = GUIHelper.Foldout(position, overrideShader, "common.shader".LG());
+        var (isExpandedShader, isShaderEnabled) = GUIHelper.FoldoutAndToggleLeft(position, overrideShader, "common.shader".LG(), rectStrict: true);
         position.NewLine();
         if (isExpandedShader)
         {
             position.Indent();
             var shaderScopePosition = position;
-            using (new EditorGUI.DisabledGroupScope(shaderLocked))
+            using (new EditorGUI.DisabledGroupScope(shaderLocked || !isShaderEnabled))
             {
-                LocalizedUI.PropertyField(position, overrideShader, "common.edit");
-                position.NewLine();
-                LocalizedUI.PropertyField(position, targetShader, "common.shader");
+                EditorGUI.PropertyField(position, targetShader, GUIContent.none);
                 position.NewLine();
             }
             if (shaderLocked)
@@ -69,16 +83,14 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
             position.Back();
         }
 
-        var isExpandedRenderQueue = GUIHelper.Foldout(position, overrideRenderQueue, "common.renderQueue".LG());
+        var (isExpandedRenderQueue, isRenderQueueEnabled) = GUIHelper.FoldoutAndToggleLeft(position, overrideRenderQueue, "common.renderQueue".LG(), rectStrict: true);
         position.NewLine();
         if (isExpandedRenderQueue)
         {
             position.Indent();
             var renderQueueScopePosition = position;
-            using (new EditorGUI.DisabledGroupScope(renderQueueLocked))
+            using (new EditorGUI.DisabledGroupScope(renderQueueLocked || !isRenderQueueEnabled))
             {
-                LocalizedUI.PropertyField(position, overrideRenderQueue, "common.edit");
-                position.NewLine();
                 DrawRenderQueueGUI(position, renderQueueValue);
                 position.NewLine();
             }
@@ -89,6 +101,7 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
             position.Back();
         }
 
+        var propertyOverridesListOptions = new GUIHelper.ListOptions(foldout: new(RectStrict: true), nest: true);
         GUIHelper.List(position, propertyOverrides, "overrideSettings.properties".LG(), propertyOverridesListOptions, prop => prop.CopyFrom(new MaterialProperty()));
     }
 
@@ -98,7 +111,7 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         var presetWidth = EditorStyles.popup.CalcSize(_renderQueuePresets[0]).x;
         GUIHelper.SplitRectHorizontallyForRight(position, presetWidth, out var valueRect, out var presetRect);
 
-        LocalizedUI.PropertyField(valueRect, renderQueueValue, "common.renderQueue");
+        EditorGUI.PropertyField(valueRect, renderQueueValue, GUIContent.none);
 
         var index = renderQueueValue.intValue == -1 ? 0 : 1;
         var newIndex = EditorGUI.Popup(presetRect, index, _renderQueuePresets);
@@ -124,28 +137,32 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         if (MaterialEditorSettings.ShowInspectorDescription)
         {
             height += GUIHelper.GUI_SPACE;
-            height += GUIHelper.GetHelpBoxHeight("overrideSettings.help".LS(), MessageType.Info);
+            height += GUIHelper.GetHelpBoxHeight(_helpKey.LS(), MessageType.Info);
         }
-        height += GUIHelper.GUI_SPACE + GUIHelper.propertyHeight;
 
         var overrideShader = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideShader));
         var overrideRenderQueue = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideRenderQueue));
         var propertyOverrides = property.FindPropertyRelative(nameof(MaterialOverrideSettings.PropertyOverrides));
-        var propertyOverridesListOptions = new GUIHelper.ListOptions();
+        var propertyOverridesListOptions = new GUIHelper.ListOptions(foldout: new(RectStrict: true));
 
         height += GUIHelper.propertyHeight + GUIHelper.GUI_SPACE;
         if (overrideShader.isExpanded)
         {
-            height += (GUIHelper.propertyHeight + GUIHelper.GUI_SPACE) * 2;
+            height += GUIHelper.propertyHeight + GUIHelper.GUI_SPACE;
         }
         height += GUIHelper.propertyHeight + GUIHelper.GUI_SPACE;
         if (overrideRenderQueue.isExpanded)
         {
-            height += (GUIHelper.propertyHeight + GUIHelper.GUI_SPACE) * 2;
+            height += GUIHelper.propertyHeight + GUIHelper.GUI_SPACE;
         }
         height += GUIHelper.GetListHeight(propertyOverrides, propertyOverridesListOptions);
 
         return height;
+    }
+
+    private static float GetResetButtonWidth()
+    {
+        return EditorStyles.miniButton.CalcSize("overrideSettings.reset".LG()).x + 8f;
     }
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
@@ -159,5 +176,21 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
 
         height += GUIHelper.GUI_SPACE * 2; // 背景の為にスペース多め
         return height;
+    }
+
+    private sealed class HelpKeyScopeImpl : IDisposable
+    {
+        private readonly string _previousHelpKey;
+
+        public HelpKeyScopeImpl(string helpKey)
+        {
+            _previousHelpKey = _helpKey;
+            _helpKey = helpKey;
+        }
+
+        public void Dispose()
+        {
+            _helpKey = _previousHelpKey;
+        }
     }
 }

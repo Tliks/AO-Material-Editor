@@ -2,78 +2,107 @@ namespace Aoyon.MaterialEditor.UI;
 
 internal static partial class GUIHelper
 {
+    public readonly record struct DropHandler(
+        Func<Object, bool> Accepts,
+        Action<SerializedProperty, Object[]> Drop,
+        string ContentKey = "common.dragAndDropAdd");
+
+    private static readonly float DropAreaHeight = EditorGUIUtility.singleLineHeight * 2f;
+
     internal static Rect DragAndDropList(
         Rect position,
         SerializedProperty property,
         GUIContent content,
         Action<SerializedProperty> initializeFunction,
-        Func<Object, bool> selectFunc,
-        Action<SerializedProperty, Object[]> onItemsDropped,
+        DropHandler? dropHandler,
         ListOptions? options = null)
     {
         var resolvedOptions = options ?? new ListOptions();
-        var drawFoldout = resolvedOptions.Foldout.Draw;
-        var shouldNest = resolvedOptions.Nest;
-        Object[] items = new Object[]{};
+        return List(position, property, content, AddDropArea(resolvedOptions, property, dropHandler), initializeFunction);
+    }
 
-        // D&D中のものの中から型が一致しているものだけ抽出
-        if(DragAndDrop.objectReferences != null) items = DragAndDrop.objectReferences.Where(selectFunc).SkipDestroyed().ToArray();
+    internal static float GetDragAndDropListHeight(SerializedProperty property, ListOptions? options, DropHandler? dropHandler)
+    {
+        return GetListHeight(property, AddDropArea(options ?? new ListOptions(), property, dropHandler));
+    }
 
-        if (items.Length <= 1)
+    private static ListOptions AddDropArea(ListOptions options, SerializedProperty property, DropHandler? dropHandler)
+    {
+        if (dropHandler == null) return options;
+
+        var existingTailContent = options.TailContent;
+        var dropContent = new ListContentOptions(
+            rect => DropArea(rect, property, dropHandler.Value),
+            () => DropAreaHeight);
+
+        if (existingTailContent == null)
         {
-            return List(position, property, content, resolvedOptions, initializeFunction);
+            return new ListOptions(
+                options.Foldout,
+                options.Nest,
+                options.MaxVisibleListHeight,
+                options.MiddleContent,
+                dropContent);
         }
 
-        var listHeight = GetListHeightInternal(property, resolvedOptions);
-        var listRect = position;
-        if (drawFoldout)
-        {
-            listRect.SetSingleHeight();
-            listRect.NewLine();
-            listHeight -= propertyHeight;
-            if (shouldNest) listRect.Indent();
-        }
-        else if (shouldNest)
-        {
-            listRect.Indent();
-        }
-        listRect.height = listHeight;
+        var combinedTailContent = new ListContentOptions(
+            rect =>
+            {
+                var existingHeight = existingTailContent.Value.GetHeight.Invoke();
+                var existingRect = new Rect(rect.x, rect.y, rect.width, existingHeight);
+                existingTailContent.Value.Draw.Invoke(existingRect);
 
+                var dropRect = new Rect(rect.x, existingRect.yMax + GUI_SPACE, rect.width, DropAreaHeight);
+                dropContent.Draw.Invoke(dropRect);
+            },
+            () => existingTailContent.Value.GetHeight.Invoke() + GUI_SPACE + DropAreaHeight);
+
+        return new ListOptions(
+            options.Foldout,
+            options.Nest,
+            options.MaxVisibleListHeight,
+            options.MiddleContent,
+            combinedTailContent);
+    }
+
+    private static readonly Color DropAreaHoverBorderColor = new(0.8f, 0.8f, 0.8f, 0.8f);
+    private static readonly Color DropAreaHoverBackgroundColor = new(0.9f, 0.9f, 0.9f, 0.18f);
+    private static void DropArea(Rect position, SerializedProperty property, DropHandler dropHandler)
+    {
         var e = Event.current;
+        var objectReferences = DragAndDrop.objectReferences;
+        var items = objectReferences != null
+            ? objectReferences.Where(dropHandler.Accepts).SkipDestroyed().ToArray()
+            : Array.Empty<Object>();
+        var isDraggingOverArea = items.Length > 0 && position.Contains(e.mousePosition);
 
+        var content = dropHandler.ContentKey.LG();
+        EditorGUI.LabelField(position, content, StyleHelper.DropStyle);
+        if (isDraggingOverArea)
+        {
+            EditorGUI.DrawRect(position, DropAreaHoverBackgroundColor);
+            DrawRectBorder(position, DropAreaHoverBorderColor);
+        }
+
+        if (items.Length == 0) return;
         if (e.type is EventType.DragUpdated or EventType.DragPerform or EventType.DragExited)
         {
             HandleUtility.Repaint();
         }
+        if (!isDraggingOverArea) return;
 
-        var isDraggingOverList = listRect.Contains(e.mousePosition);
-        using (var disableScope = new EditorGUI.DisabledScope(isDraggingOverList))
-        {
-            position = List(position, property, content, resolvedOptions, initializeFunction);
-        }
-        if (isDraggingOverList) DrawDropLect(listRect);
-
-        if (!isDraggingOverList) return position;
-
-        switch(e.type)
+        switch (e.type)
         {
             case EventType.DragUpdated:
                 DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+                e.Use();
                 break;
             case EventType.DragPerform:
                 DragAndDrop.AcceptDrag();
-                onItemsDropped?.Invoke(property, items);
+                dropHandler.Drop.Invoke(property, items);
                 e.Use();
                 break;
         }
-
-        return position;
-    }
-
-    private static void DrawDropLect(Rect position)
-    {
-        StyleHelper.DropStyle.fontSize = (int)Mathf.Min(24, position.height);
-        EditorGUI.LabelField(position, Localization.G("common.dragAndDropAdd"), StyleHelper.DropStyle);
     }
 
     public static void DrawFullWidthHorizontalLine(Color color, float thickness = 1.0f)
@@ -225,16 +254,12 @@ internal static partial class GUIHelper
         bool toggleOnLabelClick = true)
     {
         var foldWidth = EditorStyles.foldout.CalcSize(GUIContent.none).x;
-        SplitRectHorizontallyForLeft(position, foldWidth, out var foldRect, out var toggleAndLabelRect);
-        SplitRectHorizontallyForLeft(toggleAndLabelRect, EditorGUIUtility.singleLineHeight, out var toggleRect, out var labelRect);
+        var toggleWidth = EditorGUIUtility.singleLineHeight;
+        var foldRect = new Rect(position.x, position.y, foldWidth, position.height);
+        var toggleRect = new Rect(foldRect.xMax, position.y, toggleWidth, position.height);
+        var labelRect = new Rect(toggleRect.xMax, position.y, Mathf.Max(0f, position.xMax - toggleRect.xMax), position.height);
 
-        Foldout(
-            foldRect,
-            property,
-            GUIContent.none,
-            new FoldoutOptions(
-                RectStrict: rectStrict,
-                ToggleOnLabelClick: false));
+        DrawFoldout(position, property, GUIContent.none, false, rectStrict);
 
         using (var _ = new EditorGUI.PropertyScope(position, label, property))
         {
@@ -249,6 +274,7 @@ internal static partial class GUIHelper
             ApplyExpandedState(property, !property.isExpanded);
             e.Use();
         }
+
         return (property.isExpanded, property.boolValue);
     }
 }
