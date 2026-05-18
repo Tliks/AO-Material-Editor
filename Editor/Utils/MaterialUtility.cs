@@ -97,24 +97,49 @@ internal static class MaterialUtility
     public static int GetCustomRenderQueue(Material material)
     {
         using var so = new SerializedObject(material);
-        var customQueueProp = so.FindProperty(CustomRenderQueueProperty);
-        return customQueueProp.intValue;
+        return GetCustomRenderQueue(so);
     }
 
     public static void ApplyCustomRenderQueue(Material material, int renderQueue)
     {
         using var so = new SerializedObject(material);
-        var customQueueProp = so.FindProperty(CustomRenderQueueProperty);
-        customQueueProp.intValue = renderQueue;
+        SetCustomRenderQueue(so, renderQueue);
         so.ApplyModifiedPropertiesWithoutUndo();
     }
-    
+
+    public static int CopyCustomRenderQueue(Material source, Material target)
+    {
+        using var sourceSo = new SerializedObject(source);
+        using var targetSo = new SerializedObject(target);
+        var renderQueue = GetCustomRenderQueue(sourceSo);
+        SetCustomRenderQueue(targetSo, renderQueue);
+        targetSo.ApplyModifiedPropertiesWithoutUndo();
+        return renderQueue;
+    }
+
+    private static int GetCustomRenderQueue(SerializedObject so)
+    {
+        return so.FindProperty(CustomRenderQueueProperty).intValue;
+    }
+
+    private static void SetCustomRenderQueue(SerializedObject so, int renderQueue)
+    {
+        so.FindProperty(CustomRenderQueueProperty).intValue = renderQueue;
+    }
+
     public static bool GetRenderQueueOverride(Material original, Material overrided, out int targetRenderQueue)
+    {
+        using var originalSo = new SerializedObject(original);
+        using var overridedSo = new SerializedObject(overrided);
+        return GetRenderQueueOverride(originalSo, overridedSo, out targetRenderQueue);
+    }
+
+    private static bool GetRenderQueueOverride(SerializedObject originalSo, SerializedObject overridedSo, out int targetRenderQueue)
     {
         targetRenderQueue = default;
 
-        var originalRenderQueue = GetCustomRenderQueue(original);
-        var overridedRenderQueue = GetCustomRenderQueue(overrided);
+        var originalRenderQueue = GetCustomRenderQueue(originalSo);
+        var overridedRenderQueue = GetCustomRenderQueue(overridedSo);
 
         if (originalRenderQueue != overridedRenderQueue)
         {
@@ -128,6 +153,16 @@ internal static class MaterialUtility
     public static MaterialOverrideSettings GetOverrides(Material original, Material overrided, 
         bool strict, bool includeExtra, bool includeTextures = true)
     {
+        using var originalSo = new SerializedObject(original);
+        using var overridedSo = new SerializedObject(overrided);
+        return GetOverrides(original, originalSo, overrided, overridedSo, strict, includeExtra, includeTextures);
+    }
+
+    private static MaterialOverrideSettings GetOverrides(
+        Material original, SerializedObject originalSo,
+        Material overrided, SerializedObject overridedSo,
+        bool strict, bool includeExtra, bool includeTextures = true)
+    {
         var settings = new MaterialOverrideSettings();
 
         if (GetShaderOverride(original, overrided, out var targetShader))
@@ -136,7 +171,7 @@ internal static class MaterialUtility
             settings.TargetShader = targetShader;
         }
 
-        if (GetRenderQueueOverride(original, overrided, out var targetRenderQueue))
+        if (GetRenderQueueOverride(originalSo, overridedSo, out var targetRenderQueue))
         {
             settings.OverrideRenderQueue = true;
             settings.RenderQueueValue = targetRenderQueue;
@@ -189,13 +224,21 @@ internal static class MaterialUtility
 
     public static void ApplyShader(Material editableMaterial, Shader targetShader)
     {
-        var savedRenderQueue = GetCustomRenderQueue(editableMaterial);
+        using var so = new SerializedObject(editableMaterial);
+        ApplyShader(editableMaterial, so, targetShader);
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static void ApplyShader(Material editableMaterial, SerializedObject so, Shader targetShader)
+    {
+        var savedRenderQueue = GetCustomRenderQueue(so);
 
         editableMaterial.shader = targetShader;
+        so.Update();
 
         // Material.shaderを変更するとCustomRenderQueueが-1(from shader)にリセットされる仕様がある
         // ここではRenderQuqueの変更は意図しないため、シェーダー変更前のRenderQueueを保持しておき、変更後に元に戻す
-        ApplyCustomRenderQueue(editableMaterial, savedRenderQueue);
+        SetCustomRenderQueue(so, savedRenderQueue);
 
         // 新規シェーダーにのみ存在するプロパティはここでデフォルト値が書き込まれる
         // シェーダー変更と同時に発生するこの差分は仕様とする
@@ -211,6 +254,13 @@ internal static class MaterialUtility
 
     public static void ApplyOverrideSettings(Material editableMaterial, MaterialOverrideSettings overrideSettings)
     {
+        using var so = new SerializedObject(editableMaterial);
+        ApplyOverrideSettings(editableMaterial, so, overrideSettings);
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static void ApplyOverrideSettings(Material editableMaterial, SerializedObject so, MaterialOverrideSettings overrideSettings)
+    {
         if (overrideSettings.OverrideShader)
         {
             var targetShader = overrideSettings.TargetShader;
@@ -220,13 +270,13 @@ internal static class MaterialUtility
             }
             else
             {
-                ApplyShader(editableMaterial, targetShader);
+                ApplyShader(editableMaterial, so, targetShader);
             }
         }
 
         if (overrideSettings.OverrideRenderQueue)
         {
-            ApplyCustomRenderQueue(editableMaterial, overrideSettings.RenderQueueValue);
+            SetCustomRenderQueue(so, overrideSettings.RenderQueueValue);
         }
 
         ApplyProperties(editableMaterial, overrideSettings.PropertyOverrides);
@@ -244,8 +294,20 @@ internal static class MaterialUtility
     // シェーダー未参照のプロパティの削除はここで行うにはコストがかなり高い
     public static void CopyAllSettings(Material source, Material target, bool includeTextures = true)
     {
-        ApplyShader(target, source.shader);
-        ApplyCustomRenderQueue(target, GetCustomRenderQueue(source));
+        using var sourceSo = new SerializedObject(source);
+        using var targetSo = new SerializedObject(target);
+        CopyAllSettings(source, sourceSo, target, targetSo, includeTextures);
+        targetSo.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static void CopyAllSettings(
+        Material source, SerializedObject sourceSo,
+        Material target, SerializedObject targetSo,
+        bool includeTextures = true)
+    {
+        ApplyShader(target, targetSo, source.shader);
+        var renderQueue = GetCustomRenderQueue(sourceSo);
+        SetCustomRenderQueue(targetSo, renderQueue);
         CopyPropertiesForSameShader(source, target);
     }
 

@@ -472,8 +472,8 @@ internal class MaterialEditorEditor : Editor
             {
                 if (conflicts.RenderQueueLocked)
                 {
-                    MaterialUtility.ApplyCustomRenderQueue(_recordingMaterial, MaterialUtility.GetCustomRenderQueue(authoritative));
-                    LocalizedLog.Warning("lock.renderQueue.log", MaterialUtility.GetCustomRenderQueue(authoritative));
+                    var renderQueue = MaterialUtility.CopyCustomRenderQueue(authoritative, _recordingMaterial);
+                    LocalizedLog.Warning("lock.renderQueue.log", renderQueue);
                     sanitized = true;
                 }
 
