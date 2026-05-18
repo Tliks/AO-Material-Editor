@@ -550,37 +550,37 @@ internal class MaterialEditorEditor : Editor
 
             var previous = _target.OverrideSettings;
             var cloned = previous.Clone();
-            var newOvrs = MaterialUtility.GetOverrides(baseMaterial, _recordingMaterial, false, true);
-            if (newOvrs.OverrideShader && newOvrs.TargetShader != null)
+            var currentOvrs = MaterialUtility.GetOverrides(baseMaterial, _recordingMaterial, false, true);
+            if (currentOvrs.OverrideShader && currentOvrs.TargetShader != null)
             {
-                newOvrs.RemoveMatchingProperties(MaterialUtility.GetShaderDefaultProperties(newOvrs.TargetShader));
+                currentOvrs.RemoveMatchingProperties(MaterialUtility.GetShaderDefaultProperties(currentOvrs.TargetShader));
             }
 
             // 前段階として、編集によって元の値に戻った設定(新しい差分に存在しないが、これまで存在していた差分)に対して
             // これを維持するために、元の値を書き込む
             {
-                if (previous.OverrideShader && !newOvrs.OverrideShader)
+                if (previous.OverrideShader && !currentOvrs.OverrideShader)
                 {
                     cloned.OverrideShader = true;
                     cloned.TargetShader = baseMaterial.shader;
                 }
 
-                if (previous.OverrideRenderQueue && !newOvrs.OverrideRenderQueue)
+                if (previous.OverrideRenderQueue && !currentOvrs.OverrideRenderQueue)
                 {
                     cloned.OverrideRenderQueue = true;
                     cloned.RenderQueueValue = MaterialUtility.GetCustomRenderQueue(baseMaterial);
                 }
 
-                using var _1 = DictionaryPool<string, MaterialProperty>.Get(out var newDict);
-                foreach (var p in newOvrs.PropertyOverrides) newDict[p.PropertyName] = p;
-                using var _2 = DictionaryPool<string, MaterialProperty>.Get(out var origDict);
-                foreach (var p in MaterialUtility.GetProperties(baseMaterial)) origDict[p.PropertyName] = p;
+                using var _1 = DictionaryPool<string, MaterialProperty>.Get(out var currentDict);
+                foreach (var p in currentOvrs.PropertyOverrides) currentDict[p.PropertyName] = p;
+                using var _2 = DictionaryPool<string, MaterialProperty>.Get(out var baseDict);
+                foreach (var p in MaterialUtility.GetProperties(baseMaterial)) baseDict[p.PropertyName] = p;
 
                 var modified = new List<MaterialProperty>();
                 foreach (var p in previous.PropertyOverrides)
                 {
                     var name = p.PropertyName;
-                    if (!newDict.ContainsKey(name) && origDict.TryGetValue(name, out var o))
+                    if (!currentDict.ContainsKey(name) && baseDict.TryGetValue(name, out var o))
                         modified.Add(o);
                     else
                         modified.Add(p);
@@ -589,7 +589,7 @@ internal class MaterialEditorEditor : Editor
             }
 
             // 新しい差分をマージ(上書き, 追加)する
-            MaterialOverrideSettings.MergeInto(newOvrs, cloned);
+            MaterialOverrideSettings.MergeInto(currentOvrs, cloned);
 
             return cloned;
         }

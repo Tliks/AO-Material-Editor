@@ -189,11 +189,16 @@ internal static class MaterialUtility
 
     public static void ApplyShader(Material editableMaterial, Shader targetShader)
     {
-        // Material.shaderを変更するとMaterial.renderQueueが変更先のShader.renderQueueに自動で置き換わる仕様がある
-        // ここではShaderのみを変更するため、シェーダー変更前のRenderQueueを保持しておき、変更後に元に戻す
         var savedRenderQueue = GetCustomRenderQueue(editableMaterial);
+
         editableMaterial.shader = targetShader;
+
+        // Material.shaderを変更するとCustomRenderQueueが-1(from shader)にリセットされる仕様がある
+        // ここではRenderQuqueの変更は意図しないため、シェーダー変更前のRenderQueueを保持しておき、変更後に元に戻す
         ApplyCustomRenderQueue(editableMaterial, savedRenderQueue);
+
+        // 新規シェーダーにのみ存在するプロパティはここでデフォルト値が書き込まれる
+        // シェーダー変更と同時に発生するこの差分は仕様とする
     }
 
     public static void ApplyProperties(Material editableMaterial, List<MaterialProperty> properties)
