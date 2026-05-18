@@ -139,7 +139,7 @@ internal struct MaterialProperty : IEquatable<MaterialProperty>
         return true;
     }
 
-    public static bool TryGetDefualtValue(Shader shader, int propertyIndex, out MaterialProperty materialProperty)
+    public static bool TryGetDefualtValue(Shader shader, int propertyIndex,  out MaterialProperty materialProperty, bool forceTextureNull = false)
     {
         materialProperty = default;
 
@@ -158,13 +158,16 @@ internal struct MaterialProperty : IEquatable<MaterialProperty>
         {
             case ShaderPropertyType.Texture:
                 Texture? texture = null;
+                if (!forceTextureNull)
+                {
 #if UNITY_EDITOR
-                var importer = UnityEditor.AssetImporter.GetAtPath(UnityEditor.AssetDatabase.GetAssetPath(shader)) as UnityEditor.ShaderImporter;
-                if (importer != null)
-                    texture = importer.GetDefaultTexture(propertyName);
-                // if (texture == null)
-                //     texture = UnityEditor.EditorMaterialUtility.GetShaderDefaultTexture(shader, propertyName);
+                    var importer = UnityEditor.AssetImporter.GetAtPath(UnityEditor.AssetDatabase.GetAssetPath(shader)) as UnityEditor.ShaderImporter;
+                    if (importer != null)
+                        texture = importer.GetDefaultTexture(propertyName);
+                    // if (texture == null)
+                    //     texture = UnityEditor.EditorMaterialUtility.GetShaderDefaultTexture(shader, propertyName);
 #endif
+                }
                 materialProperty.TextureValue = texture;
                 materialProperty.TextureOffsetValue = new(0, 0);
                 materialProperty.TextureScaleValue = new(1,1);

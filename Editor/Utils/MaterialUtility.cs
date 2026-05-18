@@ -29,13 +29,13 @@ internal static class MaterialUtility
         }
     }
 
-    public static IEnumerable<MaterialProperty> GetShaderDefaultProperties(Shader shader)
+    public static IEnumerable<MaterialProperty> GetShaderDefaultProperties(Shader shader, bool forceTextureNull = false)
     {
         var propertyCount = shader.GetPropertyCount();
         var seenNames = new HashSet<string>();
         for (var i = 0; i < propertyCount; i++)
         {
-            if (!MaterialProperty.TryGetDefualtValue(shader, i, out var property)) continue;
+            if (!MaterialProperty.TryGetDefualtValue(shader, i, out var property, forceTextureNull)) continue;
             if (!seenNames.Add(property.PropertyName)) continue;
             yield return property;
         }

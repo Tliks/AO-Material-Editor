@@ -553,7 +553,7 @@ internal class MaterialEditorEditor : Editor
             var currentOvrs = MaterialUtility.GetOverrides(baseMaterial, _recordingMaterial, false, true);
             if (currentOvrs.OverrideShader && currentOvrs.TargetShader != null)
             {
-                currentOvrs.RemoveMatchingProperties(MaterialUtility.GetShaderDefaultProperties(currentOvrs.TargetShader));
+                currentOvrs.Except(MaterialUtility.GetShaderDefaultProperties(currentOvrs.TargetShader, true));
             }
 
             // 前段階として、編集によって元の値に戻った設定(新しい差分に存在しないが、これまで存在していた差分)に対して
