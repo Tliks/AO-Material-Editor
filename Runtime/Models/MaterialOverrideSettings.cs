@@ -16,23 +16,23 @@ internal class MaterialOverrideSettings : IEquatable<MaterialOverrideSettings>
     public static MaterialOverrideSettings Empty => new();
     
     /// <summary>
-    /// sourceをtargetにマージする。
+    /// sourceを自身にマージする。
     /// sourceが優先され、後ろにあるプロパティが優先される。
     /// 同じプロパティ名は上書きし、新規要素を後ろに追加する。
     /// </summary>
     /// <param name="source"></param>
     /// <param name="target"></param>
-    public static void MergeInto(MaterialOverrideSettings source, MaterialOverrideSettings target)
+    public MaterialOverrideSettings Merge(MaterialOverrideSettings source)
     {
         if (source.OverrideShader && source.TargetShader != null)
         {
-            target.OverrideShader = true;
-            target.TargetShader = source.TargetShader;
+            OverrideShader = true;
+            TargetShader = source.TargetShader;
         }
         if (source.OverrideRenderQueue)
         {
-            target.OverrideRenderQueue = true;
-            target.RenderQueueValue = source.RenderQueueValue;
+            OverrideRenderQueue = true;
+            RenderQueueValue = source.RenderQueueValue;
         }
 
         {
@@ -40,9 +40,9 @@ internal class MaterialOverrideSettings : IEquatable<MaterialOverrideSettings>
             foreach (var p in source.PropertyOverrides) srcDict[p.PropertyName] = p;
             using var _2 = HashSetPool<string>.Get(out var targetKeys);
 
-            var result = new List<MaterialProperty>(target.PropertyOverrides.Count + source.PropertyOverrides.Count);
+            var result = new List<MaterialProperty>(PropertyOverrides.Count + source.PropertyOverrides.Count);
 
-            foreach (var p in target.PropertyOverrides)
+            foreach (var p in this.PropertyOverrides)
             {
                 targetKeys.Add(p.PropertyName); 
                 result.Add(srcDict.TryGetValue(p.PropertyName, out var s) ? s : p);
@@ -55,8 +55,10 @@ internal class MaterialOverrideSettings : IEquatable<MaterialOverrideSettings>
                 }
             }
 
-            target.PropertyOverrides = result;
+            PropertyOverrides = result;
         }
+
+        return this;
     }
 
     public MaterialOverrideSettings Where(Predicate<MaterialProperty> predicate)

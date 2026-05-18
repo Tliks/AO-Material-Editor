@@ -379,11 +379,11 @@ internal class MaterialEditorEditor : Editor
             {
                 if (i < myIndex)
                 {
-                    MaterialOverrideSettings.MergeInto(component.OverrideSettings, _beforeOverrides);
+                    _beforeOverrides.Merge(component.OverrideSettings);
                 }
                 else
                 {
-                    MaterialOverrideSettings.MergeInto(component.OverrideSettings, _afterOverrides);
+                    _afterOverrides.Merge(component.OverrideSettings);
                 }
             }
         }
@@ -589,7 +589,7 @@ internal class MaterialEditorEditor : Editor
             }
 
             // 新しい差分をマージ(上書き, 追加)する
-            MaterialOverrideSettings.MergeInto(currentOvrs, cloned);
+            cloned.Merge(currentOvrs);
 
             return cloned;
         }
@@ -720,7 +720,7 @@ internal class MaterialEditorEditor : Editor
         serializedObject.ApplyModifiedProperties();
 
         var merged = _target.OverrideSettings.Clone();
-        MaterialOverrideSettings.MergeInto(extractedOverrides, merged);
+        merged.Merge(extractedOverrides);
 
         _overrideSettings.CopyFrom(merged);
         serializedObject.ApplyModifiedProperties();
