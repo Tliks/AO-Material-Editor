@@ -59,6 +59,18 @@ internal class MaterialOverrideSettings : IEquatable<MaterialOverrideSettings>
         }
     }
 
+    public void RemoveMatchingProperties(IEnumerable<MaterialProperty> properties, bool strict = true)
+    {
+        using var _ = DictionaryPool<string, MaterialProperty>.Get(out var propertyDict);
+        foreach (var property in properties) propertyDict[property.PropertyName] = property;
+
+        PropertyOverrides = PropertyOverrides
+            .Where(property =>
+                !propertyDict.TryGetValue(property.PropertyName, out var other)
+                || !property.EqualsImpl(other, strict))
+            .ToList();
+    }
+
     public int OverrideCount
     {
         get

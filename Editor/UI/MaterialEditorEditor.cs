@@ -551,6 +551,10 @@ internal class MaterialEditorEditor : Editor
             var previous = _target.OverrideSettings;
             var cloned = previous.Clone();
             var newOvrs = MaterialUtility.GetOverrides(baseMaterial, _recordingMaterial, false, true);
+            if (newOvrs.OverrideShader && newOvrs.TargetShader != null)
+            {
+                newOvrs.RemoveMatchingProperties(MaterialUtility.GetShaderDefaultProperties(newOvrs.TargetShader));
+            }
 
             // 前段階として、編集によって元の値に戻った設定(新しい差分に存在しないが、これまで存在していた差分)に対して
             // これを維持するために、元の値を書き込む

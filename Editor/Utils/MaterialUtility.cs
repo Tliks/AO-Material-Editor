@@ -29,6 +29,18 @@ internal static class MaterialUtility
         }
     }
 
+    public static IEnumerable<MaterialProperty> GetShaderDefaultProperties(Shader shader)
+    {
+        var propertyCount = shader.GetPropertyCount();
+        var seenNames = new HashSet<string>();
+        for (var i = 0; i < propertyCount; i++)
+        {
+            if (!MaterialProperty.TryGetDefualtValue(shader, i, out var property)) continue;
+            if (!seenNames.Add(property.PropertyName)) continue;
+            yield return property;
+        }
+    }
+
     public static IEnumerable<MaterialProperty> GetPropertyOverrides(Material original, Material overrided, 
         bool strict, bool includeExtra, bool includeTextures = true)
     {

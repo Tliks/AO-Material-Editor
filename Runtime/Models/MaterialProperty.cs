@@ -139,6 +139,54 @@ internal struct MaterialProperty : IEquatable<MaterialProperty>
         return true;
     }
 
+    public static bool TryGetDefualtValue(Shader shader, int propertyIndex, out MaterialProperty materialProperty)
+    {
+        materialProperty = default;
+
+        if (!ValidateIndex(shader, propertyIndex)) return false;
+        
+        var propertyName = shader.GetPropertyName(propertyIndex);
+        var propertyType = shader.GetPropertyType(propertyIndex);
+
+        materialProperty = new MaterialProperty
+        {
+            PropertyName = propertyName,
+            PropertyType = propertyType
+        };
+
+        switch (propertyType)
+        {
+            case ShaderPropertyType.Texture:
+                Texture? texture = null;
+#if UNITY_EDITOR
+                var importer = UnityEditor.AssetImporter.GetAtPath(UnityEditor.AssetDatabase.GetAssetPath(shader)) as UnityEditor.ShaderImporter;
+                if (importer != null)
+                    texture = importer.GetDefaultTexture(propertyName);
+                // if (texture == null)
+                //     texture = UnityEditor.EditorMaterialUtility.GetShaderDefaultTexture(shader, propertyName);
+#endif
+                materialProperty.TextureValue = texture;
+                materialProperty.TextureOffsetValue = new(0, 0);
+                materialProperty.TextureScaleValue = new(1,1);
+                break;
+            case ShaderPropertyType.Vector:
+                materialProperty.VectorValue = shader.GetPropertyDefaultVectorValue(propertyIndex);
+                break;
+            case ShaderPropertyType.Color:
+                materialProperty.ColorValue = shader.GetPropertyDefaultVectorValue(propertyIndex);
+                break;
+            case ShaderPropertyType.Int:
+                materialProperty.IntValue = shader.GetPropertyDefaultIntValue(propertyIndex);
+                break;
+            case ShaderPropertyType.Float:
+            case ShaderPropertyType.Range:
+                materialProperty.FloatValue = shader.GetPropertyDefaultFloatValue(propertyIndex);
+                break;
+        }
+
+        return true;
+    }
+
     private static bool Validate(Material mat, string propertyName, ShaderPropertyType propertyType)
     {
         if (!mat.HasProperty(propertyName))
