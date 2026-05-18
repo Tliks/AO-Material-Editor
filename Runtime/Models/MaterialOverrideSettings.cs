@@ -59,6 +59,22 @@ internal class MaterialOverrideSettings : IEquatable<MaterialOverrideSettings>
         }
     }
 
+    public MaterialOverrideSettings Where(Predicate<MaterialProperty> predicate)
+    {
+        PropertyOverrides = PropertyOverrides.Where(p => predicate(p)).ToList();
+        return this;
+    }
+
+    public MaterialOverrideSettings Except(IEnumerable<MaterialProperty> properties, bool strict = true)
+    {
+        using var _ = DictionaryPool<string, MaterialProperty>.Get(out var propertyDict);
+        foreach (var property in properties) propertyDict[property.PropertyName] = property;
+
+        return Where(property => 
+            !propertyDict.TryGetValue(property.PropertyName, out var other) 
+            || !property.EqualsImpl(other, strict));
+    }
+
     public int OverrideCount
     {
         get
