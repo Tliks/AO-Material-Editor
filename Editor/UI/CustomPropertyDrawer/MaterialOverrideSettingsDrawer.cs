@@ -80,12 +80,13 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         }
 
         var component = property.serializedObject.targetObject as MaterialEditorComponent;
-        var shaderLocked = component != null
-            && MaterialEditoEditorContext.ComponentToShaderLocked.TryGetValue(component, out var isShaderLocked)
-            && isShaderLocked;
-        var renderQueueLocked = component != null
-            && MaterialEditoEditorContext.ComponentToRenderQueueLocked.TryGetValue(component, out var isRenderQueueLocked)
-            && isRenderQueueLocked;
+        MaterialEditorEditor? editor = null;
+        if (component != null)
+        {
+            MaterialEditorEditor.TryGetRecordingEditor(component, out editor);
+        }
+        var shaderLocked = editor != null && editor.IsShaderLocked;
+        var renderQueueLocked = editor != null && editor.IsRenderQueueLocked;
 
         DrawOverrideField(
             ref position,

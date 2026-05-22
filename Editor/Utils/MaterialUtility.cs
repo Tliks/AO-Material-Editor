@@ -318,7 +318,7 @@ internal static class MaterialUtility
     }
 
     public static MaterialOverrideSettings GetOverrides(Material original, Material overrided, 
-        bool strict, bool includeExtra, bool includeTextures = true)
+        bool strict, bool includeExtra = true, bool includeTextures = true)
     {
         using var originalSo = new SerializedObject(original);
         using var overridedSo = new SerializedObject(overrided);
@@ -328,7 +328,7 @@ internal static class MaterialUtility
     private static MaterialOverrideSettings GetOverrides(
         Material original, SerializedObject originalSo,
         Material overrided, SerializedObject overridedSo,
-        bool strict, bool includeExtra, bool includeTextures = true)
+        bool strict, bool includeExtra = true, bool includeTextures = true)
     {
         var settings = new MaterialOverrideSettings();
 
@@ -362,12 +362,10 @@ internal static class MaterialUtility
             settings.DoubleSidedGIValue = targetDoubleSidedGI;
         }
 
+        settings.PropertyOverrides = GetPropertyOverrides(original, overrided, strict, includeExtra, includeTextures).ToList();
         settings.KeywordStateOverrides = GetKeywordStateOverrides(originalSo, overridedSo);
         settings.StringTagOverrides = GetStringTagOverrides(originalSo, overridedSo);
         settings.ShaderPassStateOverrides = GetShaderPassStateOverrides(originalSo, overridedSo);
-
-        var propertyOverrides = GetPropertyOverrides(original, overrided, strict, includeExtra, includeTextures).ToList();
-        settings.PropertyOverrides = propertyOverrides;
 
         return settings;
     }
@@ -488,9 +486,6 @@ internal static class MaterialUtility
 
     private static void CopyAllSettings(SerializedObject sourceSo, SerializedObject targetSo)
     {
-        sourceSo.Update();
-        targetSo.Update();
-
         CopySerializedProperty(sourceSo, targetSo, ShaderProperty);
         CopySerializedProperty(sourceSo, targetSo, SavedPropertiesProperty);
         CopySerializedProperty(sourceSo, targetSo, CustomRenderQueueProperty);

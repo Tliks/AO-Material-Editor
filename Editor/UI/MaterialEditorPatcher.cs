@@ -141,7 +141,7 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
 
     private static bool MaterialPropertyDoLockActionPrefix()
     {
-        return !MaterialEditoEditorContext.IsRecording;
+        return !MaterialEditorEditor.IsRecording;
     }
 
     private static void PatchGUILabel(Harmony harmony)
@@ -254,7 +254,7 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
         foreach (var target in __instance.targets)
         {
             if (target is not Material material) continue;
-            if (!MaterialEditoEditorContext.RecordingToComponent.ContainsKey(material)) continue;
+            if (!MaterialEditorEditor.TryGetRecordingEditor(material, out _)) continue;
 
             MaterialUtility.Normalize(material);
         }
@@ -283,13 +283,13 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
         var enabled = GUI.enabled;
         string? tooltip = null;
 
-        if (!TryGetRecordingContext(prop, out var component, out var recordingMaterial, out var overrideProperties, out var lockedProperties))
+        if (!TryGetRecordingContext(prop, out var editor, out var recordingMaterial))
         {
             PushInactivePropertyGUIState(position, startY);
             return;
         }
 
-        if (lockedProperties.Contains(prop.name))
+        if (editor.IsPropertyLocked(prop.name))
         {
             GUI.enabled = false;
             tooltip = "lock.property.tooltip".LS();
@@ -303,7 +303,7 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
             recordingMaterial,
             prop.name,
             null,
-            overrideProperties.Contains(prop.name)));
+            editor.HasOverrideProperty(prop.name)));
     }
 
     private static void BeginLeafPropertyGUI(Rect position, UnityEditor.MaterialProperty prop)
@@ -327,15 +327,13 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
         string? tooltip = null;
 
         if (serializedProperty == null ||
-            !TryGetRecordingContext(targets, out var component, out var recordingMaterial) ||
-            !MaterialEditoEditorContext.ComponentToOverrideSerializedProperties.TryGetValue(component, out var overrideProperties) ||
-            !MaterialEditoEditorContext.ComponentToLockedSerializedProperties.TryGetValue(component, out var lockedProperties))
+            !TryGetRecordingContext(targets, out var editor, out var recordingMaterial))
         {
             PushInactivePropertyGUIState(position, startY);
             return;
         }
 
-        if (lockedProperties.Contains(serializedProperty.Value))
+        if (editor.IsSerializedPropertyLocked(serializedProperty.Value))
         {
             GUI.enabled = false;
             tooltip = "lock.property.tooltip".LS();
@@ -349,7 +347,7 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
             recordingMaterial,
             null,
             serializedProperty,
-            overrideProperties.Contains(serializedProperty.Value)));
+            editor.HasOverrideSerializedProperty(serializedProperty.Value)));
     }
 
     private static void PushInactivePropertyGUIState(Rect position, float startY)
@@ -399,46 +397,33 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
 
     private static bool TryGetRecordingContext(
         UnityEditor.MaterialProperty prop,
-        out MaterialEditorComponent component,
-        out Material recordingMaterial,
-        out HashSet<string> overrideProperties,
-        out HashSet<string> lockedProperties)
+        out MaterialEditorEditor editor,
+        out Material recordingMaterial)
     {
-        component = null!;
+        editor = null!;
         recordingMaterial = null!;
-        overrideProperties = null!;
-        lockedProperties = null!;
 
         var targets = prop.targets;
         if (targets == null || targets.Length != 1 || targets[0] is not Material material)
             return false;
 
         recordingMaterial = material;
-        if (!MaterialEditoEditorContext.RecordingToComponent.TryGetValue(recordingMaterial, out component))
-            return false;
-
-        if (!MaterialEditoEditorContext.ComponentToOverrideProperties.TryGetValue(component, out overrideProperties))
-            return false;
-
-        if (!MaterialEditoEditorContext.ComponentToLockedProperties.TryGetValue(component, out lockedProperties))
-            return false;
-
-        return true;
+        return MaterialEditorEditor.TryGetRecordingEditor(recordingMaterial, out editor);
     }
 
     private static bool TryGetRecordingContext(
         UnityEngine.Object[] targets,
-        out MaterialEditorComponent component,
+        out MaterialEditorEditor editor,
         out Material recordingMaterial)
     {
-        component = null!;
+        editor = null!;
         recordingMaterial = null!;
 
         if (targets == null || targets.Length != 1 || targets[0] is not Material material)
             return false;
 
         recordingMaterial = material;
-        return MaterialEditoEditorContext.RecordingToComponent.TryGetValue(recordingMaterial, out component);
+        return MaterialEditorEditor.TryGetRecordingEditor(recordingMaterial, out editor);
     }
 
     private static RecordingMaterialSerializedProperty? ToSerializedPropertyKind(object property)
@@ -518,7 +503,7 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
         string? propertyName,
         RecordingMaterialSerializedProperty? serializedProperty)
     {
-        if (MaterialEditoEditorContext.TryGetEditor(recordingMaterial, out var editor))
+        if (MaterialEditorEditor.TryGetRecordingEditor(recordingMaterial, out var editor))
         {
             if (propertyName != null)
             {
@@ -546,7 +531,7 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
         if (tex != _lockInChildrenIcon && tex != _lockedByAncestorIcon)
             return true;
 
-        if (!MaterialEditoEditorContext.IsRecording)
+        if (!MaterialEditorEditor.IsRecording)
             return true;
 
         return false;
@@ -555,7 +540,7 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
     private static void PoiyomiRectifiedLayoutGetRectPostfix(ref Rect __result)
     {
 #if UNITY_2022_1_OR_NEWER
-        if (!MaterialEditoEditorContext.IsRecording)
+        if (!MaterialEditorEditor.IsRecording)
             return;
 
         __result.x += 30;

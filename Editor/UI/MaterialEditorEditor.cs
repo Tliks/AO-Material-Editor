@@ -8,6 +8,8 @@ namespace Aoyon.MaterialEditor.UI;
 [CustomEditor(typeof(MaterialEditorComponent))]
 internal class MaterialEditorEditor : Editor
 {
+    private static readonly Dictionary<Material, MaterialEditorEditor> RecordingMaterialToEditor = new();
+
     private MaterialEditorComponent _target = null!;
     private GameObject? _avatarRoot;
 
@@ -23,13 +25,13 @@ internal class MaterialEditorEditor : Editor
     private Material? _unlockedRecordingSourceMaterial;
     private Material _recordingMaterial = null!;
     private UnityEditor.MaterialEditor _materialEditor = null!;
-    private MaterialTargetSettings? _cachedTargetSettings;
 
     private MaterialOverrideSettings _beforeOverrides = MaterialOverrideSettings.Empty;
     private MaterialOverrideSettings _afterOverrides = MaterialOverrideSettings.Empty;
-    private MaterialOverrideSettings? _pendingSelfCommittedOverrides;
-    private bool _pendingSelfCommittedRecordingMaterialChange;
     private bool _showEditorDisplaySettings = false;
+    private ChangeWatcher<int> _targetSettingsChangeWatcher = null!;
+    private ChangeWatcher<int> _overrideSettingsChangeWatcher = null!;
+    private ChangeWatcher<int> _recordingMaterialChangeWatcher = null!;
 
     private const string RecordingMaterialName = "Recording… (Cloned)";
     private const float EditorContentLeftPadding = 4f;
@@ -47,7 +49,6 @@ internal class MaterialEditorEditor : Editor
         var renderers = _avatarRoot != null ? MaterialEditorProcessor.GetTargetRenderers(_avatarRoot) : new List<Renderer>();
         _allAssignments = _materialTargeting.GetAssignments(renderers).ToHashSet();
         _targetMaterials = UpdateTargetMaterials();
-        _cachedTargetSettings = _target.TargetSettings.Clone();
 
         _recordingSourceMaterial = AutoSelectRecordingSourceMaterial();
         if (_recordingSourceMaterial != null) { 
@@ -62,31 +63,19 @@ internal class MaterialEditorEditor : Editor
         _materialEditor = (UnityEditor.MaterialEditor)CreateEditor(_recordingMaterial, typeof(UnityEditor.MaterialEditor));
         InternalEditorUtility.SetIsInspectorExpanded(_recordingMaterial, true); // 初期状態でEditorを展開しておく
 
-        ObjectChangeEvents.changesPublished += OnObjectChanged;
-        MaterialEditoEditorContext.StartRecording(
-            this,
-            _target,
-            _recordingMaterial,
-            GetCurrentOverridePropertyNames(),
-            GetCurrentOverrideSerializedProperties(),
-            GetLockedPropertyNames(),
-            GetLockedSerializedProperties(),
-            IsShaderLocked(),
-            IsRenderQueueLocked());
-        MaterialEditoEditorContext.OnRecordingEntryStateChanged += OnRecordingEntryStateChanged;
-        MaterialEditoEditorContext.OnRecordingOverrideStateChanged += OnRecordingOverrideStateChanged;
+        RecordingMaterialToEditor[_recordingMaterial] = this;
+        RegisterChangeWatchers();
     }
 
     private void OnDisable()
     {
-        MaterialEditoEditorContext.StopRecording(_recordingMaterial, _target);
+        _targetSettingsChangeWatcher.Dispose();
+        _overrideSettingsChangeWatcher.Dispose();
+        _recordingMaterialChangeWatcher.Dispose();
+        RecordingMaterialToEditor.Remove(_recordingMaterial);
 
         if (_recordingMaterial != null) { DestroyImmediate(_recordingMaterial); }
         if (_materialEditor != null) { DestroyImmediate(_materialEditor); }
-
-        ObjectChangeEvents.changesPublished -= OnObjectChanged;
-        MaterialEditoEditorContext.OnRecordingEntryStateChanged -= OnRecordingEntryStateChanged;
-        MaterialEditoEditorContext.OnRecordingOverrideStateChanged -= OnRecordingOverrideStateChanged;
     }
 
     public override void OnInspectorGUI()
@@ -178,13 +167,7 @@ internal class MaterialEditorEditor : Editor
                 position = DrawEditorHelp(position);
                 GUIHelper.DrawFullWidthHorizontalLine(new Color(0.35f, 0.35f, 0.35f));
                 // EditorGUILayout.Space();
-                var stringTagsBefore = GetRecordingStringTags();
                 _materialEditor.OnInspectorGUI();
-                if (!StringTagsEqual(stringTagsBefore, GetRecordingStringTags()))
-                {
-                    CommitRecordingMaterialChange();
-                    _pendingSelfCommittedRecordingMaterialChange = true;
-                }
             }
             else {
                 var editorPosition = GetEditorPosition(EditorGUI.GetPropertyHeight(_overrideSettings, true));
@@ -331,58 +314,24 @@ internal class MaterialEditorEditor : Editor
         return unlocked;
     }
 
-    // PrefabuTility.PrefabInstanceUpdatedはPrefab Revertなどのイベントを拾わずRecording Materialの更新を行えない
-    // これを回避するため、コンポーネントの変更とMaterialEditorを介したマテリアルの編集、両方のイベント取得をObjectChangeEventStream経由で行う
-    private void OnObjectChanged(ref ObjectChangeEventStream stream)
+    private void RegisterChangeWatchers()
     {
-        DebugLog("OnObjectChanged, frame: " + Time.frameCount);
+        _targetSettingsChangeWatcher = new ChangeWatcher<int>(
+            () => _target.TargetSettings.GetHashCode(),
+            (previous, current) => previous == current,
+            (_, _) => OnEntrySettingsChanged());
+        _overrideSettingsChangeWatcher = new ChangeWatcher<int>(
+            () => _target.OverrideSettings.GetHashCode(),
+            (previous, current) => previous == current,
+            (_, _) => OnComponentOverridesChanged());
+        _recordingMaterialChangeWatcher = new ChangeWatcher<int>(
+            () => _recordingMaterial.ComputeCRC(),
+            (previous, current) => previous == current,
+            (_, _) => OnRecordingMaterialChanged());
 
-        var componentId = _target.GetInstanceID();
-        var recordingMaterialId = _recordingMaterial.GetInstanceID();
-        
-        for (int i = 0; i < stream.length; i++)
-        {
-            var eventType = stream.GetEventType(i);
-            
-            if (eventType == ObjectChangeKind.ChangeGameObjectOrComponentProperties)
-            {
-                stream.GetChangeGameObjectOrComponentPropertiesEvent(i, out var data);
-                if (data.instanceId == componentId)
-                {
-                    // AdvancedDropdown などは changed を立てないため、ここで検知する。
-                    if (!_target.TargetSettings.Equals(_cachedTargetSettings))
-                    {
-                        _cachedTargetSettings = _target.TargetSettings.Clone();
-                        OnEntrySettingsChanged();
-                    }
-                    else // その他(overrides)の変更
-                    {
-                        if (TryConsumeSelfCommittedOverrideEcho())
-                        {
-                            continue;
-                        }
-
-                        SyncRecordingMaterialFromComponent();
-                        UpdateRecordingOverrideState();
-                    }
-                    return;
-                }
-            }
-            else if (eventType == ObjectChangeKind.ChangeAssetObjectProperties)
-            {
-                stream.GetChangeAssetObjectPropertiesEvent(i, out var data);
-                if (data.instanceId == recordingMaterialId)
-                {
-                    if (TryConsumeSelfCommittedRecordingMaterialChange())
-                    {
-                        continue;
-                    }
-
-                    CommitRecordingMaterialChange();
-                    return;
-                }
-            }
-        }
+        _targetSettingsChangeWatcher.Start();
+        _overrideSettingsChangeWatcher.Start();
+        _recordingMaterialChangeWatcher.Start();
     }
 
     private void CommitRecordingMaterialChange()
@@ -398,37 +347,44 @@ internal class MaterialEditorEditor : Editor
         CommitOverridesFromRecording(nextOverrides);
     }
 
-    private Dictionary<string, string> GetRecordingStringTags()
+    private void OnComponentOverridesChanged()
     {
-        using var so = new SerializedObject(_recordingMaterial);
-        return MaterialUtility.GetStringTags(so);
+        using (_recordingMaterialChangeWatcher.ChangeWithoutNotify())
+        {
+            SyncRecordingMaterialFromComponent();
+        }
+        UpdateRecordingOverrideState();
     }
 
-    private static bool StringTagsEqual(
-        Dictionary<string, string> lhs,
-        Dictionary<string, string> rhs)
+    private void OnRecordingMaterialChanged()
     {
-        if (lhs.Count != rhs.Count) return false;
-        foreach (var (key, value) in lhs)
+        using (_overrideSettingsChangeWatcher.ChangeWithoutNotify())
+        using (_recordingMaterialChangeWatcher.ChangeWithoutNotify())
         {
-            if (!rhs.TryGetValue(key, out var otherValue) || value != otherValue)
-            {
-                return false;
-            }
+            CommitRecordingMaterialChange();
         }
-
-        return true;
     }
 
     private void OnEntrySettingsChanged()
     {
         UpdateTargetMaterials();
         AutoSelectRecordingSourceMaterial();
-        OnRecordingSourceMaterialChanged();
+        using (_recordingMaterialChangeWatcher.ChangeWithoutNotify())
+        {
+            RefreshRecordingSourceMaterial();
+        }
         NotifyRecordingEntryStateChanged();
     }
 
     private void OnRecordingSourceMaterialChanged()
+    {
+        using (_recordingMaterialChangeWatcher.ChangeWithoutNotify())
+        {
+            RefreshRecordingSourceMaterial();
+        }
+    }
+
+    private void RefreshRecordingSourceMaterial()
     {
         if (_recordingSourceMaterial != null) {
             _unlockedRecordingSourceMaterial = CreateUnlockedRecordingSourceMaterial(_recordingSourceMaterial);
@@ -437,30 +393,19 @@ internal class MaterialEditorEditor : Editor
             _unlockedRecordingSourceMaterial = null;
         }
         UpdateOtherOverrides();
-        UpdateRecordingLockedState();
         SyncRecordingMaterialFromComponent();
-    }
-
-    private void OnRecordingEntryStateChanged(MaterialEditorComponent component)
-    {
-        if (component == _target) return;
-        OnOtherComponentChanged();
-    }
-
-    private void OnRecordingOverrideStateChanged(MaterialEditorComponent component)
-    {
-        if (component == _target) return;
-        OnOtherComponentChanged();
     }
 
     // hierarchy上でenabledやeditoronlyが変化したり、削除、移動された場合にも呼ばれるべきではある
-    // ObjectChangeEventStreamの拡張で対応可能だが、複雑なので、ここでは同時に開いている場合のみ追従するように
+    // ここでは同時に開いているMaterialEditorComponentの変更のみ追従する
     // Todo
     private void OnOtherComponentChanged()
     {
-        UpdateOtherOverrides();
-        UpdateRecordingLockedState();
-        SyncRecordingMaterialFromComponent();
+        using (_recordingMaterialChangeWatcher.ChangeWithoutNotify())
+        {
+            UpdateOtherOverrides();
+            SyncRecordingMaterialFromComponent();
+        }
     }
 
     private void UpdateOtherOverrides()
@@ -495,60 +440,79 @@ internal class MaterialEditorEditor : Editor
         }
     }
 
-    private HashSet<string> GetCurrentOverridePropertyNames()
+    internal static bool IsRecording => RecordingMaterialToEditor.Count > 0;
+
+    internal static bool TryGetRecordingEditor(
+        Material recordingMaterial,
+        [NotNullWhen(true)] out MaterialEditorEditor? editor)
     {
-        return _target.OverrideSettings.PropertyOverrides
-            .Select(p => p.PropertyName)
-            .ToHashSet();
+        return RecordingMaterialToEditor.TryGetValue(recordingMaterial, out editor);
     }
 
-    private HashSet<RecordingMaterialSerializedProperty> GetCurrentOverrideSerializedProperties()
+    internal static bool TryGetRecordingEditor(
+        MaterialEditorComponent component,
+        [NotNullWhen(true)] out MaterialEditorEditor? editor)
     {
-        var result = new HashSet<RecordingMaterialSerializedProperty>();
-        if (_target.OverrideSettings.OverrideRenderQueue) result.Add(RecordingMaterialSerializedProperty.CustomRenderQueue);
-        if (_target.OverrideSettings.OverrideLightmapFlags) result.Add(RecordingMaterialSerializedProperty.LightmapFlags);
-        if (_target.OverrideSettings.OverrideEnableInstancing) result.Add(RecordingMaterialSerializedProperty.EnableInstancingVariants);
-        if (_target.OverrideSettings.OverrideDoubleSidedGI) result.Add(RecordingMaterialSerializedProperty.DoubleSidedGI);
-        return result;
+        editor = RecordingMaterialToEditor.Values.FirstOrDefault(item => item._target == component);
+        return editor != null;
     }
 
-    private bool IsShaderLocked() => _afterOverrides.OverrideShader;
-    private bool IsRenderQueueLocked() => _afterOverrides.OverrideRenderQueue;
-    private HashSet<string> GetLockedPropertyNames() => _afterOverrides.PropertyOverrides
-        .Select(p => p.PropertyName)
-        .ToHashSet();
+    internal Material RecordingMaterial => _recordingMaterial;
 
-    private HashSet<RecordingMaterialSerializedProperty> GetLockedSerializedProperties()
+    internal bool IsShaderLocked => _afterOverrides.OverrideShader;
+    internal bool IsRenderQueueLocked => _afterOverrides.OverrideRenderQueue;
+
+    internal bool HasOverrideProperty(string propertyName)
     {
-        var result = new HashSet<RecordingMaterialSerializedProperty>();
-        if (_afterOverrides.OverrideRenderQueue) result.Add(RecordingMaterialSerializedProperty.CustomRenderQueue);
-        if (_afterOverrides.OverrideLightmapFlags) result.Add(RecordingMaterialSerializedProperty.LightmapFlags);
-        if (_afterOverrides.OverrideEnableInstancing) result.Add(RecordingMaterialSerializedProperty.EnableInstancingVariants);
-        if (_afterOverrides.OverrideDoubleSidedGI) result.Add(RecordingMaterialSerializedProperty.DoubleSidedGI);
-        return result;
+        return _target.OverrideSettings.PropertyOverrides.Any(property => property.PropertyName == propertyName);
+    }
+
+    internal bool IsPropertyLocked(string propertyName)
+    {
+        return _afterOverrides.PropertyOverrides.Any(property => property.PropertyName == propertyName);
+    }
+
+    internal bool HasOverrideSerializedProperty(RecordingMaterialSerializedProperty property)
+    {
+        return property switch
+        {
+            RecordingMaterialSerializedProperty.CustomRenderQueue => _target.OverrideSettings.OverrideRenderQueue,
+            RecordingMaterialSerializedProperty.LightmapFlags => _target.OverrideSettings.OverrideLightmapFlags,
+            RecordingMaterialSerializedProperty.EnableInstancingVariants => _target.OverrideSettings.OverrideEnableInstancing,
+            RecordingMaterialSerializedProperty.DoubleSidedGI => _target.OverrideSettings.OverrideDoubleSidedGI,
+            _ => false,
+        };
+    }
+
+    internal bool IsSerializedPropertyLocked(RecordingMaterialSerializedProperty property)
+    {
+        return property switch
+        {
+            RecordingMaterialSerializedProperty.CustomRenderQueue => _afterOverrides.OverrideRenderQueue,
+            RecordingMaterialSerializedProperty.LightmapFlags => _afterOverrides.OverrideLightmapFlags,
+            RecordingMaterialSerializedProperty.EnableInstancingVariants => _afterOverrides.OverrideEnableInstancing,
+            RecordingMaterialSerializedProperty.DoubleSidedGI => _afterOverrides.OverrideDoubleSidedGI,
+            _ => false,
+        };
     }
 
     private void NotifyRecordingEntryStateChanged()
     {
-        MaterialEditoEditorContext.NotifyRecordingEntryStateChanged(_target);
+        NotifyOtherEditorsChanged();
     }
 
     private void UpdateRecordingOverrideState()
     {
-        MaterialEditoEditorContext.UpdateRecordingOverrideState(
-            _target,
-            GetCurrentOverridePropertyNames(),
-            GetCurrentOverrideSerializedProperties());
+        NotifyOtherEditorsChanged();
     }
 
-    private void UpdateRecordingLockedState()
+    private void NotifyOtherEditorsChanged()
     {
-        MaterialEditoEditorContext.UpdateLockedState(
-            _target,
-            IsShaderLocked(),
-            IsRenderQueueLocked(),
-            GetLockedPropertyNames(),
-            GetLockedSerializedProperties());
+        foreach (var editor in RecordingMaterialToEditor.Values.ToArray())
+        {
+            if (editor == this) continue;
+            editor.OnOtherComponentChanged();
+        }
     }
 
     private void SyncRecordingMaterialFromComponent()
@@ -807,25 +771,29 @@ internal class MaterialEditorEditor : Editor
     {
         if (_unlockedRecordingSourceMaterial == null) return;
 
-        var baseMaterial = CreateDiffBaseMaterial();
-        try
+        using (_overrideSettingsChangeWatcher.ChangeWithoutNotify())
+        using (_recordingMaterialChangeWatcher.ChangeWithoutNotify())
         {
-            mutateRecordingMaterial(baseMaterial);
-            MaterialUtility.Normalize(_recordingMaterial);
+            var baseMaterial = CreateDiffBaseMaterial();
+            try
+            {
+                mutateRecordingMaterial(baseMaterial);
+                MaterialUtility.Normalize(_recordingMaterial);
 
-            if (!SanitizeRecordingMaterialAgainstAfter()) return;
+                if (!SanitizeRecordingMaterialAgainstAfter()) return;
 
-            var maintainEqualOverrides = _target.TargetSettings.Mode != MaterialTargetSettings.SelectionMode.SingleMaterial;
-            var nextOverrides = BuildOverrideSettingsFromRecordingMaterial(maintainEqualOverrides);
-            if (nextOverrides == null) return;
+                var maintainEqualOverrides = _target.TargetSettings.Mode != MaterialTargetSettings.SelectionMode.SingleMaterial;
+                var nextOverrides = BuildOverrideSettingsFromRecordingMaterial(maintainEqualOverrides);
+                if (nextOverrides == null) return;
 
-            applyExplicitOverrideEdit(nextOverrides);
-            CommitOverridesFromRecording(nextOverrides);
-            SyncRecordingMaterialFromComponent();
-        }
-        finally
-        {
-            DestroyImmediate(baseMaterial);
+                applyExplicitOverrideEdit(nextOverrides);
+                CommitOverridesFromRecording(nextOverrides);
+                SyncRecordingMaterialFromComponent();
+            }
+            finally
+            {
+                DestroyImmediate(baseMaterial);
+            }
         }
     }
 
@@ -941,35 +909,9 @@ internal class MaterialEditorEditor : Editor
     private void CommitOverridesFromRecording(MaterialOverrideSettings value)
     {
         serializedObject.Update();
-        _pendingSelfCommittedOverrides = value.Clone();
         _overrideSettings.CopyFrom(value);
         serializedObject.ApplyModifiedProperties();
         UpdateRecordingOverrideState();
-    }
-
-    private bool TryConsumeSelfCommittedOverrideEcho()
-    {
-        if (_pendingSelfCommittedOverrides == null) return false;
-
-        var expected = _pendingSelfCommittedOverrides;
-        _pendingSelfCommittedOverrides = null;
-
-        if (!_target.OverrideSettings.Equals(expected))
-        {
-            return false;
-        }
-
-        DebugLog("ConsumeSelfCommittedOverrideEcho, frame: " + Time.frameCount);
-        return true;
-    }
-
-    private bool TryConsumeSelfCommittedRecordingMaterialChange()
-    {
-        if (!_pendingSelfCommittedRecordingMaterialChange) return false;
-
-        _pendingSelfCommittedRecordingMaterialChange = false;
-        DebugLog("ConsumeSelfCommittedRecordingMaterialChange, frame: " + Time.frameCount);
-        return true;
     }
 
     // OverrideUtilityGUI
@@ -1177,7 +1119,6 @@ internal class MaterialEditorEditor : Editor
 #endif
     }
 }
-
 internal enum RecordingMaterialSerializedProperty
 {
     CustomRenderQueue,
@@ -1186,100 +1127,89 @@ internal enum RecordingMaterialSerializedProperty
     DoubleSidedGI,
 }
 
-internal static class MaterialEditoEditorContext
+internal sealed class ChangeWatcher<T> : IDisposable
 {
-    public static readonly Dictionary<Material, MaterialEditorComponent> RecordingToComponent = new();
-    private static readonly Dictionary<Material, MaterialEditorEditor> RecordingToEditor = new();
-    private static readonly Dictionary<MaterialEditorComponent, Material> ComponentToRecording = new();
+    private const double PollInterval = 0.1d;
+    private readonly Func<T> _capture;
+    private readonly Func<T, T, bool> _equals;
+    private readonly Action<T, T> _onChanged;
+    private T _snapshot;
+    private int _suppressCount;
+    private double _nextPollTime;
+    private bool _started;
+    private bool _disposed;
 
-    public static readonly Dictionary<MaterialEditorComponent, HashSet<string>> ComponentToOverrideProperties = new();
-    public static readonly Dictionary<MaterialEditorComponent, HashSet<RecordingMaterialSerializedProperty>> ComponentToOverrideSerializedProperties = new();
-
-    public static readonly Dictionary<MaterialEditorComponent, bool> ComponentToShaderLocked = new();
-    public static readonly Dictionary<MaterialEditorComponent, bool> ComponentToRenderQueueLocked = new();
-    public static readonly Dictionary<MaterialEditorComponent, HashSet<string>> ComponentToLockedProperties = new();
-    public static readonly Dictionary<MaterialEditorComponent, HashSet<RecordingMaterialSerializedProperty>> ComponentToLockedSerializedProperties = new();
-
-    public static bool IsRecording => RecordingToComponent.Count > 0;
-
-    public static event Action<MaterialEditorComponent>? OnStartRecording;
-    public static event Action<MaterialEditorComponent>? OnRecordingEntryStateChanged;
-    public static event Action<MaterialEditorComponent>? OnRecordingOverrideStateChanged;
-    public static event Action<MaterialEditorComponent>? OnStopRecording;
-
-    public static void StartRecording(
-        MaterialEditorEditor editor,
-        MaterialEditorComponent component,
-        Material recordingMaterial,
-        HashSet<string> overrideProperties,
-        HashSet<RecordingMaterialSerializedProperty> overrideSerializedProperties,
-        HashSet<string> lockedProperties,
-        HashSet<RecordingMaterialSerializedProperty> lockedSerializedProperties,
-        bool shaderLocked,
-        bool renderQueueLocked)
+    public ChangeWatcher(
+        Func<T> capture,
+        Func<T, T, bool> equals,
+        Action<T, T> onChanged)
     {
-        RecordingToComponent[recordingMaterial] = component;
-        RecordingToEditor[recordingMaterial] = editor;
-        ComponentToRecording[component] = recordingMaterial;
-        ComponentToOverrideProperties[component] = overrideProperties;
-        ComponentToOverrideSerializedProperties[component] = overrideSerializedProperties;
-        ComponentToLockedProperties[component] = lockedProperties;
-        ComponentToLockedSerializedProperties[component] = lockedSerializedProperties;
-        ComponentToShaderLocked[component] = shaderLocked;
-        ComponentToRenderQueueLocked[component] = renderQueueLocked;
-        OnStartRecording?.Invoke(component);
+        _capture = capture;
+        _equals = equals;
+        _onChanged = onChanged;
+        _snapshot = _capture();
     }
 
-    public static void NotifyRecordingEntryStateChanged(
-        MaterialEditorComponent component)
+
+    public void Start()
     {
-        OnRecordingEntryStateChanged?.Invoke(component);
+        if (_started || _disposed) return;
+
+        _started = true;
+        EditorApplication.update += OnEditorUpdate;
     }
 
-    public static void UpdateRecordingOverrideState(
-        MaterialEditorComponent component,
-        HashSet<string> overrideProperties,
-        HashSet<RecordingMaterialSerializedProperty> overrideSerializedProperties)
+    public IDisposable ChangeWithoutNotify()
     {
-        ComponentToOverrideProperties[component] = overrideProperties;
-        ComponentToOverrideSerializedProperties[component] = overrideSerializedProperties;
-        OnRecordingOverrideStateChanged?.Invoke(component);
+        return new ChangeWithoutNotifyScope(this);
     }
 
-    public static void UpdateLockedState(
-        MaterialEditorComponent component,
-        bool shaderLocked,
-        bool renderQueueLocked,
-        HashSet<string> lockedProperties,
-        HashSet<RecordingMaterialSerializedProperty> lockedSerializedProperties)
+    public void Dispose()
     {
-        ComponentToShaderLocked[component] = shaderLocked;
-        ComponentToRenderQueueLocked[component] = renderQueueLocked;
-        ComponentToLockedProperties[component] = lockedProperties;
-        ComponentToLockedSerializedProperties[component] = lockedSerializedProperties;
+        if (_disposed) return;
+
+        _disposed = true;
+        if (_started)
+        {
+            EditorApplication.update -= OnEditorUpdate;
+        }
     }
 
-    public static bool TryGetRecordingMaterial(MaterialEditorComponent component, [NotNullWhen(true)] out Material? recordingMaterial)
+    private void OnEditorUpdate()
     {
-        return ComponentToRecording.TryGetValue(component, out recordingMaterial);
+        if (_disposed || !_started || _suppressCount > 0) return;
+        if (EditorApplication.timeSinceStartup < _nextPollTime) return;
+        _nextPollTime = EditorApplication.timeSinceStartup + PollInterval;
+
+        var current = _capture();
+        if (_equals(_snapshot, current)) return;
+
+        var previous = _snapshot;
+        _snapshot = current;
+        _onChanged(previous, current);
     }
 
-    public static bool TryGetEditor(Material recordingMaterial, [NotNullWhen(true)] out MaterialEditorEditor? editor)
+    private sealed class ChangeWithoutNotifyScope : IDisposable
     {
-        return RecordingToEditor.TryGetValue(recordingMaterial, out editor);
-    }
+        private readonly ChangeWatcher<T> _owner;
+        private bool _disposed;
 
-    public static void StopRecording(Material recordingMaterial, MaterialEditorComponent component)
-    {
-        RecordingToComponent.Remove(recordingMaterial);
-        RecordingToEditor.Remove(recordingMaterial);
-        ComponentToRecording.Remove(component);
-        ComponentToOverrideProperties.Remove(component);
-        ComponentToOverrideSerializedProperties.Remove(component);
-        ComponentToLockedProperties.Remove(component);
-        ComponentToLockedSerializedProperties.Remove(component);
-        ComponentToShaderLocked.Remove(component);
-        ComponentToRenderQueueLocked.Remove(component);
-        OnStopRecording?.Invoke(component);
+        public ChangeWithoutNotifyScope(ChangeWatcher<T> owner)
+        {
+            _owner = owner;
+            _owner._suppressCount++;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+
+            _disposed = true;
+            _owner._suppressCount--;
+            if (_owner._suppressCount == 0 && !_owner._disposed)
+            {
+                _owner._snapshot = _owner._capture();
+            }
+        }
     }
 }
