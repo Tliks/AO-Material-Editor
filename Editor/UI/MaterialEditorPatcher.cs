@@ -5,7 +5,7 @@ using HarmonyLib;
 namespace Aoyon.MaterialEditor.UI;
 
 [InitializeOnLoad]
-internal static class MaterialEditorPatcher
+internal static class MaterialEditorPatcher // Todo: リファクタ
 {
     private const string HARMONY_ID = "aoyon.material-editor";
 
@@ -33,8 +33,8 @@ internal static class MaterialEditorPatcher
 
         try
         {
-            PatchMaterialEditor(harmony);
             PatchMaterialProperty(harmony);
+            PatchMaterialEditor(harmony);
             PatchGUILabel(harmony);
             PatchPoiyomiLayout(harmony);
         }
@@ -56,13 +56,18 @@ internal static class MaterialEditorPatcher
     private static void PatchMaterialEditor(Harmony harmony)
     {
         var materialEditorType = typeof(UnityEditor.MaterialEditor);
-        
-        PatchMethod(harmony, materialEditorType, "ShaderPropertyInternal",
-            new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(GUIContent) },
-            prefixName: nameof(ShaderPropertyInternalPrefix),
+
+        PatchMethod(harmony, materialEditorType, "SetShader",
+            new[] { typeof(Shader), typeof(bool) },
+            postfixName: nameof(SetShaderPostfix));
+        PatchMethod(harmony, materialEditorType, "EndProperty",
+            Type.EmptyTypes,
             postfixName: nameof(PropertyPostfix));
 
-        // leaf methods
+        PatchMethod(harmony, materialEditorType, "ShaderPropertyInternal",
+            new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(GUIContent) },
+            prefixName: nameof(LeafPrefix),
+            postfixName: nameof(PropertyPostfix));
         PatchMethod(harmony, materialEditorType, "DoPowerRangeProperty",
             new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(GUIContent), typeof(float) },
             prefixName: nameof(LeafPrefix),
@@ -87,7 +92,6 @@ internal static class MaterialEditorPatcher
             new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(GUIContent), typeof(bool) },
             prefixName: nameof(LeafPrefix),
             postfixName: nameof(PropertyPostfix));
-
         PatchMethod(harmony, materialEditorType, "TexturePropertyMiniThumbnail",
             new[] { typeof(Rect), typeof(UnityEditor.MaterialProperty), typeof(string), typeof(string) },
             prefixName: nameof(TexturePropertyMiniThumbnailPrefix),
@@ -104,6 +108,13 @@ internal static class MaterialEditorPatcher
 
     private static void PatchMaterialProperty(Harmony harmony)
     {
+        var materialPropertyType = typeof(UnityEditor.MaterialProperty);
+
+        var beginPropertyMethod = AccessTools.GetDeclaredMethods(materialPropertyType)
+            .FirstOrDefault(IsMaterialPropertyBeginPropertyMethod)
+            ?? throw new Exception("MaterialProperty.BeginProperty method not found");
+        PatchMethod(harmony, beginPropertyMethod, prefixName: nameof(MaterialPropertyBeginPropertyPrefix));
+
         var propertyDataType = AccessTools.TypeByName("UnityEditor.MaterialProperty+PropertyData");
         if (propertyDataType == null)
         {
@@ -114,6 +125,18 @@ internal static class MaterialEditorPatcher
         PatchMethod(harmony, propertyDataType, "DoLockAction",
             new[] { typeof(UnityEngine.Object[]) },
             prefixName: nameof(MaterialPropertyDoLockActionPrefix));
+    }
+
+    private static bool IsMaterialPropertyBeginPropertyMethod(System.Reflection.MethodInfo method)
+    {
+        if (method.Name != "BeginProperty") return false;
+
+        var parameters = method.GetParameters();
+        return parameters.Length == 5
+               && parameters[0].ParameterType == typeof(Rect)
+               && parameters[1].ParameterType == typeof(UnityEditor.MaterialProperty)
+               && parameters[3].ParameterType == typeof(UnityEngine.Object[])
+               && parameters[4].ParameterType == typeof(float);
     }
 
     private static bool MaterialPropertyDoLockActionPrefix()
@@ -155,30 +178,51 @@ internal static class MaterialEditorPatcher
         harmony.Patch(method, prefix: prefix, postfix: postfix);
     }
 
-    private static void ShaderPropertyInternalPrefix(
-        Rect position,
-        UnityEditor.MaterialProperty prop,
-        GUIContent label)
+    private static void PatchMethod(
+        Harmony harmony,
+        System.Reflection.MethodInfo method,
+        string? prefixName = null,
+        string? postfixName = null)
     {
-        // // カスタムドロワーがない際はデフォルトの描画になるので他のパッチで重複する
-        // ただ同時にボタンは消えるのと判定ロジックが大変なので、重複を許容する
-        // if (!HasCustomDrawer(prop)) 
-        //     return;
-        BeginPropertyGUI(position, prop);
+        var prefix = prefixName != null ? new HarmonyMethod(typeof(MaterialEditorPatcher), prefixName) : null;
+        var postfix = postfixName != null ? new HarmonyMethod(typeof(MaterialEditorPatcher), postfixName) : null;
+        harmony.Patch(method, prefix: prefix, postfix: postfix);
+    }
+
+    private static void MaterialPropertyBeginPropertyPrefix(
+        Rect __0,
+        UnityEditor.MaterialProperty __1,
+        object __2,
+        UnityEngine.Object[] __3,
+        float __4)
+    {
+        if (__1 != null)
+        {
+            BeginPropertyGUI(__0, __4, __1);
+        }
+        else
+        {
+            BeginSerializedPropertyGUI(__0, __4, ToSerializedPropertyKind(__2), __3);
+        }
+    }
+
+    private static void PropertyPostfix()
+    {
+        EndPropertyGUI();
     }
 
     private static void LeafPrefix(Rect position, UnityEditor.MaterialProperty prop)
     {
-        BeginPropertyGUI(position, prop);
+        BeginLeafPropertyGUI(position, prop);
     }
 
     private static void TexturePropertyMiniThumbnailPrefix(
-        Rect position, 
-        UnityEditor.MaterialProperty prop, 
-        string label, 
+        Rect position,
+        UnityEditor.MaterialProperty prop,
+        string label,
         string tooltip)
     {
-        BeginPropertyGUI(position, prop);
+        BeginLeafPropertyGUI(position, prop);
     }
 
     private static void TexturePropertyWithHDRColorPrefix(
@@ -188,7 +232,7 @@ internal static class MaterialEditorPatcher
         UnityEditor.MaterialProperty colorProperty,
         bool showAlpha)
     {
-        BeginPropertyGUI(__result, colorProperty);
+        BeginLeafPropertyGUI(__result, colorProperty);
     }
 
     private static void TextureScaleOffsetPropertyPrefix(
@@ -197,21 +241,33 @@ internal static class MaterialEditorPatcher
         bool partOfTexturePropertyControl)
     {
         if (partOfTexturePropertyControl)
+        {
+            PushInactivePropertyGUIState(position, -1f);
             return;
-        BeginPropertyGUI(position, property);
+        }
+
+        BeginLeafPropertyGUI(position, property);
     }
 
-    private static void PropertyPostfix()
+    private static void SetShaderPostfix(UnityEditor.MaterialEditor __instance)
     {
-        EndPropertyGUI();
+        foreach (var target in __instance.targets)
+        {
+            if (target is not Material material) continue;
+            if (!MaterialEditoEditorContext.RecordingToComponent.ContainsKey(material)) continue;
+
+            MaterialUtility.Normalize(material);
+        }
     }
 
     private readonly record struct PropertyGUIState(
         bool Enabled,
         Rect Position,
+        float StartY,
         string? Tooltip,
-        MaterialEditorComponent? Component,
+        Material? RecordingMaterial,
         string? PropertyName,
+        RecordingMaterialSerializedProperty? SerializedProperty,
         bool ShowRevertButton);
 
     private static readonly Stack<PropertyGUIState> _guiStateStack = new();
@@ -219,14 +275,14 @@ internal static class MaterialEditorPatcher
     private static GUIContent TooltipOverlayContent => _tooltipOverlayContent ??= new GUIContent("");
 
     // control idの衝突を防ぐ為、postfixでrevert buttonは描画する
-    private static void BeginPropertyGUI(Rect position, UnityEditor.MaterialProperty prop)
+    private static void BeginPropertyGUI(Rect position, float startY, UnityEditor.MaterialProperty prop)
     {
         var enabled = GUI.enabled;
         string? tooltip = null;
 
-        if (!TryGetRecordingContext(prop, out var component, out var overrideProperties, out var lockedProperties))
+        if (!TryGetRecordingContext(prop, out var component, out var recordingMaterial, out var overrideProperties, out var lockedProperties))
         {
-            _guiStateStack.Push(new PropertyGUIState(enabled, position, null, null, null, false));
+            PushInactivePropertyGUIState(position, startY);
             return;
         }
 
@@ -239,10 +295,63 @@ internal static class MaterialEditorPatcher
         _guiStateStack.Push(new PropertyGUIState(
             enabled,
             position,
+            startY,
             tooltip,
-            component,
+            recordingMaterial,
             prop.name,
+            null,
             overrideProperties.Contains(prop.name)));
+    }
+
+    private static void BeginLeafPropertyGUI(Rect position, UnityEditor.MaterialProperty prop)
+    {
+        if (_guiStateStack.Count > 0)
+        {
+            PushInactivePropertyGUIState(position, -1f);
+            return;
+        }
+
+        BeginPropertyGUI(position, -1f, prop);
+    }
+
+    private static void BeginSerializedPropertyGUI(
+        Rect position,
+        float startY,
+        RecordingMaterialSerializedProperty? serializedProperty,
+        UnityEngine.Object[] targets)
+    {
+        var enabled = GUI.enabled;
+        string? tooltip = null;
+
+        if (serializedProperty == null ||
+            !TryGetRecordingContext(targets, out var component, out var recordingMaterial) ||
+            !MaterialEditoEditorContext.ComponentToOverrideSerializedProperties.TryGetValue(component, out var overrideProperties) ||
+            !MaterialEditoEditorContext.ComponentToLockedSerializedProperties.TryGetValue(component, out var lockedProperties))
+        {
+            PushInactivePropertyGUIState(position, startY);
+            return;
+        }
+
+        if (lockedProperties.Contains(serializedProperty.Value))
+        {
+            GUI.enabled = false;
+            tooltip = "lock.property.tooltip".LS();
+        }
+
+        _guiStateStack.Push(new PropertyGUIState(
+            enabled,
+            position,
+            startY,
+            tooltip,
+            recordingMaterial,
+            null,
+            serializedProperty,
+            overrideProperties.Contains(serializedProperty.Value)));
+    }
+
+    private static void PushInactivePropertyGUIState(Rect position, float startY)
+    {
+        _guiStateStack.Push(new PropertyGUIState(GUI.enabled, position, startY, null, null, null, null, false));
     }
 
     private static void EndPropertyGUI()
@@ -252,33 +361,56 @@ internal static class MaterialEditorPatcher
 
         var state = _guiStateStack.Pop();
         GUI.enabled = state.Enabled;
+        var hasPosition = TryGetButtonSourceRect(state.Position, state.StartY, out var position);
 
-        if (state.ShowRevertButton && state.Component != null && state.PropertyName != null)
+        if (state.ShowRevertButton && state.RecordingMaterial != null && hasPosition)
         {
-            DrawRevertButton(state.Position, state.PropertyName, state.Component);
+            DrawRevertButton(position, state.RecordingMaterial, state.PropertyName, state.SerializedProperty);
         }
 
-        if (!string.IsNullOrEmpty(state.Tooltip))
+        if (!string.IsNullOrEmpty(state.Tooltip) && hasPosition)
         {
             TooltipOverlayContent.tooltip = state.Tooltip;
-            GUI.Label(state.Position, TooltipOverlayContent, GUIStyle.none);
+            GUI.Label(position, TooltipOverlayContent, GUIStyle.none);
         }
+    }
+
+    private static bool TryGetButtonSourceRect(Rect rect, float startY, out Rect result)
+    {
+        result = rect;
+        if (startY != -1f)
+        {
+            var lastRect = GUILayoutUtility.GetLastRect();
+            result = lastRect;
+            result.yMin = startY;
+            result.x = 1f;
+            result.width = EditorGUIUtility.labelWidth;
+            return true;
+        }
+
+        if (rect.width > 0f || rect.height > 0f)
+            return true;
+
+        return false;
     }
 
     private static bool TryGetRecordingContext(
         UnityEditor.MaterialProperty prop,
         out MaterialEditorComponent component,
+        out Material recordingMaterial,
         out HashSet<string> overrideProperties,
         out HashSet<string> lockedProperties)
     {
         component = null!;
+        recordingMaterial = null!;
         overrideProperties = null!;
         lockedProperties = null!;
 
         var targets = prop.targets;
-        if (targets == null || targets.Length != 1 || targets[0] is not Material recordingMaterial)
+        if (targets == null || targets.Length != 1 || targets[0] is not Material material)
             return false;
 
+        recordingMaterial = material;
         if (!MaterialEditoEditorContext.RecordingToComponent.TryGetValue(recordingMaterial, out component))
             return false;
 
@@ -289,6 +421,33 @@ internal static class MaterialEditorPatcher
             return false;
 
         return true;
+    }
+
+    private static bool TryGetRecordingContext(
+        UnityEngine.Object[] targets,
+        out MaterialEditorComponent component,
+        out Material recordingMaterial)
+    {
+        component = null!;
+        recordingMaterial = null!;
+
+        if (targets == null || targets.Length != 1 || targets[0] is not Material material)
+            return false;
+
+        recordingMaterial = material;
+        return MaterialEditoEditorContext.RecordingToComponent.TryGetValue(recordingMaterial, out component);
+    }
+
+    private static RecordingMaterialSerializedProperty? ToSerializedPropertyKind(object property)
+    {
+        return property.ToString() switch
+        {
+            "CustomRenderQueue" => RecordingMaterialSerializedProperty.CustomRenderQueue,
+            "LightmapFlags" => RecordingMaterialSerializedProperty.LightmapFlags,
+            "EnableInstancingVariants" => RecordingMaterialSerializedProperty.EnableInstancingVariants,
+            "DoubleSidedGI" => RecordingMaterialSerializedProperty.DoubleSidedGI,
+            _ => null
+        };
     }
 
     private const float BUTTON_SIZE = 16f;
@@ -306,8 +465,9 @@ internal static class MaterialEditorPatcher
 
     private static void DrawRevertButton(
         Rect position,
-        string propertyName,
-        MaterialEditorComponent component)
+        Material recordingMaterial,
+        string? propertyName,
+        RecordingMaterialSerializedProperty? serializedProperty)
     {
         if (!GUIHelper.TryGetMarginX(out var marginX))
             return;
@@ -322,9 +482,7 @@ internal static class MaterialEditorPatcher
 
         if (RevertButton(buttonRect))
         {
-            RevertProperty(component, propertyName);
-            if (MaterialEditoEditorContext.ComponentToMaterialEditor.TryGetValue(component, out var materialEditor) && materialEditor != null)
-                EditorApplication.delayCall += () => materialEditor.Repaint();
+            RevertProperty(recordingMaterial, propertyName, serializedProperty);
             GUIUtility.ExitGUI();
         }
     }
@@ -352,13 +510,23 @@ internal static class MaterialEditorPatcher
         return false;
     }
 
-    private static void RevertProperty(MaterialEditorComponent component, string propertyName)
+    private static void RevertProperty(
+        Material recordingMaterial,
+        string? propertyName,
+        RecordingMaterialSerializedProperty? serializedProperty)
     {
-        var edited = new List<MaterialProperty>(component.OverrideSettings.PropertyOverrides);
-        edited.RemoveAll(p => p.PropertyName == propertyName);
-        using var so = new SerializedObject(component);
-        so.FindProperty(nameof(MaterialEditorComponent.OverrideSettings)).FindPropertyRelative(nameof(MaterialOverrideSettings.PropertyOverrides)).CopyFrom(edited);
-        so.ApplyModifiedProperties();
+        if (MaterialEditoEditorContext.TryGetEditor(recordingMaterial, out var editor))
+        {
+            if (propertyName != null)
+            {
+                editor.RevertRecordingProperty(propertyName);
+            }
+            else if (serializedProperty != null)
+            {
+                editor.RevertRecordingSerializedProperty(serializedProperty.Value);
+            }
+            EditorApplication.delayCall += editor.Repaint;
+        }
     }
 
     private static readonly Texture _lockInChildrenIcon =

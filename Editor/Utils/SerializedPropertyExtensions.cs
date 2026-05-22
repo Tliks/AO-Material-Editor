@@ -94,7 +94,7 @@ internal static class SerializedPropertyExtensions
                 prop.stringValue = value?.ToString() ?? "";
                 break;
             case SerializedPropertyType.Enum:
-                prop.enumValueIndex = value != null ? (int)value : 0;
+                prop.enumValueFlag = value != null ? Convert.ToInt32(value) : 0;
                 break;
             case SerializedPropertyType.ObjectReference:
                 prop.objectReferenceValue = value as UnityEngine.Object;
@@ -135,6 +135,51 @@ internal static class SerializedPropertyExtensions
                 var element = prop.GetArrayElementAtIndex(i);
                 initializeFunction(element);
             }
+        }
+    }
+
+    public static List<string> GetStringArrayValues(this SerializedProperty prop)
+    {
+        var values = new List<string>(prop.arraySize);
+        for (var i = 0; i < prop.arraySize; i++)
+        {
+            values.Add(prop.GetArrayElementAtIndex(i).stringValue);
+        }
+
+        return values;
+    }
+
+    public static void SetStringArrayValues(this SerializedProperty prop, IReadOnlyList<string> values)
+    {
+        prop.arraySize = values.Count;
+        for (var i = 0; i < values.Count; i++)
+        {
+            prop.GetArrayElementAtIndex(i).stringValue = values[i];
+        }
+    }
+
+    public static Dictionary<string, string> GetStringMapValues(this SerializedProperty prop)
+    {
+        var values = new Dictionary<string, string>();
+        for (var i = 0; i < prop.arraySize; i++)
+        {
+            var element = prop.GetArrayElementAtIndex(i);
+            values[element.FindPropertyRelative("first").stringValue] = element.FindPropertyRelative("second").stringValue;
+        }
+
+        return values;
+    }
+
+    public static void SetStringMapValues(this SerializedProperty prop, IReadOnlyDictionary<string, string> values)
+    {
+        prop.arraySize = values.Count;
+        var i = 0;
+        foreach (var (key, value) in values)
+        {
+            var element = prop.GetArrayElementAtIndex(i);
+            element.FindPropertyRelative("first").stringValue = key;
+            element.FindPropertyRelative("second").stringValue = value;
+            i++;
         }
     }
 

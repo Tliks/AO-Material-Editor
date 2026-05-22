@@ -4,6 +4,15 @@ using jp.lilxyzw.lilycalinventory.runtime;
 
 namespace Aoyon.MaterialEditor.Processor.Extension;
 
+[InitializeOnLoad]
+internal static class LilycalInventoryMaterialTargetingRegistration
+{
+    static LilycalInventoryMaterialTargetingRegistration()
+    {
+        ExternalMaterialTargeting.Register(root => new LilycalInventoryMaterialTargeting(root));
+    }
+}
+
 internal class LilycalInventoryMaterialTargeting : IMaterialTargeting
 {
     private readonly GameObject _root;

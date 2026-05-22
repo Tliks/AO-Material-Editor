@@ -87,3 +87,113 @@ internal class MaterialPropertyDrawer : PropertyDrawer
         return height;
     }
 }
+
+[CustomPropertyDrawer(typeof(MaterialKeywordStateOverride))]
+internal class MaterialKeywordStateOverrideDrawer : PropertyDrawer
+{
+    public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+    {
+        using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, property);
+
+        MaterialStateOverrideDrawerGUI.DrawNameAndAction(
+            position,
+            property.FindPropertyRelative(nameof(MaterialKeywordStateOverride.Keyword)),
+            property.FindPropertyRelative(nameof(MaterialKeywordStateOverride.Enabled)),
+            MaterialStateOverrideDrawerGUI.KeywordActionOptions);
+    }
+
+    public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+    {
+        return GUIHelper.propertyHeight;
+    }
+}
+
+[CustomPropertyDrawer(typeof(MaterialStringTagOverride))]
+internal class MaterialStringTagOverrideDrawer : PropertyDrawer
+{
+    public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+    {
+        using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, property);
+
+        var tagName = property.FindPropertyRelative(nameof(MaterialStringTagOverride.TagName));
+        var value = property.FindPropertyRelative(nameof(MaterialStringTagOverride.Value));
+        var remove = property.FindPropertyRelative(nameof(MaterialStringTagOverride.Remove));
+
+        GUIHelper.SplitRectHorizontallyForLeft(position, MaterialStateOverrideDrawerGUI.ActionFieldWidth, out var actionRect, out var contentRect);
+        MaterialStateOverrideDrawerGUI.DrawStringTagAction(actionRect, remove);
+        if (!remove.boolValue)
+        {
+            GUIHelper.SplitRectHorizontally(contentRect, 0.5f, out var tagNameRect, out var valueRect);
+            EditorGUI.PropertyField(tagNameRect, tagName, GUIContent.none);
+            EditorGUI.PropertyField(valueRect, value, GUIContent.none);
+        }
+        else
+        {
+            EditorGUI.PropertyField(contentRect, tagName, GUIContent.none);
+        }
+    }
+
+    public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+    {
+        return GUIHelper.propertyHeight;
+    }
+}
+
+[CustomPropertyDrawer(typeof(MaterialShaderPassStateOverride))]
+internal class MaterialShaderPassStateOverrideDrawer : PropertyDrawer
+{
+    public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+    {
+        using var _ = new EditorGUI.PropertyScope(position, GUIContent.none, property);
+
+        MaterialStateOverrideDrawerGUI.DrawNameAndAction(
+            position,
+            property.FindPropertyRelative(nameof(MaterialShaderPassStateOverride.PassName)),
+            property.FindPropertyRelative(nameof(MaterialShaderPassStateOverride.Enabled)),
+            MaterialStateOverrideDrawerGUI.ShaderPassActionOptions);
+    }
+
+    public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+    {
+        return GUIHelper.propertyHeight;
+    }
+}
+
+internal static class MaterialStateOverrideDrawerGUI
+{
+    public const float ActionFieldWidth = 96f;
+
+    public static readonly GUIContent[] KeywordActionOptions =
+    {
+        new("Remove"),
+        new("Add"),
+    };
+
+    public static readonly GUIContent[] ShaderPassActionOptions =
+    {
+        new("Disable"),
+        new("Enable"),
+    };
+
+    private static readonly GUIContent[] StringTagActionOptions =
+    {
+        new("Add or Edit"),
+        new("Remove"),
+    };
+
+    public static void DrawNameAndAction(Rect position, SerializedProperty nameProperty, SerializedProperty enabledProperty, GUIContent[] options)
+    {
+        GUIHelper.SplitRectHorizontallyForLeft(position, ActionFieldWidth, out var actionRect, out var nameRect);
+        var index = enabledProperty.boolValue ? 1 : 0;
+        var newIndex = EditorGUI.Popup(actionRect, index, options, StyleHelper.MiddleCenteredPopupStyle);
+        if (newIndex != index) enabledProperty.boolValue = newIndex == 1;
+        EditorGUI.PropertyField(nameRect, nameProperty, GUIContent.none);
+    }
+
+    public static void DrawStringTagAction(Rect position, SerializedProperty removeProperty)
+    {
+        var index = removeProperty.boolValue ? 1 : 0;
+        var newIndex = EditorGUI.Popup(position, index, StringTagActionOptions, StyleHelper.MiddleCenteredPopupStyle);
+        if (newIndex != index) removeProperty.boolValue = newIndex == 1;
+    }
+}

@@ -14,11 +14,11 @@ internal interface IMaterialTargeting
     void ApplyReplacements(IReadOnlyDictionary<MaterialAssignment, Material> replacements);
 }
 
-internal class MaterialTargeting : IMaterialTargeting
+internal class MaterialTargetings : IMaterialTargeting
 {
     private readonly IMaterialTargeting[] _materialTargetings;
 
-    public MaterialTargeting(params IMaterialTargeting[] materialTargetings)
+    public MaterialTargetings(params IMaterialTargeting[] materialTargetings)
     {
         _materialTargetings = materialTargetings;
     }
@@ -194,3 +194,19 @@ internal class AnimatorMaterialTargeting : IMaterialTargeting
         }
     }
 }
+
+internal class ExternalMaterialTargeting : MaterialTargetings
+{
+    private static readonly Dictionary<Type, Func<GameObject, IMaterialTargeting>> _additionalTargetingFactories = new();
+
+    public static void Register<T>(Func<GameObject, T> factory) where T : IMaterialTargeting
+    {
+        _additionalTargetingFactories[typeof(T)] = root => factory(root);
+    }
+
+    public ExternalMaterialTargeting(GameObject root)
+        : base(_additionalTargetingFactories.Values.Select(factory => factory(root)).ToArray())
+    {
+    }
+}
+ 

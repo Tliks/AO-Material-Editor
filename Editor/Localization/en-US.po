@@ -144,6 +144,9 @@ msgstr "No material to edit was found. Configure it above."
 msgid "editor.recordingSourceMaterial"
 msgstr "Display Material"
 
+msgid "editor.displaySettings"
+msgstr "Editing Screen Display Settings"
+
 # override settings
 msgid "overrideSettings.count"
 msgstr "Saved Edits: {0} items"
@@ -152,13 +155,16 @@ msgid "overrideSettings.help.visibleEditor"
 msgstr "Saved edits are shown here. Changes made in the editing screen below are reflected automatically, so you usually do not need to edit this directly."
 
 msgid "overrideSettings.help.hiddenEditor"
-msgstr "Saved edits are shown here. Expand the editing screen above to edit materials."
+msgstr "Saved edits are shown here. Changes made after expanding the editing screen above are reflected automatically, so you usually do not need to edit this directly."
 
 msgid "overrideSettings.help.noMaterial"
 msgstr "Saved edits are shown here. The normal editing screen is hidden because no target material was found."
 
 msgid "overrideSettings.properties"
 msgstr "Properties"
+
+msgid "overrideSettings.advancedSettings"
+msgstr "Advanced Settings"
 
 msgid "overrideSettings.reset"
 msgstr "Reset"
