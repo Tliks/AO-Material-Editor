@@ -268,7 +268,10 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
         Material? RecordingMaterial,
         string? PropertyName,
         RecordingMaterialSerializedProperty? SerializedProperty,
-        bool ShowRevertButton);
+        bool ShowRevertButton)
+    {
+        public bool IsActive => RecordingMaterial != null || SerializedProperty != null;
+    }
 
     private static readonly Stack<PropertyGUIState> _guiStateStack = new();
     private static GUIContent? _tooltipOverlayContent;
@@ -305,7 +308,7 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
 
     private static void BeginLeafPropertyGUI(Rect position, UnityEditor.MaterialProperty prop)
     {
-        if (_guiStateStack.Count > 0)
+        if (_guiStateStack.Count > 0 && _guiStateStack.Peek().IsActive)
         {
             PushInactivePropertyGUIState(position, -1f);
             return;
