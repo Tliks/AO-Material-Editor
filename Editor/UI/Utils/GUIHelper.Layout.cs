@@ -41,6 +41,16 @@ internal static partial class GUIHelper
         return position;
     }
 
+    internal static Rect AlignToMarginX(Rect position, float leftPadding = 0f)
+    {
+        if (!TryGetMarginX(out var marginX)) return position;
+
+        var offset = position.xMin - marginX;
+        position.x = marginX + leftPadding;
+        position.width += offset - leftPadding;
+        return position;
+    }
+
     internal static void SplitRectHorizontally(in Rect source, float leftRatio, out Rect left, out Rect right)
     {
         left = source;

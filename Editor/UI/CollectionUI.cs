@@ -9,12 +9,12 @@ internal static class AvatarObjectReferenceCollectionUI
         o => o is GameObject,
         OnItemsDropped);
 
-    public static void Draw(Rect position, SerializedProperty property, GUIContent label, GUIHelper.ListOptions? options)
+    public static Rect Draw(Rect position, SerializedProperty property, GUIContent label, GUIHelper.ListOptions? options)
     {
-        Draw(position, property, label, options, DropHandler);
+        return Draw(position, property, label, options, DropHandler);
     }
 
-    public static void Draw(
+    public static Rect Draw(
         Rect position,
         SerializedProperty property,
         GUIContent label,
@@ -23,10 +23,10 @@ internal static class AvatarObjectReferenceCollectionUI
     {
         if (!property.isArray) {
             EditorGUI.PropertyField(position, property, label);
-            return;
+            return position.NewLine();
         }
 
-        GUIHelper.DragAndDropList(position, property, label, prop => {
+        return GUIHelper.DragAndDropList(position, property, label, prop => {
             prop.CopyFrom(new AvatarObjectReference());
         }, dropHandler, options ?? new GUIHelper.ListOptions());
     }
@@ -66,12 +66,12 @@ internal static class MaterialCollectionUI
         OnMaterialsOrRenderersDropped,
         "targetSettings.dragAndDropAdd");
 
-    public static void Draw(Rect position, SerializedProperty property, GUIContent label, GUIHelper.ListOptions? options)
+    public static Rect Draw(Rect position, SerializedProperty property, GUIContent label, GUIHelper.ListOptions? options)
     {
-        Draw(position, property, label, options, DefaultDropHandler);
+        return Draw(position, property, label, options, DefaultDropHandler);
     }
 
-    public static void Draw(
+    public static Rect Draw(
         Rect position,
         SerializedProperty property,
         GUIContent label,
@@ -81,10 +81,10 @@ internal static class MaterialCollectionUI
         if (!property.isArray)
         {
             EditorGUI.PropertyField(position, property, label);
-            return;
+            return position.NewLine();
         }
 
-        GUIHelper.DragAndDropList(position, property, label, prop =>
+        return GUIHelper.DragAndDropList(position, property, label, prop =>
         {
             prop.objectReferenceValue = null;
         }, dropHandler, options ?? new GUIHelper.ListOptions());
@@ -166,12 +166,12 @@ internal static class MaterialSlotReferenceCollectionUI
         OnItemsDropped,
         "targetSettings.dragAndDropAdd");
 
-    public static void Draw(Rect position, SerializedProperty property, GUIContent label, GUIHelper.ListOptions? options)
+    public static Rect Draw(Rect position, SerializedProperty property, GUIContent label, GUIHelper.ListOptions? options)
     {
-        Draw(position, property, label, options, DefaultDropHandler);
+        return Draw(position, property, label, options, DefaultDropHandler);
     }
 
-    public static void Draw(
+    public static Rect Draw(
         Rect position,
         SerializedProperty property,
         GUIContent label,
@@ -181,10 +181,10 @@ internal static class MaterialSlotReferenceCollectionUI
         if (!property.isArray)
         {
             EditorGUI.PropertyField(position, property, label);
-            return;
+            return position.NewLine();
         }
 
-        GUIHelper.DragAndDropList(position, property, label, prop =>
+        return GUIHelper.DragAndDropList(position, property, label, prop =>
         {
             prop.CopyFrom(new MaterialSlotReference());
         }, dropHandler, options ?? new GUIHelper.ListOptions());

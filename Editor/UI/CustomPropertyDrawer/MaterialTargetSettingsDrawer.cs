@@ -243,8 +243,7 @@ internal class SingleMaterialTargetSettingsDrawer : PropertyDrawer
 
         position.NewLine();
         position.SetSingleHeight();
-        position.height = MaterialSlotReferenceCollectionUI.GetHeight(excludedSlots, GUIContent.none, excludedSlotsListOptions, null);
-        MaterialSlotReferenceCollectionUI.Draw(position, excludedSlots, "targetSettings.exclusions.slots".LG(), excludedSlotsListOptions, null);
+        position = MaterialSlotReferenceCollectionUI.Draw(position, excludedSlots, "targetSettings.exclusions.slots".LG(), excludedSlotsListOptions, null);
     }
 
     private static MaterialSlotReference[] GetUsageSlots(SerializedProperty materialProperty, SerializedProperty excludedSlotsProperty)
@@ -299,9 +298,7 @@ internal class BulkMaterialTargetSettingsDrawer : PropertyDrawer
                 rect => MaterialSlotReferenceCollectionUI.DrawAddSlotsSelector(rect, excludedSlots, () => GetUsageSlots(materials, excludedSlots), "targetSettings.exclusions.selectUsageSlots".LS()),
                 () => GUIHelper.propertyHeight));
 
-        position.height = MaterialCollectionUI.GetHeight(materials, GUIContent.none, materialsListOptions, MaterialCollectionUI.MaterialOrRendererDropHandler);
-        MaterialCollectionUI.Draw(position, materials, "targetSettings.materials.label".LG(), materialsListOptions, MaterialCollectionUI.MaterialOrRendererDropHandler);
-        position.NewLine();
+        position = MaterialCollectionUI.Draw(position, materials, "targetSettings.materials.label".LG(), materialsListOptions, MaterialCollectionUI.MaterialOrRendererDropHandler);
         position.SetSingleHeight();
         var isExpanded = GUIHelper.Foldout(position, property, "targetSettings.exclusions.options".LG(), new(RectStrict: true));
 
@@ -317,8 +314,7 @@ internal class BulkMaterialTargetSettingsDrawer : PropertyDrawer
 
         position.NewLine();
         position.SetSingleHeight();
-        position.height = MaterialSlotReferenceCollectionUI.GetHeight(excludedSlots, GUIContent.none, excludedSlotsListOptions, null);
-        MaterialSlotReferenceCollectionUI.Draw(position, excludedSlots, "targetSettings.exclusions.slots".LG(), excludedSlotsListOptions, null);
+        position = MaterialSlotReferenceCollectionUI.Draw(position, excludedSlots, "targetSettings.exclusions.slots".LG(), excludedSlotsListOptions, null);
     }
 
     private static MaterialSlotReference[] GetUsageSlots(SerializedProperty materialsProperty, SerializedProperty excludedSlotsProperty)
@@ -386,14 +382,9 @@ internal class AllMaterialSettingsDrawer : PropertyDrawer
             maxVisibleListHeight: maxVisibleListHeight);
 
         position.NewLine();
-        position.height = MaterialCollectionUI.GetHeight(excludedMaterials, GUIContent.none, listOptions);
-        MaterialCollectionUI.Draw(position, excludedMaterials, "targetSettings.exclusions.materials".LG(), listOptions);
-        position.NewLine();
-        position.height = MaterialSlotReferenceCollectionUI.GetHeight(excludedSlots, GUIContent.none, listOptions);
-        MaterialSlotReferenceCollectionUI.Draw(position, excludedSlots, "targetSettings.exclusions.slots".LG(), listOptions);
-        position.NewLine();
-        position.height = AvatarObjectReferenceCollectionUI.GetHeight(excludedObjects, GUIContent.none, listOptions);
-        AvatarObjectReferenceCollectionUI.Draw(position, excludedObjects, "targetSettings.exclusions.objects".LG(), listOptions);
+        position = MaterialCollectionUI.Draw(position, excludedMaterials, "targetSettings.exclusions.materials".LG(), listOptions);
+        position = MaterialSlotReferenceCollectionUI.Draw(position, excludedSlots, "targetSettings.exclusions.slots".LG(), listOptions);
+        position = AvatarObjectReferenceCollectionUI.Draw(position, excludedObjects, "targetSettings.exclusions.objects".LG(), listOptions);
     }
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
@@ -423,8 +414,7 @@ internal class SlotTargetSettingsDrawer : PropertyDrawer
     {
         var slots = property.FindPropertyRelative(nameof(SlotTargetSettings.TargetSlots));
         var listOptions = CreateListOptions(slots);
-        position.height = MaterialSlotReferenceCollectionUI.GetHeight(slots, GUIContent.none, listOptions);
-        MaterialSlotReferenceCollectionUI.Draw(position, slots, "targetSettings.slotTargets.label".LG(), listOptions);
+        position = MaterialSlotReferenceCollectionUI.Draw(position, slots, "targetSettings.slotTargets.label".LG(), listOptions);
     }
 
     private static GUIHelper.ListOptions CreateListOptions(SerializedProperty slotsProperty)

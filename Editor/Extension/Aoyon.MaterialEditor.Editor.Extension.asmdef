@@ -1,0 +1,29 @@
+{
+    "name": "Aoyon.MaterialEditor.Editor.Extension",
+    "rootNamespace": "",
+    "references": [
+        "Aoyon.MaterialEditor.Runtime",
+        "Aoyon.MaterialEditor.Editor",
+        "nadena.dev.ndmf",
+        "nadena.dev.modular-avatar.core",
+        "jp.lilxyzw.lilycalinventory.runtime",
+        "lilToon.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "jp.lilxyzw.lilycalinventory",
+            "expression": "",
+            "define": "ME_LI"
+        }
+    ],
+    "noEngineReferences": false
+}

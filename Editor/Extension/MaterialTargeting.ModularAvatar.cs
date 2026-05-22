@@ -2,17 +2,13 @@ using nadena.dev.modular_avatar.core;
 
 namespace Aoyon.MaterialEditor.Processor.Extension;
 
-internal class ModularAvatarMaterialTargeting : MaterialTargeting
+[InitializeOnLoad]
+internal static class ModularAvatarMaterialTargeting
 {
-    public ModularAvatarMaterialTargeting(GameObject root) : base(GetMaterialTargetings(root)) { } 
-
-    private static IMaterialTargeting[] GetMaterialTargetings(GameObject Root)
+    static ModularAvatarMaterialTargeting()
     {
-        return new IMaterialTargeting[]
-        {
-            new ModularAvatarMaterialSetterTargeting(Root),
-            new ModularAvatarMaterialSwapTargeting(Root)
-        };
+        ExternalMaterialTargeting.Register(root => new ModularAvatarMaterialSetterTargeting(root));
+        ExternalMaterialTargeting.Register(root => new ModularAvatarMaterialSwapTargeting(root));
     }
 }
 
