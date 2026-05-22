@@ -109,7 +109,7 @@ internal static class MenuItems
     static bool ValidateCreateRecordingMaterial(MenuCommand command)
     {
         var component = command.context as MaterialEditorComponent;
-        return component != null && MaterialEditorEditor.TryGetRecordingEditor(component, out _);
+        return component != null && MaterialEditorSession.TryGetRecordingSession(component, out _);
     }
 
     [MenuItem(CreateRecordingMaterialPath, false)]
@@ -117,7 +117,7 @@ internal static class MenuItems
     {
         var component = command.context as MaterialEditorComponent;
         if (component == null) throw new Exception($"{nameof(MaterialEditorComponent)} not found");
-        if (!MaterialEditorEditor.TryGetRecordingEditor(component, out var editor))
+        if (!MaterialEditorSession.TryGetRecordingSession(component, out var session))
         {
             throw new Exception("Recording material not found");
         }
@@ -129,7 +129,7 @@ internal static class MenuItems
             "Select a path for the generated material asset");
         if (string.IsNullOrEmpty(path)) return;
 
-        var material = new Material(editor.RecordingMaterial)
+        var material = new Material(session.RecordingMaterial)
         {
             name = Path.GetFileNameWithoutExtension(path),
         };

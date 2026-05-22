@@ -80,13 +80,13 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         }
 
         var component = property.serializedObject.targetObject as MaterialEditorComponent;
-        MaterialEditorEditor? editor = null;
+        MaterialEditorSession? session = null;
         if (component != null)
         {
-            MaterialEditorEditor.TryGetRecordingEditor(component, out editor);
+            MaterialEditorSession.TryGetRecordingSession(component, out session);
         }
-        var shaderLocked = editor != null && editor.IsShaderLocked;
-        var renderQueueLocked = editor != null && editor.IsRenderQueueLocked;
+        var shaderLocked = session != null && session.IsShaderLocked;
+        var renderQueueLocked = session != null && session.IsRenderQueueLocked;
 
         DrawOverrideField(
             ref position,

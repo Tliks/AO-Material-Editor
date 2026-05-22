@@ -141,7 +141,7 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
 
     private static bool MaterialPropertyDoLockActionPrefix()
     {
-        return !MaterialEditorEditor.IsRecording;
+        return !MaterialEditorSession.IsRecording;
     }
 
     private static void PatchGUILabel(Harmony harmony)
@@ -196,11 +196,7 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
         UnityEngine.Object[] __3,
         float __4)
     {
-        if (__1 != null)
-        {
-            BeginPropertyGUI(__0, __4, __1);
-        }
-        else
+        if (__1 == null)
         {
             BeginSerializedPropertyGUI(__0, __4, ToSerializedPropertyKind(__2), __3);
         }
@@ -254,7 +250,7 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
         foreach (var target in __instance.targets)
         {
             if (target is not Material material) continue;
-            if (!MaterialEditorEditor.TryGetRecordingEditor(material, out _)) continue;
+            if (!MaterialEditorSession.TryGetRecordingSession(material, out _)) continue;
 
             MaterialUtility.Normalize(material);
         }
@@ -303,17 +299,11 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
             recordingMaterial,
             prop.name,
             null,
-            editor.HasOverrideProperty(prop.name)));
+            editor.IsPropertyOverriden(prop.name)));
     }
 
     private static void BeginLeafPropertyGUI(Rect position, UnityEditor.MaterialProperty prop)
     {
-        if (_guiStateStack.Count > 0 && _guiStateStack.Peek().IsActive)
-        {
-            PushInactivePropertyGUIState(position, -1f);
-            return;
-        }
-
         BeginPropertyGUI(position, -1f, prop);
     }
 
@@ -347,7 +337,7 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
             recordingMaterial,
             null,
             serializedProperty,
-            editor.HasOverrideSerializedProperty(serializedProperty.Value)));
+            editor.IsSerializedPropertyOverriden(serializedProperty.Value)));
     }
 
     private static void PushInactivePropertyGUIState(Rect position, float startY)
@@ -397,10 +387,10 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
 
     private static bool TryGetRecordingContext(
         UnityEditor.MaterialProperty prop,
-        out MaterialEditorEditor editor,
+        out MaterialEditorSession session,
         out Material recordingMaterial)
     {
-        editor = null!;
+        session = null!;
         recordingMaterial = null!;
 
         var targets = prop.targets;
@@ -408,22 +398,30 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
             return false;
 
         recordingMaterial = material;
-        return MaterialEditorEditor.TryGetRecordingEditor(recordingMaterial, out editor);
+        if (!MaterialEditorSession.TryGetRecordingSession(recordingMaterial, out var foundSession))
+            return false;
+
+        session = foundSession;
+        return true;
     }
 
     private static bool TryGetRecordingContext(
         UnityEngine.Object[] targets,
-        out MaterialEditorEditor editor,
+        out MaterialEditorSession session,
         out Material recordingMaterial)
     {
-        editor = null!;
+        session = null!;
         recordingMaterial = null!;
 
         if (targets == null || targets.Length != 1 || targets[0] is not Material material)
             return false;
 
         recordingMaterial = material;
-        return MaterialEditorEditor.TryGetRecordingEditor(recordingMaterial, out editor);
+        if (!MaterialEditorSession.TryGetRecordingSession(recordingMaterial, out var foundSession))
+            return false;
+
+        session = foundSession;
+        return true;
     }
 
     private static RecordingMaterialSerializedProperty? ToSerializedPropertyKind(object property)
@@ -503,17 +501,16 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
         string? propertyName,
         RecordingMaterialSerializedProperty? serializedProperty)
     {
-        if (MaterialEditorEditor.TryGetRecordingEditor(recordingMaterial, out var editor))
+        if (MaterialEditorSession.TryGetRecordingSession(recordingMaterial, out var session))
         {
             if (propertyName != null)
             {
-                editor.RevertRecordingProperty(propertyName);
+                session.RevertRecordingProperty(propertyName);
             }
             else if (serializedProperty != null)
             {
-                editor.RevertRecordingSerializedProperty(serializedProperty.Value);
+                session.RevertRecordingSerializedProperty(serializedProperty.Value);
             }
-            EditorApplication.delayCall += editor.Repaint;
         }
     }
 
@@ -531,7 +528,7 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
         if (tex != _lockInChildrenIcon && tex != _lockedByAncestorIcon)
             return true;
 
-        if (!MaterialEditorEditor.IsRecording)
+        if (!MaterialEditorSession.IsRecording)
             return true;
 
         return false;
@@ -540,7 +537,7 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
     private static void PoiyomiRectifiedLayoutGetRectPostfix(ref Rect __result)
     {
 #if UNITY_2022_1_OR_NEWER
-        if (!MaterialEditorEditor.IsRecording)
+        if (!MaterialEditorSession.IsRecording)
             return;
 
         __result.x += 30;
