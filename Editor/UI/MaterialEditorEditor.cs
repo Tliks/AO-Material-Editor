@@ -523,17 +523,9 @@ internal sealed class MaterialEditorSession : IDisposable
         OnRecordingSourceMaterialChanged();
     }
 
-    public bool IsShaderLocked => _afterOverrides.OverrideShader;
-    public bool IsRenderQueueLocked => _afterOverrides.OverrideRenderQueue;
-
     public bool IsPropertyOverriden(string propertyName)
     {
         return _target.OverrideSettings.PropertyOverrides.Any(property => property.PropertyName == propertyName);
-    }
-
-    public bool IsPropertyLocked(string propertyName)
-    {
-        return _afterOverrides.PropertyOverrides.Any(property => property.PropertyName == propertyName);
     }
 
     public bool IsSerializedPropertyOverriden(RecordingMaterialSerializedProperty property)
@@ -544,18 +536,6 @@ internal sealed class MaterialEditorSession : IDisposable
             RecordingMaterialSerializedProperty.LightmapFlags => _target.OverrideSettings.OverrideLightmapFlags,
             RecordingMaterialSerializedProperty.EnableInstancingVariants => _target.OverrideSettings.OverrideEnableInstancing,
             RecordingMaterialSerializedProperty.DoubleSidedGI => _target.OverrideSettings.OverrideDoubleSidedGI,
-            _ => false,
-        };
-    }
-
-    public bool IsSerializedPropertyLocked(RecordingMaterialSerializedProperty property)
-    {
-        return property switch
-        {
-            RecordingMaterialSerializedProperty.CustomRenderQueue => _afterOverrides.OverrideRenderQueue,
-            RecordingMaterialSerializedProperty.LightmapFlags => _afterOverrides.OverrideLightmapFlags,
-            RecordingMaterialSerializedProperty.EnableInstancingVariants => _afterOverrides.OverrideEnableInstancing,
-            RecordingMaterialSerializedProperty.DoubleSidedGI => _afterOverrides.OverrideDoubleSidedGI,
             _ => false,
         };
     }
@@ -666,8 +646,6 @@ internal sealed class MaterialEditorSession : IDisposable
     {
         if (_target == null || RecordingMaterial == null) return;
 
-        if (!SanitizeRecordingMaterialAgainstAfter()) return; // サニタイズに失敗した状態でコンポーネントに書き込むべきではない
-
         var maintainEqualOverrides = _target.TargetSettings.Mode != MaterialTargetSettings.SelectionMode.SingleMaterial;
         var nextOverrides = BuildOverrideSettingsFromRecordingMaterial(maintainEqualOverrides);
         if (nextOverrides == null) return;
@@ -683,32 +661,40 @@ internal sealed class MaterialEditorSession : IDisposable
 
     private void UpdateOtherComponentOverrides()
     {
+        var hadBeforeOverrides = _beforeOverrides.OverrideCount > 0;
+        var hasBeforeComponent = false;
+
         _beforeOverrides = MaterialOverrideSettings.Empty;
         _afterOverrides = MaterialOverrideSettings.Empty;
 
-        if (_avatarRoot == null || RecordingSourceMaterial == null) return;
-
-        for (int i = 0; i < _allComponents.Length; i++)
+        if (_avatarRoot != null && RecordingSourceMaterial != null)
         {
-            if (i == _myIndex) continue;
-            var component = _allComponents[i];
-            if (!MaterialEditorProcessor.IsEffective(component)) continue;
-
-            var targetAssignments = MaterialEditorProcessor.SelectTargetAssignments(_allAssignments, component);
-            if (targetAssignments.Any(a => a.Material == RecordingSourceMaterial))
+            for (int i = 0; i < _allComponents.Length; i++)
             {
-                if (i < _myIndex)
+                if (i == _myIndex) continue;
+                var component = _allComponents[i];
+                if (!MaterialEditorProcessor.IsEffective(component)) continue;
+
+                var targetAssignments = MaterialEditorProcessor.SelectTargetAssignments(_allAssignments, component);
+                if (targetAssignments.Any(a => a.Material == RecordingSourceMaterial))
                 {
-                    _beforeOverrides.Merge(component.OverrideSettings);
-                }
-                else
-                {
-                    _afterOverrides.Merge(component.OverrideSettings);
+                    if (i < _myIndex)
+                    {
+                        hasBeforeComponent = true;
+                        _beforeOverrides.Merge(component.OverrideSettings);
+                    }
+                    else
+                    {
+                        _afterOverrides.Merge(component.OverrideSettings);
+                    }
                 }
             }
         }
 
-        InvalidateDiffBaseMaterial();
+        if (hadBeforeOverrides || hasBeforeComponent)
+        {
+            InvalidateDiffBaseMaterial();
+        }
     }
 
     private void NotifyOtherSessionsChanged()
@@ -734,8 +720,6 @@ internal sealed class MaterialEditorSession : IDisposable
         MaterialUtility.ApplyOverrideSettings(RecordingMaterial, _beforeOverrides);
         // 2. 自分自身のオーバーライドを反映
         MaterialUtility.ApplyOverrideSettings(RecordingMaterial, _target.OverrideSettings);
-        // 3. 自分より下のオーバーライドを反映 (上書き)
-        MaterialUtility.ApplyOverrideSettings(RecordingMaterial, _afterOverrides);
     }
 
     private MaterialOverrideSettings? BuildOverrideSettingsFromRecordingMaterial(bool maintainEquals)
@@ -796,7 +780,6 @@ internal sealed class MaterialEditorSession : IDisposable
 
         _diffBaseMaterial = new Material(_unlockedRecordingSourceMaterial);
         MaterialUtility.ApplyOverrideSettings(_diffBaseMaterial, _beforeOverrides);
-        MaterialUtility.ApplyOverrideSettings(_diffBaseMaterial, _afterOverrides);
         _diffBaseMaterialDirty = false;
         return _diffBaseMaterial;
     }
@@ -1006,8 +989,6 @@ internal sealed class MaterialEditorSession : IDisposable
                 mutateRecordingMaterial(baseMaterial);
                 MaterialUtility.Normalize(RecordingMaterial);
 
-                if (!SanitizeRecordingMaterialAgainstAfter()) return;
-
                 var maintainEqualOverrides = _target.TargetSettings.Mode != MaterialTargetSettings.SelectionMode.SingleMaterial;
                 var nextOverrides = BuildOverrideSettingsFromRecordingMaterial(maintainEqualOverrides);
                 if (nextOverrides == null) return;
@@ -1025,7 +1006,6 @@ internal sealed class MaterialEditorSession : IDisposable
 
     public void ApplyExtractedOverrides(MaterialOverrideSettings extractedOverrides)
     {
-        if (!SanitizeExtractedOverridesAgainstAfter(extractedOverrides)) return;
         if (extractedOverrides.OverrideCount == 0) return;
 
         _serializedObject.ApplyModifiedProperties();
@@ -1060,140 +1040,6 @@ internal sealed class MaterialEditorSession : IDisposable
                 MaterialEditor.Repaint();
             }
         };
-    }
-
-    private AfterOverrideConflicts GetAfterOverrideConflicts(MaterialOverrideSettings candidateOverrides)
-    {
-        using var _ = DictionaryPool<string, string>.Get(out var afterOverridesPropertyValues);
-        foreach (var property in _afterOverrides.PropertyOverrides) afterOverridesPropertyValues[property.PropertyName] = property.PropertyValue;
-
-        var lockedPropertyNames = candidateOverrides.PropertyOverrides
-            .Where(property => afterOverridesPropertyValues.ContainsKey(property.PropertyName))
-            .Select(property => property.PropertyName)
-            .ToHashSet();
-
-        return new AfterOverrideConflicts(
-            _afterOverrides.OverrideShader && candidateOverrides.OverrideShader,
-            _afterOverrides.OverrideRenderQueue && candidateOverrides.OverrideRenderQueue,
-            lockedPropertyNames,
-            afterOverridesPropertyValues.ToDictionary(pair => pair.Key, pair => pair.Value));
-    }
-
-    private readonly record struct AfterOverrideConflicts(
-        bool ShaderLocked,
-        bool RenderQueueLocked,
-        HashSet<string> LockedPropertyNames,
-        Dictionary<string, string> LockedPropertyValues);
-
-
-    private bool SanitizeRecordingMaterialAgainstAfter()
-    {
-        if (_unlockedRecordingSourceMaterial == null) return true;
-
-        if (!_afterOverrides.OverrideShader && !_afterOverrides.OverrideRenderQueue && _afterOverrides.PropertyOverrides.Count == 0) return true;
-
-        var authoritative = new Material(_unlockedRecordingSourceMaterial);
-        try
-        {
-            var sanitized = false;
-
-            _serializedObject.ApplyModifiedProperties();
-
-            MaterialUtility.ApplyOverrideSettings(authoritative, _beforeOverrides);
-            MaterialUtility.ApplyOverrideSettings(authoritative, _target.OverrideSettings);
-            MaterialUtility.ApplyOverrideSettings(authoritative, _afterOverrides);
-
-            var currentDiff = MaterialUtility.GetOverrides(authoritative, RecordingMaterial, false, true);
-            var conflicts = GetAfterOverrideConflicts(currentDiff);
-
-            // 固定されたシェーダーが変更された場合は、プロパティの空間が大規模に変わるので、同時に発生した変更を全て巻き戻す。
-            if (conflicts.ShaderLocked)
-            {
-                MaterialUtility.CopyAllSettings(authoritative, RecordingMaterial);
-                LocalizedLog.Warning("lock.shader.log", authoritative.shader.name);
-                sanitized = true;
-            }
-            else
-            {
-                if (conflicts.RenderQueueLocked)
-                {
-                    using var authoritativeSo = new SerializedObject(authoritative);
-                    using var recordingSo = new SerializedObject(RecordingMaterial);
-                    var renderQueue = MaterialUtility.GetCustomRenderQueue(authoritativeSo);
-                    MaterialUtility.SetCustomRenderQueue(recordingSo, renderQueue);
-                    recordingSo.ApplyModifiedPropertiesWithoutUndo();
-                    LocalizedLog.Warning("lock.renderQueue.log", renderQueue);
-                    sanitized = true;
-                }
-
-                if (conflicts.LockedPropertyNames.Count > 0)
-                {
-                    using var _ = DictionaryPool<string, MaterialProperty>.Get(out var authoritativeProperties);
-                    foreach (var property in MaterialUtility.GetProperties(authoritative)) authoritativeProperties[property.PropertyName] = property;
-
-                    foreach (var propertyName in conflicts.LockedPropertyNames)
-                    {
-                        if (!authoritativeProperties.TryGetValue(propertyName, out var authoritativeProperty)) continue;
-
-                        authoritativeProperty.TrySet(RecordingMaterial);
-                        LocalizedLog.Warning("lock.property.log", propertyName, authoritativeProperty.PropertyValue);
-                        sanitized = true;
-                    }
-                }
-            }
-
-            if (sanitized && MaterialEditor != null)
-            {
-                MaterialEditor.Repaint();
-            }
-
-            return true;
-        }
-        catch (Exception e)
-        {
-            Debug.LogError(e);
-            return false;
-        }
-        finally
-        {
-            Object.DestroyImmediate(authoritative);
-        }
-    }
-
-
-    private bool SanitizeExtractedOverridesAgainstAfter(MaterialOverrideSettings extractedOverrides)
-    {
-        var conflicts = GetAfterOverrideConflicts(extractedOverrides);
-
-        if (conflicts.ShaderLocked)
-        {
-            if (_afterOverrides.TargetShader != null)
-            {
-                LocalizedLog.Warning("lock.shader.log", _afterOverrides.TargetShader.name);
-            }
-            return false;
-        }
-
-        if (conflicts.RenderQueueLocked)
-        {
-            extractedOverrides.OverrideRenderQueue = false;
-            LocalizedLog.Warning("lock.renderQueue.log", _afterOverrides.RenderQueueValue);
-        }
-
-        if (conflicts.LockedPropertyNames.Count > 0)
-        {
-            extractedOverrides.PropertyOverrides = extractedOverrides.PropertyOverrides
-                .Where(property =>
-                {
-                    if (!conflicts.LockedPropertyValues.TryGetValue(property.PropertyName, out var lockedValue)) return true;
-
-                    LocalizedLog.Warning("lock.property.log", property.PropertyName, lockedValue);
-                    return false;
-                })
-                .ToList();
-        }
-
-        return true;
     }
 
     private static void DebugLog(string message)

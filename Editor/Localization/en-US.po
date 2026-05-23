@@ -221,25 +221,6 @@ msgstr "Select a mesh"
 msgid "migration.required"
 msgstr "Migrate Data"
 
-# lock
-msgid "lock.shader.log"
-msgstr "[AO Material Editor] This component cannot change the shader because a component lower in the Hierarchy has set it to {0}."
-
-msgid "lock.shader.tooltip"
-msgstr "This component cannot change the shader because a component lower in the Hierarchy has set the shader."
-
-msgid "lock.renderQueue.log"
-msgstr "[AO Material Editor] This component cannot change the render queue because a component lower in the Hierarchy has set it to {0}."
-
-msgid "lock.renderQueue.tooltip"
-msgstr "This component cannot change the render queue because a component lower in the Hierarchy has set the render queue."
-
-msgid "lock.property.log"
-msgstr "[AO Material Editor] This component cannot change property {0} because a component lower in the Hierarchy has set it to {1}."
-
-msgid "lock.property.tooltip"
-msgstr "This component cannot change this property because a component lower in the Hierarchy has set the property."
-
 # error
 msgid "error.targetShaderMissing"
 msgstr "[AO Material Editor] Target shader is not specified."

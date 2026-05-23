@@ -260,24 +260,17 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
         bool Enabled,
         Rect Position,
         float StartY,
-        string? Tooltip,
         Material? RecordingMaterial,
         string? PropertyName,
         RecordingMaterialSerializedProperty? SerializedProperty,
-        bool ShowRevertButton)
-    {
-        public bool IsActive => RecordingMaterial != null || SerializedProperty != null;
-    }
+        bool ShowRevertButton);
 
     private static readonly Stack<PropertyGUIState> _guiStateStack = new();
-    private static GUIContent? _tooltipOverlayContent;
-    private static GUIContent TooltipOverlayContent => _tooltipOverlayContent ??= new GUIContent("");
 
     // control idの衝突を防ぐ為、postfixでrevert buttonは描画する
     private static void BeginPropertyGUI(Rect position, float startY, UnityEditor.MaterialProperty prop)
     {
         var enabled = GUI.enabled;
-        string? tooltip = null;
 
         if (!TryGetRecordingContext(prop, out var editor, out var recordingMaterial))
         {
@@ -285,17 +278,10 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
             return;
         }
 
-        if (editor.IsPropertyLocked(prop.name))
-        {
-            GUI.enabled = false;
-            tooltip = "lock.property.tooltip".LS();
-        }
-
         _guiStateStack.Push(new PropertyGUIState(
             enabled,
             position,
             startY,
-            tooltip,
             recordingMaterial,
             prop.name,
             null,
@@ -314,7 +300,6 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
         UnityEngine.Object[] targets)
     {
         var enabled = GUI.enabled;
-        string? tooltip = null;
 
         if (serializedProperty == null ||
             !TryGetRecordingContext(targets, out var editor, out var recordingMaterial))
@@ -323,17 +308,10 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
             return;
         }
 
-        if (editor.IsSerializedPropertyLocked(serializedProperty.Value))
-        {
-            GUI.enabled = false;
-            tooltip = "lock.property.tooltip".LS();
-        }
-
         _guiStateStack.Push(new PropertyGUIState(
             enabled,
             position,
             startY,
-            tooltip,
             recordingMaterial,
             null,
             serializedProperty,
@@ -342,7 +320,7 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
 
     private static void PushInactivePropertyGUIState(Rect position, float startY)
     {
-        _guiStateStack.Push(new PropertyGUIState(GUI.enabled, position, startY, null, null, null, null, false));
+        _guiStateStack.Push(new PropertyGUIState(GUI.enabled, position, startY, null, null, null, false));
     }
 
     private static void EndPropertyGUI()
@@ -359,11 +337,6 @@ internal static class MaterialEditorPatcher // Todo: リファクタ
             DrawRevertButton(position, state.RecordingMaterial, state.PropertyName, state.SerializedProperty);
         }
 
-        if (!string.IsNullOrEmpty(state.Tooltip) && hasPosition)
-        {
-            TooltipOverlayContent.tooltip = state.Tooltip;
-            GUI.Label(position, TooltipOverlayContent, GUIStyle.none);
-        }
     }
 
     private static bool TryGetButtonSourceRect(Rect rect, float startY, out Rect result)

@@ -7,8 +7,6 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
     private const string AdvancedSettingsLabelKey = "overrideSettings.advancedSettings";
 
     private static string _helpKey = DefaultHelpKey;
-    private static GUIContent? _tooltipOverlayContent;
-    private static GUIContent TooltipOverlayContent => _tooltipOverlayContent ??= new GUIContent("");
     private static readonly HashSet<string> _advancedSettingsExpandedKeys = new();
     private static readonly GUIHelper.FoldoutOptions RectStrictFoldoutOptions = new(RectStrict: true);
     private static readonly GUIHelper.ListOptions OverrideListOptions = new(foldout: RectStrictFoldoutOptions, nest: true);
@@ -79,30 +77,17 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
             position = GUIHelper.HelpBox(position, _helpKey.LS(), MessageType.Info);
         }
 
-        var component = property.serializedObject.targetObject as MaterialEditorComponent;
-        MaterialEditorSession? session = null;
-        if (component != null)
-        {
-            MaterialEditorSession.TryGetRecordingSession(component, out session);
-        }
-        var shaderLocked = session != null && session.IsShaderLocked;
-        var renderQueueLocked = session != null && session.IsRenderQueueLocked;
-
         DrawOverrideField(
             ref position,
             overrideShader,
             "common.shader".LG(),
-            rect => EditorGUI.PropertyField(rect, targetShader, GUIContent.none),
-            disabled: shaderLocked,
-            disabledTooltip: "lock.shader.tooltip".LS());
+            rect => EditorGUI.PropertyField(rect, targetShader, GUIContent.none));
 
         DrawOverrideField(
             ref position,
             overrideRenderQueue,
             "common.renderQueue".LG(),
-            rect => DrawRenderQueueGUI(rect, renderQueueValue),
-            disabled: renderQueueLocked,
-            disabledTooltip: "lock.renderQueue.tooltip".LS());
+            rect => DrawRenderQueueGUI(rect, renderQueueValue));
 
         position = DrawOverrideList(position, propertyOverrides, "overrideSettings.properties".LG(), prop => prop.CopyFrom(new MaterialProperty()));
 
@@ -149,18 +134,6 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         if (newIndex != index) renderQueueValue.intValue = newIndex == 0 ? -1 : 2000;
     }
 
-    private static void DrawTooltipOverlay(Rect startPosition, Rect endPosition, string tooltip)
-    {
-        var rect = new Rect(
-            startPosition.xMin,
-            startPosition.yMin,
-            startPosition.width,
-            Mathf.Max(0f, endPosition.yMin - startPosition.yMin));
-
-        TooltipOverlayContent.tooltip = tooltip;
-        GUI.Label(rect, TooltipOverlayContent, GUIStyle.none);
-    }
-
     private static bool DrawAdvancedSettingsFoldout(Rect position, SerializedProperty property, int overrideCount)
     {
         GUIHelper.SplitRectHorizontallyForRight(position, EditorGUIUtility.fieldWidth, out var foldoutRect, out var countRect);
@@ -181,25 +154,17 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         ref Rect position,
         SerializedProperty enabledProperty,
         GUIContent label,
-        Action<Rect> drawValue,
-        bool disabled = false,
-        string? disabledTooltip = null)
+        Action<Rect> drawValue)
     {
         var (isExpanded, isEnabled) = GUIHelper.FoldoutAndToggleLeft(position, enabledProperty, label, rectStrict: RectStrictFoldoutOptions.RectStrict);
         position.NewLine();
         if (!isExpanded) return;
 
         position.Indent();
-        var scopeStartPosition = position;
-        using (new EditorGUI.DisabledGroupScope(disabled || !isEnabled))
+        using (new EditorGUI.DisabledGroupScope(!isEnabled))
         {
             drawValue(position);
             position.NewLine();
-        }
-
-        if (disabled && disabledTooltip is { Length: > 0 } tooltip)
-        {
-            DrawTooltipOverlay(scopeStartPosition, position, tooltip);
         }
 
         position.Back();

@@ -221,25 +221,6 @@ msgstr "メッシュを選択してください"
 msgid "migration.required"
 msgstr "データを移行する"
 
-# lock
-msgid "lock.shader.log"
-msgstr "[AO Material Editor] Hierarchy 上でより下にあるコンポーネントにより、シェーダーが{0}に設定されているため、このコンポーネントではシェーダーを変更できません。"
-
-msgid "lock.shader.tooltip"
-msgstr "Hierarchy 上でより下にあるコンポーネントにより、シェーダーが設定されているため、このコンポーネントではシェーダーを変更できません。"
-
-msgid "lock.renderQueue.log"
-msgstr "[AO Material Editor] Hierarchy 上でより下にあるコンポーネントにより、レンダーキューが{0}に設定されているため、このコンポーネントではレンダーキューを変更できません。"
-
-msgid "lock.renderQueue.tooltip"
-msgstr "Hierarchy 上でより下にあるコンポーネントにより、レンダーキューが設定されているため、このコンポーネントではレンダーキューを変更できません。"
-
-msgid "lock.property.log"
-msgstr "[AO Material Editor] Hierarchy 上でより下にあるコンポーネントにより、プロパティ{0}が{1}に設定されているため、このコンポーネントではこのプロパティを変更できません。"
-
-msgid "lock.property.tooltip"
-msgstr "Hierarchy 上でより下にあるコンポーネントにより、このプロパティは設定されているため、このコンポーネントでは変更できません。"
-
 # error
 msgid "error.targetShaderMissing"
 msgstr "[AO Material Editor] 変更先のシェーダーが指定されていません。"
