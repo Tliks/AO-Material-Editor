@@ -139,7 +139,7 @@ internal struct MaterialProperty : IEquatable<MaterialProperty>
         return true;
     }
 
-    public static bool TryGetDefualtValue(Shader shader, int propertyIndex,  out MaterialProperty materialProperty, bool forceTextureNull = false)
+    public static bool TryGetDefualtValue(Shader shader, int propertyIndex, Func<string, Texture?> getDefaultTexture, out MaterialProperty materialProperty)
     {
         materialProperty = default;
 
@@ -157,18 +157,7 @@ internal struct MaterialProperty : IEquatable<MaterialProperty>
         switch (propertyType)
         {
             case ShaderPropertyType.Texture:
-                Texture? texture = null;
-                if (!forceTextureNull)
-                {
-#if UNITY_EDITOR
-                    var importer = UnityEditor.AssetImporter.GetAtPath(UnityEditor.AssetDatabase.GetAssetPath(shader)) as UnityEditor.ShaderImporter;
-                    if (importer != null)
-                        texture = importer.GetDefaultTexture(propertyName);
-                    // if (texture == null)
-                    //     texture = UnityEditor.EditorMaterialUtility.GetShaderDefaultTexture(shader, propertyName);
-#endif
-                }
-                materialProperty.TextureValue = texture;
+                materialProperty.TextureValue = getDefaultTexture(propertyName);
                 materialProperty.TextureOffsetValue = new(0, 0);
                 materialProperty.TextureScaleValue = new(1,1);
                 break;
@@ -212,7 +201,8 @@ internal struct MaterialProperty : IEquatable<MaterialProperty>
 
     public readonly bool EqualsImpl(MaterialProperty other, bool strict)
     {
-        if (PropertyType != other.PropertyType) return false;
+        if (PropertyType != other.PropertyType
+            && (!IsFloatLike(PropertyType) || !IsFloatLike(other.PropertyType))) return false;
         if (PropertyName != other.PropertyName) return false;
 
         switch (PropertyType)
@@ -235,6 +225,11 @@ internal struct MaterialProperty : IEquatable<MaterialProperty>
             default:
                 return false;
         }
+    }
+
+    private static bool IsFloatLike(ShaderPropertyType type)
+    {
+        return type is ShaderPropertyType.Float or ShaderPropertyType.Range;
     }
 
     public readonly bool Equals(MaterialProperty other)
@@ -269,5 +264,76 @@ internal struct MaterialProperty : IEquatable<MaterialProperty>
                     return HashCode.Combine(PropertyName, PropertyType, FloatValue);
                 }
         }
+    }
+}
+
+[Serializable]
+internal struct MaterialKeywordStateOverride : IEquatable<MaterialKeywordStateOverride>
+{
+    public string Keyword;
+    public bool Enabled;
+
+    public MaterialKeywordStateOverride()
+    {
+        Keyword = string.Empty;
+        Enabled = true;
+    }
+
+    public readonly bool Equals(MaterialKeywordStateOverride other)
+    {
+        return Keyword == other.Keyword && Enabled == other.Enabled;
+    }
+
+    public override readonly int GetHashCode()
+    {
+        return HashCode.Combine(Keyword, Enabled);
+    }
+}
+
+[Serializable]
+internal struct MaterialStringTagOverride : IEquatable<MaterialStringTagOverride>
+{
+    public string TagName;
+    public string Value;
+    public bool Remove;
+
+    public MaterialStringTagOverride()
+    {
+        TagName = string.Empty;
+        Value = string.Empty;
+        Remove = false;
+    }
+
+    public readonly bool Equals(MaterialStringTagOverride other)
+    {
+        return TagName == other.TagName && Value == other.Value && Remove == other.Remove;
+    }
+
+    public override readonly int GetHashCode()
+    {
+        return HashCode.Combine(TagName, Value, Remove);
+    }
+}
+
+[Serializable]
+internal struct MaterialShaderPassStateOverride : IEquatable<MaterialShaderPassStateOverride>
+{
+    public string PassName;
+    public bool Enabled;
+
+    public MaterialShaderPassStateOverride()
+    {
+        PassName = string.Empty;
+        Enabled = true;
+    }
+
+    public readonly bool Equals(MaterialShaderPassStateOverride other)
+    {
+        return PassName == other.PassName && Enabled == other.Enabled;
+    }
+
+    public override readonly int GetHashCode()
+    {
+        return HashCode.Combine(PassName, Enabled);
     }
 }

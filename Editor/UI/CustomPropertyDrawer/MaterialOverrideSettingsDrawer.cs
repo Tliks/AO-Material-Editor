@@ -4,10 +4,12 @@ namespace Aoyon.MaterialEditor.UI;
 internal class MaterialOverrideSettingsDrawer : PropertyDrawer
 {
     private const string DefaultHelpKey = "overrideSettings.help.visibleEditor";
+    private const string AdvancedSettingsLabelKey = "overrideSettings.advancedSettings";
 
     private static string _helpKey = DefaultHelpKey;
-    private static GUIContent? _tooltipOverlayContent;
-    private static GUIContent TooltipOverlayContent => _tooltipOverlayContent ??= new GUIContent("");
+    private static readonly HashSet<string> _advancedSettingsExpandedKeys = new();
+    private static readonly GUIHelper.FoldoutOptions RectStrictFoldoutOptions = new(RectStrict: true);
+    private static readonly GUIHelper.ListOptions OverrideListOptions = new(foldout: RectStrictFoldoutOptions, nest: true);
 
     public static IDisposable HelpKeyScope(string helpKey)
     {
@@ -22,19 +24,37 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         var targetShader = property.FindPropertyRelative(nameof(MaterialOverrideSettings.TargetShader));
         var overrideRenderQueue = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideRenderQueue));
         var renderQueueValue = property.FindPropertyRelative(nameof(MaterialOverrideSettings.RenderQueueValue));
+        var overrideLightmapFlags = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideLightmapFlags));
+        var lightmapFlagsValue = property.FindPropertyRelative(nameof(MaterialOverrideSettings.LightmapFlagsValue));
+        var overrideEnableInstancing = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideEnableInstancing));
+        var enableInstancingValue = property.FindPropertyRelative(nameof(MaterialOverrideSettings.EnableInstancingValue));
+        var overrideDoubleSidedGI = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideDoubleSidedGI));
+        var doubleSidedGIValue = property.FindPropertyRelative(nameof(MaterialOverrideSettings.DoubleSidedGIValue));
         var propertyOverrides = property.FindPropertyRelative(nameof(MaterialOverrideSettings.PropertyOverrides));
+        var keywordStateOverrides = property.FindPropertyRelative(nameof(MaterialOverrideSettings.KeywordStateOverrides));
+        var stringTagOverrides = property.FindPropertyRelative(nameof(MaterialOverrideSettings.StringTagOverrides));
+        var shaderPassStateOverrides = property.FindPropertyRelative(nameof(MaterialOverrideSettings.ShaderPassStateOverrides));
 
         position.SetSingleHeight();
         GUIHelper.SplitRectHorizontallyForRight(position, GetResetButtonWidth(), out var foldoutRect, out var resetRect);
 
-        var overrideCount = 0;
-        if (overrideShader.boolValue && targetShader.objectReferenceValue != null) overrideCount++;
-        if (overrideRenderQueue.boolValue) overrideCount++;
-        overrideCount += propertyOverrides.arraySize;
+        var advancedOverrideCount = GetAdvancedOverrideCount(
+            overrideLightmapFlags,
+            overrideEnableInstancing,
+            overrideDoubleSidedGI,
+            keywordStateOverrides,
+            stringTagOverrides,
+            shaderPassStateOverrides);
+        var overrideCount = GetOverrideCount(
+            overrideShader,
+            targetShader,
+            overrideRenderQueue,
+            propertyOverrides,
+            advancedOverrideCount);
 
         label = new GUIContent(string.Format("overrideSettings.count".LS(), overrideCount));
 
-        var isExpanded = GUIHelper.Foldout(foldoutRect, property, label);
+        var isExpanded = GUIHelper.Foldout(foldoutRect, property, label, RectStrictFoldoutOptions);
         using (new EditorGUI.DisabledGroupScope(overrideCount == 0))
         {
             if (GUI.Button(resetRect, "overrideSettings.reset".LG()))
@@ -45,7 +65,7 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         if (!isExpanded) return;
 
         position.NewLine();
-        // position.Indent();
+        position.Indent();
 
         // var helpBoxRect = position;
         // helpBoxRect.height = GetInnerHeight(property);
@@ -57,52 +77,48 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
             position = GUIHelper.HelpBox(position, _helpKey.LS(), MessageType.Info);
         }
 
-        var component = property.serializedObject.targetObject as MaterialEditorComponent;
-        var shaderLocked = component != null
-            && MaterialEditoEditorContext.ComponentToShaderLocked.TryGetValue(component, out var isShaderLocked)
-            && isShaderLocked;
-        var renderQueueLocked = component != null
-            && MaterialEditoEditorContext.ComponentToRenderQueueLocked.TryGetValue(component, out var isRenderQueueLocked)
-            && isRenderQueueLocked;
+        DrawOverrideField(
+            ref position,
+            overrideShader,
+            "common.shader".LG(),
+            rect => EditorGUI.PropertyField(rect, targetShader, GUIContent.none));
 
-        var (isExpandedShader, isShaderEnabled) = GUIHelper.FoldoutAndToggleLeft(position, overrideShader, "common.shader".LG(), rectStrict: true);
+        DrawOverrideField(
+            ref position,
+            overrideRenderQueue,
+            "common.renderQueue".LG(),
+            rect => DrawRenderQueueGUI(rect, renderQueueValue));
+
+        position = DrawOverrideList(position, propertyOverrides, "overrideSettings.properties".LG(), prop => prop.CopyFrom(new MaterialProperty()));
+
+        var advancedExpanded = DrawAdvancedSettingsFoldout(position, property, advancedOverrideCount);
         position.NewLine();
-        if (isExpandedShader)
+        if (advancedExpanded)
         {
             position.Indent();
-            var shaderScopePosition = position;
-            using (new EditorGUI.DisabledGroupScope(shaderLocked || !isShaderEnabled))
-            {
-                EditorGUI.PropertyField(position, targetShader, GUIContent.none);
-                position.NewLine();
-            }
-            if (shaderLocked)
-            {
-                DrawTooltipOverlay(shaderScopePosition, position, "lock.shader.tooltip".LS());
-            }
+            DrawOverrideField(
+                ref position,
+                overrideLightmapFlags,
+                new GUIContent("Lightmap Flags"),
+                rect => EditorGUI.PropertyField(rect, lightmapFlagsValue, new GUIContent("Flags")));
+            DrawOverrideField(
+                ref position,
+                overrideEnableInstancing,
+                new GUIContent("GPU Instancing"),
+                rect => EditorGUI.PropertyField(rect, enableInstancingValue, new GUIContent("Enabled")));
+            DrawOverrideField(
+                ref position,
+                overrideDoubleSidedGI,
+                new GUIContent("Double Sided Global Illumination"),
+                rect => EditorGUI.PropertyField(rect, doubleSidedGIValue, new GUIContent("Enabled")));
+
+            position = DrawOverrideList(position, keywordStateOverrides, new GUIContent("Keywords"), prop => prop.CopyFrom(new MaterialKeywordStateOverride()));
+            position = DrawOverrideList(position, stringTagOverrides, new GUIContent("Override Tags"), prop => prop.CopyFrom(new MaterialStringTagOverride()));
+            position = DrawOverrideList(position, shaderPassStateOverrides, new GUIContent("Passes"), prop => prop.CopyFrom(new MaterialShaderPassStateOverride()));
             position.Back();
         }
 
-        var (isExpandedRenderQueue, isRenderQueueEnabled) = GUIHelper.FoldoutAndToggleLeft(position, overrideRenderQueue, "common.renderQueue".LG(), rectStrict: true);
-        position.NewLine();
-        if (isExpandedRenderQueue)
-        {
-            position.Indent();
-            var renderQueueScopePosition = position;
-            using (new EditorGUI.DisabledGroupScope(renderQueueLocked || !isRenderQueueEnabled))
-            {
-                DrawRenderQueueGUI(position, renderQueueValue);
-                position.NewLine();
-            }
-            if (renderQueueLocked)
-            {
-                DrawTooltipOverlay(renderQueueScopePosition, position, "lock.renderQueue.tooltip".LS());
-            }
-            position.Back();
-        }
-
-        var propertyOverridesListOptions = new GUIHelper.ListOptions(foldout: new(RectStrict: true), nest: true);
-        GUIHelper.List(position, propertyOverrides, "overrideSettings.properties".LG(), propertyOverridesListOptions, prop => prop.CopyFrom(new MaterialProperty()));
+        position.Back();
     }
 
     private static readonly GUIContent[] _renderQueuePresets = new GUIContent[] { new("From Shader"), new("Custom") };
@@ -118,16 +134,40 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
         if (newIndex != index) renderQueueValue.intValue = newIndex == 0 ? -1 : 2000;
     }
 
-    private static void DrawTooltipOverlay(Rect startPosition, Rect endPosition, string tooltip)
+    private static bool DrawAdvancedSettingsFoldout(Rect position, SerializedProperty property, int overrideCount)
     {
-        var rect = new Rect(
-            startPosition.xMin,
-            startPosition.yMin,
-            startPosition.width,
-            Mathf.Max(0f, endPosition.yMin - startPosition.yMin));
+        GUIHelper.SplitRectHorizontallyForRight(position, EditorGUIUtility.fieldWidth, out var foldoutRect, out var countRect);
+        var key = GetAdvancedSettingsExpandedKey(property);
+        var isExpanded = _advancedSettingsExpandedKeys.Contains(key);
+        var nextExpanded = GUIHelper.Foldout(foldoutRect, isExpanded, AdvancedSettingsLabelKey.LG(), RectStrictFoldoutOptions);
+        if (nextExpanded) _advancedSettingsExpandedKeys.Add(key);
+        else _advancedSettingsExpandedKeys.Remove(key);
 
-        TooltipOverlayContent.tooltip = tooltip;
-        GUI.Label(rect, TooltipOverlayContent, GUIStyle.none);
+        using (new EditorGUI.DisabledScope(true))
+        {
+            EditorGUI.IntField(countRect, overrideCount);
+        }
+        return nextExpanded;
+    }
+
+    private static void DrawOverrideField(
+        ref Rect position,
+        SerializedProperty enabledProperty,
+        GUIContent label,
+        Action<Rect> drawValue)
+    {
+        var (isExpanded, isEnabled) = GUIHelper.FoldoutAndToggleLeft(position, enabledProperty, label, rectStrict: RectStrictFoldoutOptions.RectStrict);
+        position.NewLine();
+        if (!isExpanded) return;
+
+        position.Indent();
+        using (new EditorGUI.DisabledGroupScope(!isEnabled))
+        {
+            drawValue(position);
+            position.NewLine();
+        }
+
+        position.Back();
     }
 
     private float GetInnerHeight(SerializedProperty property)
@@ -136,28 +176,104 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
 
         if (MaterialEditorSettings.ShowInspectorDescription)
         {
-            height += GUIHelper.GUI_SPACE;
             height += GUIHelper.GetHelpBoxHeight(_helpKey.LS(), MessageType.Info);
+            height += GUIHelper.GUI_SPACE;
         }
 
         var overrideShader = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideShader));
         var overrideRenderQueue = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideRenderQueue));
+        var overrideLightmapFlags = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideLightmapFlags));
+        var overrideEnableInstancing = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideEnableInstancing));
+        var overrideDoubleSidedGI = property.FindPropertyRelative(nameof(MaterialOverrideSettings.OverrideDoubleSidedGI));
         var propertyOverrides = property.FindPropertyRelative(nameof(MaterialOverrideSettings.PropertyOverrides));
-        var propertyOverridesListOptions = new GUIHelper.ListOptions(foldout: new(RectStrict: true));
-
+        var keywordStateOverrides = property.FindPropertyRelative(nameof(MaterialOverrideSettings.KeywordStateOverrides));
+        var stringTagOverrides = property.FindPropertyRelative(nameof(MaterialOverrideSettings.StringTagOverrides));
+        var shaderPassStateOverrides = property.FindPropertyRelative(nameof(MaterialOverrideSettings.ShaderPassStateOverrides));
+        height += GetOverrideFieldHeight(overrideShader);
+        height += GetOverrideFieldHeight(overrideRenderQueue);
+        height += GetOverrideListHeight(propertyOverrides);
         height += GUIHelper.propertyHeight + GUIHelper.GUI_SPACE;
-        if (overrideShader.isExpanded)
+        if (IsAdvancedSettingsExpanded(property))
         {
-            height += GUIHelper.propertyHeight + GUIHelper.GUI_SPACE;
+            height += GetOverrideFieldHeight(overrideLightmapFlags);
+            height += GetOverrideFieldHeight(overrideEnableInstancing);
+            height += GetOverrideFieldHeight(overrideDoubleSidedGI);
+            height += GetOverrideListHeight(keywordStateOverrides);
+            height += GetOverrideListHeight(stringTagOverrides);
+            height += GetOverrideListHeight(shaderPassStateOverrides);
         }
-        height += GUIHelper.propertyHeight + GUIHelper.GUI_SPACE;
-        if (overrideRenderQueue.isExpanded)
-        {
-            height += GUIHelper.propertyHeight + GUIHelper.GUI_SPACE;
-        }
-        height += GUIHelper.GetListHeight(propertyOverrides, propertyOverridesListOptions);
 
         return height;
+    }
+
+    private static Rect DrawOverrideList(
+        Rect position,
+        SerializedProperty property,
+        GUIContent label,
+        Action<SerializedProperty> initializeFunction)
+    {
+        return GUIHelper.List(position, property, label, OverrideListOptions, initializeFunction);
+    }
+
+    private static float GetOverrideListHeight(SerializedProperty property)
+    {
+        // GUIHelper.List always advances to the next line after the list header/body.
+        // GUIHelper.GetListHeight returns the drawn controls height, so include that consumed spacing here.
+        return GUIHelper.GetListHeight(property, OverrideListOptions) + GUIHelper.GUI_SPACE;
+    }
+
+    private static float GetOverrideFieldHeight(SerializedProperty enabledProperty)
+    {
+        var height = GUIHelper.propertyHeight + GUIHelper.GUI_SPACE;
+        if (enabledProperty.isExpanded)
+        {
+            height += GUIHelper.propertyHeight + GUIHelper.GUI_SPACE;
+        }
+
+        return height;
+    }
+
+    private static int GetOverrideCount(
+        SerializedProperty overrideShader,
+        SerializedProperty targetShader,
+        SerializedProperty overrideRenderQueue,
+        SerializedProperty propertyOverrides,
+        int advancedOverrideCount)
+    {
+        var overrideCount = 0;
+        if (overrideShader.boolValue && targetShader.objectReferenceValue != null) overrideCount++;
+        if (overrideRenderQueue.boolValue) overrideCount++;
+        overrideCount += propertyOverrides.arraySize;
+        overrideCount += advancedOverrideCount;
+        return overrideCount;
+    }
+
+    private static int GetAdvancedOverrideCount(
+        SerializedProperty overrideLightmapFlags,
+        SerializedProperty overrideEnableInstancing,
+        SerializedProperty overrideDoubleSidedGI,
+        SerializedProperty keywordStateOverrides,
+        SerializedProperty stringTagOverrides,
+        SerializedProperty shaderPassStateOverrides)
+    {
+        var count = 0;
+        if (overrideLightmapFlags.boolValue) count++;
+        if (overrideEnableInstancing.boolValue) count++;
+        if (overrideDoubleSidedGI.boolValue) count++;
+        count += keywordStateOverrides.arraySize;
+        count += stringTagOverrides.arraySize;
+        count += shaderPassStateOverrides.arraySize;
+        return count;
+    }
+
+    private static bool IsAdvancedSettingsExpanded(SerializedProperty property)
+    {
+        return _advancedSettingsExpandedKeys.Contains(GetAdvancedSettingsExpandedKey(property));
+    }
+
+    private static string GetAdvancedSettingsExpandedKey(SerializedProperty property)
+    {
+        return $"{property.serializedObject.targetObject.GetInstanceID()}:{property.propertyPath}";
     }
 
     private static float GetResetButtonWidth()
@@ -172,9 +288,8 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
 
         if (!property.isExpanded) return height;
 
+        height += GUIHelper.GUI_SPACE;
         height += GetInnerHeight(property);
-
-        height += GUIHelper.GUI_SPACE * 2; // 背景の為にスペース多め
         return height;
     }
 

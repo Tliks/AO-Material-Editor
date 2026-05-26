@@ -144,6 +144,9 @@ msgstr "編集対象のマテリアルが見つかりません。画面上から
 msgid "editor.recordingSourceMaterial"
 msgstr "表示用のマテリアル"
 
+msgid "editor.displaySettings"
+msgstr "編集画面の表示設定"
+
 # override settings
 msgid "overrideSettings.count"
 msgstr "保存された編集内容: {0} 箇所"
@@ -152,13 +155,16 @@ msgid "overrideSettings.help.visibleEditor"
 msgstr "保存された編集内容がここに表示されます。画面下の編集画面から編集すると自動反映されるため、通常はここを直接編集する必要はありません。"
 
 msgid "overrideSettings.help.hiddenEditor"
-msgstr "保存された編集内容がここに表示されます。画面上の編集画面を展開すると編集できます。"
+msgstr "保存された編集内容がここに表示されます。画面上の編集画面を展開してそこから編集すると自動反映されるため、通常はここを直接編集する必要はありません。"
 
 msgid "overrideSettings.help.noMaterial"
 msgstr "保存された編集内容がここに表示されます。編集対象のマテリアルが見つからないため、通常の編集画面は表示されません。"
 
 msgid "overrideSettings.properties"
 msgstr "プロパティ"
+
+msgid "overrideSettings.advancedSettings"
+msgstr "高度な設定"
 
 msgid "overrideSettings.reset"
 msgstr "リセット"
@@ -214,25 +220,6 @@ msgstr "メッシュを選択してください"
 # migration
 msgid "migration.required"
 msgstr "データを移行する"
-
-# lock
-msgid "lock.shader.log"
-msgstr "[AO Material Editor] Hierarchy 上でより下にあるコンポーネントにより、シェーダーが{0}に設定されているため、このコンポーネントではシェーダーを変更できません。"
-
-msgid "lock.shader.tooltip"
-msgstr "Hierarchy 上でより下にあるコンポーネントにより、シェーダーが設定されているため、このコンポーネントではシェーダーを変更できません。"
-
-msgid "lock.renderQueue.log"
-msgstr "[AO Material Editor] Hierarchy 上でより下にあるコンポーネントにより、レンダーキューが{0}に設定されているため、このコンポーネントではレンダーキューを変更できません。"
-
-msgid "lock.renderQueue.tooltip"
-msgstr "Hierarchy 上でより下にあるコンポーネントにより、レンダーキューが設定されているため、このコンポーネントではレンダーキューを変更できません。"
-
-msgid "lock.property.log"
-msgstr "[AO Material Editor] Hierarchy 上でより下にあるコンポーネントにより、プロパティ{0}が{1}に設定されているため、このコンポーネントではこのプロパティを変更できません。"
-
-msgid "lock.property.tooltip"
-msgstr "Hierarchy 上でより下にあるコンポーネントにより、このプロパティは設定されているため、このコンポーネントでは変更できません。"
 
 # error
 msgid "error.targetShaderMissing"

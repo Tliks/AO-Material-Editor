@@ -114,6 +114,7 @@ internal static partial class GUIHelper
 
         DrawFooter(foldoutRect, reorderableList);
         position.NewLine();
+        if (shouldNest) position.Back();
         position.SetSingleHeight();
         return position;
     }

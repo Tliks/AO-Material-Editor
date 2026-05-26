@@ -4,8 +4,20 @@ using EditorMaterialProperty = UnityEditor.MaterialProperty;
 
 namespace Aoyon.MaterialEditor.Extension;
 
-internal static class PoiyomiMaterialUtility
+[InitializeOnLoad]
+internal sealed class PoiyomiMaterialUtility : IShaderMaterialUtility
 {
+    static PoiyomiMaterialUtility()
+    {
+        ShaderMaterialUtility.Register(new PoiyomiMaterialUtility());
+    }
+
+    public bool Supports(Shader shader) => IsPoiyomiShader(shader);
+
+    public void Normalize(Material material) => FixKeywords(material);
+
+    public bool Unlock(Material material, Material? sourceMaterial = null) => UnlockPoiyomiMaterial(material, sourceMaterial);
+
     private const BindingFlags StaticBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
     private const string OriginalShaderTag = "OriginalShader";
     private const string OriginalShaderGuidTag = "OriginalShaderGUID";
@@ -14,13 +26,11 @@ internal static class PoiyomiMaterialUtility
     private const string AnimatedTagSuffix = "Animated";
     private const string StrippedTextureTagPrefix = "_stripped_tex_";
 
-    public static bool IsPoiyomiMaterial(Material material)
+    private static bool IsPoiyomiShader(Shader shader)
     {
-        var shaderName = material.shader.name;
-        var originalShaderName = material.GetTag(OriginalShaderTag, false, "");
+        var shaderName = shader.name;
         return shaderName.Contains("poiyomi", StringComparison.OrdinalIgnoreCase)
-               || shaderName.Contains("PCSS4Poi", StringComparison.Ordinal)
-               || originalShaderName.Contains("poiyomi", StringComparison.OrdinalIgnoreCase);
+               || shaderName.Contains("PCSS4Poi", StringComparison.Ordinal);
     }
 
     // https://github.com/poiyomi/PoiyomiToonShader/blame/c5aaeeb3a67782b7e8a26e184d5e0a1970792294/_PoiyomiShaders/Scripts/ThryEditor/Editor/ShaderOptimizer.cs#L2306
@@ -40,7 +50,24 @@ internal static class PoiyomiMaterialUtility
     private static readonly FieldInfo? IllegalPropertyRenamesField =
         ShaderOptimizerType?.GetField("IllegalPropertyRenames", StaticBindingFlags);
 
-    public static bool Unlock(Material material, Material? sourceMaterial = null)
+    private static readonly Type? ShaderEditorType =
+        Type.GetType("Thry.ShaderEditor, ThryAssemblyDefinition", false);
+
+    private static readonly MethodInfo? FixKeywordsMethod =
+        ShaderEditorType?.GetMethod("FixKeywords", StaticBindingFlags, null, new[] { typeof(IEnumerable<Material>) }, null);
+
+    private static void FixKeywords(Material material)
+    {
+        if (FixKeywordsMethod == null)
+        {
+            DebugLogWarning($"Failed to normalize Poiyomi material '{material.name}' ({material.shader.name}). FixKeywords helper was not found.");
+            return;
+        }
+
+        FixKeywordsMethod.Invoke(null, new object[] { new[] { material } });
+    }
+
+    private static bool UnlockPoiyomiMaterial(Material material, Material? sourceMaterial = null)
     {
         if (sourceMaterial != null)
         {

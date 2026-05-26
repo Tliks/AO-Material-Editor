@@ -57,7 +57,7 @@ internal static partial class MaterialEditorProcessor
                 else
                 {
                     // source(observed)はread only
-                    MaterialOverrideSettings.MergeInto(observed, existingSettings);
+                    existingSettings.Merge(observed);
                 }
             }
         }
