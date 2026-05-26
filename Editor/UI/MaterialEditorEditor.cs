@@ -413,6 +413,7 @@ internal sealed class MaterialEditorSession : IDisposable
 
     private MaterialOverrideSettings _beforeOverrides = MaterialOverrideSettings.Empty;
     private MaterialOverrideSettings _afterOverrides = MaterialOverrideSettings.Empty;
+    private HashSet<string> _overriddenPropertyNames = new();
 
     public HashSet<Material> TargetMaterials { get; private set; }
     public Material? RecordingSourceMaterial { get; private set; }
@@ -420,6 +421,9 @@ internal sealed class MaterialEditorSession : IDisposable
 
     private Material? _diffBaseMaterial;
     private bool _diffBaseMaterialDirty = true;
+    private Material? _shaderDiffBaseMaterial;
+    private Shader? _shaderDiffBaseTargetShader;
+    private bool _shaderDiffBaseMaterialDirty = true;
 
     public Material RecordingMaterial { get; }
     public UnityEditor.MaterialEditor MaterialEditor { get; }
@@ -452,7 +456,7 @@ internal sealed class MaterialEditorSession : IDisposable
         _myIndex = Array.IndexOf(_allComponents, _target);
 
         TargetMaterials = UpdateTargetMaterials();
-        RecordingSourceMaterial = AutoSelectRecordingSourceMaterial();
+        AutoSelectRecordingSourceMaterial(out var RecordingSourceMaterial);
         if (RecordingSourceMaterial != null) {
             _unlockedRecordingSourceMaterial = CreateUnlockedRecordingSourceMaterial(RecordingSourceMaterial);
             RecordingMaterial = new Material(_unlockedRecordingSourceMaterial) { name = RecordingMaterialName };
@@ -482,6 +486,7 @@ internal sealed class MaterialEditorSession : IDisposable
         _overrideSettingsChangeWatcher.Start();
         _recordingMaterialChangeWatcher.Start();
 
+        UpdateOverrideStateCache();
         ComponentToSession[_target] = this;
         RecordingMaterialToSession[RecordingMaterial] = this;
     }
@@ -513,6 +518,7 @@ internal sealed class MaterialEditorSession : IDisposable
 
         if (_unlockedRecordingSourceMaterial != null) { Object.DestroyImmediate(_unlockedRecordingSourceMaterial); }
         if (_diffBaseMaterial != null) { Object.DestroyImmediate(_diffBaseMaterial); }
+        if (_shaderDiffBaseMaterial != null) { Object.DestroyImmediate(_shaderDiffBaseMaterial); }
         if (RecordingMaterial != null) { Object.DestroyImmediate(RecordingMaterial); }
         if (MaterialEditor != null) { Object.DestroyImmediate(MaterialEditor); }
     }
@@ -525,7 +531,7 @@ internal sealed class MaterialEditorSession : IDisposable
 
     public bool IsPropertyOverriden(string propertyName)
     {
-        return _target.OverrideSettings.PropertyOverrides.Any(property => property.PropertyName == propertyName);
+        return _overriddenPropertyNames.Contains(propertyName);
     }
 
     public bool IsSerializedPropertyOverriden(RecordingMaterialSerializedProperty property)
@@ -548,11 +554,10 @@ internal sealed class MaterialEditorSession : IDisposable
         return TargetMaterials;
     }
 
-    private Material? AutoSelectRecordingSourceMaterial()
+    private bool AutoSelectRecordingSourceMaterial(out Material? newTarget)
     {
-        Material? newTarget;
-
         var current = RecordingSourceMaterial;
+
         if (current != null && TargetMaterials.Contains(current)) {
             newTarget = current;
         }
@@ -561,7 +566,8 @@ internal sealed class MaterialEditorSession : IDisposable
         }
 
         RecordingSourceMaterial = newTarget;
-        return RecordingSourceMaterial;
+
+        return newTarget != current;
     }
 
     private Material CreateUnlockedRecordingSourceMaterial(Material source)
@@ -573,13 +579,16 @@ internal sealed class MaterialEditorSession : IDisposable
 
     private void OnEntrySettingsChanged()
     {
+        using var _ = new Utils.ProfilerScope("OnEntrySettingsChanged");
         UpdateTargetMaterials();
-        AutoSelectRecordingSourceMaterial();
-        OnRecordingSourceMaterialChanged();
+        if (AutoSelectRecordingSourceMaterial(out var _2)) {
+            OnRecordingSourceMaterialChanged();
+        };
     }
 
     private void OnRecordingSourceMaterialChanged()
     {
+        using var _ = new Utils.ProfilerScope("OnRecordingSourceMaterialChanged");
         RefreshUnlockedRecordingSourceMaterial();
         UpdateOtherComponentOverrides();
         using (_recordingMaterialChangeWatcher.ChangeWithoutNotify())
@@ -592,6 +601,8 @@ internal sealed class MaterialEditorSession : IDisposable
 
     private void OnOverrideSettingsChanged()
     {
+        using var _ = new Utils.ProfilerScope("OnOverrideSettingsChanged");
+        UpdateOverrideStateCache();
         using (_recordingMaterialChangeWatcher.ChangeWithoutNotify())
         {
             SyncRecordingMaterialFromComponent();
@@ -602,6 +613,7 @@ internal sealed class MaterialEditorSession : IDisposable
 
     private void OnRecordingMaterialChanged()
     {
+        using var _ = new Utils.ProfilerScope("OnRecordingMaterialChanged");
         using (_recordingMaterialChangeWatcher.ChangeWithoutNotify())
         using (_overrideSettingsChangeWatcher.ChangeWithoutNotify())
         {
@@ -616,6 +628,7 @@ internal sealed class MaterialEditorSession : IDisposable
     // Todo
     private void OnOtherComponentChanged()
     {
+        using var _ = new Utils.ProfilerScope("OnOtherComponentChanged");
         UpdateOtherComponentOverrides();
         using (_recordingMaterialChangeWatcher.ChangeWithoutNotify())
         {
@@ -655,12 +668,15 @@ internal sealed class MaterialEditorSession : IDisposable
 
     private void CommitOverrideSettings(MaterialOverrideSettings value)
     {
+        using var _ = new Utils.ProfilerScope("CommitOverrideSettings");
         _overrideSettings.CopyFrom(value);
         _serializedObject.ApplyModifiedProperties();
+        UpdateOverrideStateCache();
     }
 
     private void UpdateOtherComponentOverrides()
     {
+        using var _ = new Utils.ProfilerScope("UpdateOtherComponentOverrides");
         var hadBeforeOverrides = _beforeOverrides.OverrideCount > 0;
         var hasBeforeComponent = false;
 
@@ -697,8 +713,17 @@ internal sealed class MaterialEditorSession : IDisposable
         }
     }
 
+    private void UpdateOverrideStateCache()
+    {
+        using var _ = new Utils.ProfilerScope("UpdateOverrideStateCache");
+        _overriddenPropertyNames = _target.OverrideSettings.PropertyOverrides
+            .Select(property => property.PropertyName)
+            .ToHashSet();
+    }
+
     private void NotifyOtherSessionsChanged()
     {
+        using var _ = new Utils.ProfilerScope("NotifyOtherSessionsChanged");
         foreach (var session in RecordingMaterialToSession.Values.ToArray())
         {
             if (session == this) continue;
@@ -708,6 +733,7 @@ internal sealed class MaterialEditorSession : IDisposable
 
     private void SyncRecordingMaterialFromComponent()
     {
+        using var _ = new Utils.ProfilerScope("SyncRecordingMaterialFromComponent");
         DebugLog("SyncRecordingMaterialFromComponent, frame: " + Time.frameCount);
 
         if (_unlockedRecordingSourceMaterial == null) return;
@@ -716,14 +742,15 @@ internal sealed class MaterialEditorSession : IDisposable
 
         // sourceの状態に初期化
         MaterialUtility.CopyAllSettings(_unlockedRecordingSourceMaterial, RecordingMaterial);
-        // 1. 自分より上のオーバーライドを反映
-        MaterialUtility.ApplyOverrideSettings(RecordingMaterial, _beforeOverrides);
-        // 2. 自分自身のオーバーライドを反映
-        MaterialUtility.ApplyOverrideSettings(RecordingMaterial, _target.OverrideSettings);
+
+        var merged = _beforeOverrides.Clone();
+        merged.Merge(_target.OverrideSettings);
+        MaterialUtility.ApplyOverrideSettings(RecordingMaterial, merged);
     }
 
     private MaterialOverrideSettings? BuildOverrideSettingsFromRecordingMaterial(bool maintainEquals)
     {
+        using var _ = new Utils.ProfilerScope("BuildOverrideSettingsFromRecordingMaterial");
         DebugLog("BuildOverrideSettingsFromRecordingMaterial, frame: " + Time.frameCount);
 
         var baseMaterial = GetDiffBaseMaterial();
@@ -731,13 +758,14 @@ internal sealed class MaterialEditorSession : IDisposable
 
         try
         {
-            var current = MaterialUtility.GetOverrides(baseMaterial, RecordingMaterial, false, true);
-            if (current.OverrideShader && current.TargetShader != null)
+            var comparisonBaseMaterial = GetComparisonBaseMaterial(baseMaterial, RecordingMaterial.shader);
+            if (comparisonBaseMaterial == null) return null;
+
+            var current = MaterialUtility.GetOverrides(comparisonBaseMaterial, RecordingMaterial, false, true);
+            if (baseMaterial.shader != RecordingMaterial.shader)
             {
-                current.PropertyOverrides = RemoveNewShaderDefaultPropertyOverrides(
-                    current.PropertyOverrides,
-                    current.TargetShader,
-                    baseMaterial.shader);
+                current.OverrideShader = true;
+                current.TargetShader = RecordingMaterial.shader;
             }
 
             MaterialOverrideSettings result;
@@ -749,7 +777,7 @@ internal sealed class MaterialEditorSession : IDisposable
                 _serializedObject.ApplyModifiedProperties();
                 var previous = _target.OverrideSettings;
                 var cloned = previous.Clone();
-                MaintainEqualOverrides(previous, current, cloned, baseMaterial);
+                MaintainEqualOverrides(previous, current, cloned, comparisonBaseMaterial);
                 // 新しい差分をマージ(上書き, 追加)する
                 cloned.Merge(current);
                 result = cloned;
@@ -770,6 +798,7 @@ internal sealed class MaterialEditorSession : IDisposable
 
     private Material? GetDiffBaseMaterial()
     {
+        using var _ = new Utils.ProfilerScope("GetDiffBaseMaterial");
         if (_unlockedRecordingSourceMaterial == null) return null;
         if (!_diffBaseMaterialDirty && _diffBaseMaterial != null) return _diffBaseMaterial;
 
@@ -784,30 +813,39 @@ internal sealed class MaterialEditorSession : IDisposable
         return _diffBaseMaterial;
     }
 
+    private Material? GetComparisonBaseMaterial(Material baseMaterial, Shader targetShader)
+    {
+        using var _ = new Utils.ProfilerScope("GetComparisonBaseMaterial");
+        if (baseMaterial.shader == targetShader) return baseMaterial;
+
+        if (!_shaderDiffBaseMaterialDirty
+            && _shaderDiffBaseMaterial != null
+            && _shaderDiffBaseTargetShader == targetShader)
+        {
+            return _shaderDiffBaseMaterial;
+        }
+
+        if (_shaderDiffBaseMaterial != null)
+        {
+            Object.DestroyImmediate(_shaderDiffBaseMaterial);
+        }
+
+        _shaderDiffBaseMaterial = new Material(baseMaterial);
+        MaterialUtility.ApplyShader(_shaderDiffBaseMaterial, targetShader);
+        _shaderDiffBaseTargetShader = targetShader;
+        _shaderDiffBaseMaterialDirty = false;
+        return _shaderDiffBaseMaterial;
+    }
+
     private void InvalidateDiffBaseMaterial()
     {
         _diffBaseMaterialDirty = true;
-    }
-
-    // shader変更と同時に、新しいshaerにのみ存在するプロパティはデフォルト値が書き込まれるのを仕様とする
-    // よってEditor上における差分の自動抽出時には、新しいshaerにのみ存在しデフォルト値のものを除外する
-    // これはシェーダー変更時に、新しいshaerにのみ存在するプロパティが、大量のoverrideになる問題への対処仕様
-    private List<MaterialProperty> RemoveNewShaderDefaultPropertyOverrides(List<MaterialProperty> target, Shader targetShader, Shader originalShader)
-    {
-        var originalNames = MaterialUtility.EnumeratePropertyNames(originalShader).ToHashSet();
-        var targetDefaults = MaterialUtility.GetShaderDefaultProperties(targetShader).ToDictionary(p => p.PropertyName);
-        return target
-            .Where(p =>
-            {
-                if (originalNames.Contains(p.PropertyName)) return true;
-                if (!targetDefaults.TryGetValue(p.PropertyName, out var defaultValue)) return true;
-                return !p.EqualsImpl(defaultValue, strict: false);
-            })
-            .ToList();
+        _shaderDiffBaseMaterialDirty = true;
     }
 
     private void MaintainEqualOverrides(MaterialOverrideSettings previous, MaterialOverrideSettings current, MaterialOverrideSettings target, Material baseMaterial)
     {
+        using var _ = new Utils.ProfilerScope("MaintainEqualOverrides");
         using var baseSo = new SerializedObject(baseMaterial);
 
         if (previous.OverrideShader && !current.OverrideShader)
@@ -900,6 +938,7 @@ internal sealed class MaterialEditorSession : IDisposable
 
     public void RevertRecordingProperty(string propertyName)
     {
+        using var _ = new Utils.ProfilerScope("RevertRecordingProperty");
         ApplyManualRecordingMaterialChange(
             baseMaterial =>
             {
@@ -927,6 +966,7 @@ internal sealed class MaterialEditorSession : IDisposable
 
     public void RevertRecordingSerializedProperty(RecordingMaterialSerializedProperty property)
     {
+        using var _ = new Utils.ProfilerScope("RevertRecordingSerializedProperty");
         ApplyManualRecordingMaterialChange(
             baseMaterial =>
             {
@@ -975,6 +1015,7 @@ internal sealed class MaterialEditorSession : IDisposable
         Action<Material> mutateRecordingMaterial,
         Action<MaterialOverrideSettings> applyExplicitOverrideEdit)
     {
+        using var _ = new Utils.ProfilerScope("ApplyManualRecordingMaterialChange");
         if (_unlockedRecordingSourceMaterial == null) return;
 
         using (_overrideSettingsChangeWatcher.ChangeWithoutNotify())
@@ -1006,6 +1047,7 @@ internal sealed class MaterialEditorSession : IDisposable
 
     public void ApplyExtractedOverrides(MaterialOverrideSettings extractedOverrides)
     {
+        using var _ = new Utils.ProfilerScope("ApplyExtractedOverrides");
         if (extractedOverrides.OverrideCount == 0) return;
 
         _serializedObject.ApplyModifiedProperties();
@@ -1023,6 +1065,7 @@ internal sealed class MaterialEditorSession : IDisposable
 
     private void OnManualOverrideSettingsCommitted()
     {
+        using var _ = new Utils.ProfilerScope("OnManualOverrideSettingsCommitted");
         NotifyOtherSessionsChanged();
         SyncRecordingMaterialFromComponent();
         ScheduleMaterialEditorRepaint();

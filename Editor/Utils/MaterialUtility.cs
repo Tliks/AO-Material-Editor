@@ -73,6 +73,25 @@ internal static class MaterialUtility
         }
     }
 
+    private static bool HasCompatibleProperty(Shader shader, string propertyName, ShaderPropertyType propertyType)
+    {
+        var index = shader.FindPropertyIndex(propertyName);
+        if (index < 0) return false;
+
+        return IsCompatiblePropertyType(shader.GetPropertyType(index), propertyType);
+    }
+
+    private static bool IsCompatiblePropertyType(ShaderPropertyType a, ShaderPropertyType b)
+    {
+        if (a == b) return true;
+        return IsFloatLike(a) && IsFloatLike(b);
+    }
+
+    private static bool IsFloatLike(ShaderPropertyType type)
+    {
+        return type is ShaderPropertyType.Float or ShaderPropertyType.Range;
+    }
+
     public static IEnumerable<MaterialProperty> GetShaderDefaultProperties(Shader shader)
     {
         var propertyCount = shader.GetPropertyCount();
@@ -407,17 +426,23 @@ internal static class MaterialUtility
 
     private static void ApplyShader(Material editableMaterial, SerializedObject so, Shader targetShader)
     {
-        var savedRenderQueue = GetCustomRenderQueue(so);
+        var sourceShader = editableMaterial.shader;
+        if (sourceShader == targetShader) return;
 
-        editableMaterial.shader = targetShader;
+        var savedRenderQueue = GetCustomRenderQueue(so);
+        var defaultProperties = GetShaderDefaultProperties(targetShader)
+            .Where(property => !HasCompatibleProperty(sourceShader, property.PropertyName, property.PropertyType))
+            .ToList();
+
+        so.FindProperty(ShaderProperty).objectReferenceValue = targetShader;
+        SetCustomRenderQueue(so, savedRenderQueue);
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        ApplyProperties(editableMaterial, defaultProperties);
         so.Update();
 
-        // Material.shaderを変更するとCustomRenderQueueが-1(from shader)にリセットされる仕様がある
-        // ここではRenderQuqueの変更は意図しないため、シェーダー変更前のRenderQueueを保持しておき、変更後に元に戻す
+        // Shader overrideではRenderQueueの変更を意図しないため、シェーダー変更前の値を保持する。
         SetCustomRenderQueue(so, savedRenderQueue);
-
-        // 新規シェーダーにのみ存在するプロパティはここでデフォルト値が書き込まれる
-        // シェーダー変更と同時に発生するこの差分は仕様とする
     }
 
     public static void ApplyProperties(Material editableMaterial, List<MaterialProperty> properties)

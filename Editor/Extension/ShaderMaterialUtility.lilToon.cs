@@ -16,7 +16,18 @@ internal sealed class LilToonMaterialUtility : IShaderMaterialUtility
 
     public bool Unlock(Material material, Material? sourceMaterial = null) => false;
 
-    private static bool IsLilToonShader(Shader shader) => IsLilToonShaderName(shader.name);
+    private static readonly Dictionary<Shader, bool> _islilToonCache = new();
+    private static bool IsLilToonShader(Shader shader)
+    {
+        if (_islilToonCache.TryGetValue(shader, out bool isLilToon)) return isLilToon;
+        return _islilToonCache[shader] = IsLilToonShaderImpl(shader);
+    }
+    private static bool IsLilToonShaderImpl(Shader shader)
+    {
+        if (shader.name.Contains("lilToon") || shader.name.Contains("lts_pass")) return true;
+        var shaderPath = AssetDatabase.GetAssetPath(shader);
+        return !string.IsNullOrEmpty(shaderPath) && shaderPath.Contains(".lilcontainer");
+    }
 
     private static void UpdateKeywords(Material material)
     {
@@ -25,7 +36,6 @@ internal sealed class LilToonMaterialUtility : IShaderMaterialUtility
             var shaderName = material.shader != null ? material.shader.name : string.Empty;
             var isMulti = lilShaderUtils.IsMultiShaderName(shaderName);
 
-            material.SetFloat("_lilToonVersion", lilConstants.currentVersionValue);
             if (isMulti)
             {
                 lilMaterialUtils.SetupMultiMaterial(material);
@@ -37,13 +47,8 @@ internal sealed class LilToonMaterialUtility : IShaderMaterialUtility
         }
         catch (Exception e)
         {
-            Debug.LogWarning($"Failed to update lilToon material version and keywords: {e}");
+            Debug.LogWarning($"Failed to update lilToon material keywords: {e}");
         }
     }
 
-    private static bool IsLilToonShaderName(string shaderName)
-    {
-        return shaderName.Contains("lilToon", StringComparison.OrdinalIgnoreCase)
-            || shaderName.Contains("_lil/", StringComparison.Ordinal);
-    }
 }

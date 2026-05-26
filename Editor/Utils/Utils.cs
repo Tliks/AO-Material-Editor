@@ -92,4 +92,19 @@ internal static class Utils
 
         return GetAllTargetMaterialsInAvatar(gameObject);
     }
+
+    public class ProfilerScope : IDisposable
+    {
+        private const string ProfilerCategory = Constants.QualifiedName;
+        
+        public ProfilerScope(string name)
+        {
+            Profiler.BeginSample($"{ProfilerCategory}:{name}");
+        }
+
+        public void Dispose()
+        {
+            Profiler.EndSample();
+        }
+    }
 }

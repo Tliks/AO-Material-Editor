@@ -113,8 +113,8 @@ internal class MaterialOverrideSettingsDrawer : PropertyDrawer
                 rect => EditorGUI.PropertyField(rect, doubleSidedGIValue, new GUIContent("Enabled")));
 
             position = DrawOverrideList(position, keywordStateOverrides, new GUIContent("Keywords"), prop => prop.CopyFrom(new MaterialKeywordStateOverride()));
-            position = DrawOverrideList(position, stringTagOverrides, new GUIContent("String Tags"), prop => prop.CopyFrom(new MaterialStringTagOverride()));
-            position = DrawOverrideList(position, shaderPassStateOverrides, new GUIContent("Shader Passes"), prop => prop.CopyFrom(new MaterialShaderPassStateOverride()));
+            position = DrawOverrideList(position, stringTagOverrides, new GUIContent("Override Tags"), prop => prop.CopyFrom(new MaterialStringTagOverride()));
+            position = DrawOverrideList(position, shaderPassStateOverrides, new GUIContent("Passes"), prop => prop.CopyFrom(new MaterialShaderPassStateOverride()));
             position.Back();
         }
 
