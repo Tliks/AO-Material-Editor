@@ -161,7 +161,7 @@ internal class MaterialShaderPassStateOverrideDrawer : PropertyDrawer
 
 internal static class MaterialStateOverrideDrawerGUI
 {
-    public const float ActionFieldWidth = 96f;
+    public const float ActionFieldWidth = 80f;
 
     public static readonly GUIContent[] KeywordActionOptions =
     {
@@ -177,7 +177,7 @@ internal static class MaterialStateOverrideDrawerGUI
 
     private static readonly GUIContent[] StringTagActionOptions =
     {
-        new("Add or Edit"),
+        new("Add・Edit"),
         new("Remove"),
     };
 
