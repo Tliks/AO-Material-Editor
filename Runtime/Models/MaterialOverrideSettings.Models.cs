@@ -186,12 +186,18 @@ internal struct MaterialProperty : IEquatable<MaterialProperty>
             return false;
         }
         var propertyIndex = mat.shader.FindPropertyIndex(propertyName);
-        if (propertyIndex == -1 || mat.shader.GetPropertyType(propertyIndex) != propertyType)
+        if (propertyIndex == -1 || !IsCompatiblePropertyType(mat.shader.GetPropertyType(propertyIndex), propertyType))
         {
             return false;
         }
 
         return true;
+    }
+
+    private static bool IsCompatiblePropertyType(ShaderPropertyType a, ShaderPropertyType b)
+    {
+        if (a == b) return true;
+        return IsFloatLike(a) && IsFloatLike(b);
     }
     
     private static bool ValidateIndex(Shader shader, int propertyIndex)

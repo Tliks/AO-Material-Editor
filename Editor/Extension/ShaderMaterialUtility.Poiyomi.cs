@@ -5,18 +5,43 @@ using EditorMaterialProperty = UnityEditor.MaterialProperty;
 namespace Aoyon.MaterialEditor.Extension;
 
 [InitializeOnLoad]
-internal sealed class PoiyomiMaterialUtility : IShaderMaterialUtility
+internal sealed class PoiyomiMaterialUtility : IShaderMaterialUtility, IShaderMaterialEditOperationHandler
 {
+    private const string ShaderFamilyName = "Poiyomi";
+    private const string ToggleKeywordOperation = "toggle-keyword";
+    private const string TextureKeywordOperation = "texture-keyword";
+    private const string PropertyArgument = "property";
+    private const string KeywordArgument = "keyword";
+    private const string EnabledArgument = "enabled";
+    private const string ToggleKeywordSuffix = "_ON";
+    private const string TextureKeywordPrefix = "PROP_";
+
     static PoiyomiMaterialUtility()
     {
-        ShaderMaterialUtility.Register(new PoiyomiMaterialUtility());
+        var utility = new PoiyomiMaterialUtility();
+        ShaderMaterialUtility.Register(utility);
+        ShaderMaterialEditOperationUtility.Register(utility);
     }
+
+    public string ShaderFamily => ShaderFamilyName;
 
     public bool Supports(Shader shader) => IsPoiyomiShader(shader);
 
     public void Normalize(Material material) => FixKeywords(material);
 
     public bool Unlock(Material material, Material? sourceMaterial = null) => UnlockPoiyomiMaterial(material, sourceMaterial);
+
+    public bool TryApply(Material material, MaterialShaderSpecificOperation operation)
+    {
+        if (operation.OperationVersion != 1) return false;
+
+        return operation.OperationId switch
+        {
+            ToggleKeywordOperation => TryApplyToggleKeyword(material, operation),
+            TextureKeywordOperation => TryApplyTextureKeyword(material, operation),
+            _ => false,
+        };
+    }
 
     private const BindingFlags StaticBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
     private const string OriginalShaderTag = "OriginalShader";
@@ -65,6 +90,52 @@ internal sealed class PoiyomiMaterialUtility : IShaderMaterialUtility
         }
 
         FixKeywordsMethod.Invoke(null, new object[] { new[] { material } });
+    }
+
+    private static bool TryApplyToggleKeyword(Material material, MaterialShaderSpecificOperation operation)
+    {
+        if (!operation.TryGetString(PropertyArgument, out var propertyName)) return false;
+        if (!operation.TryGetBool(EnabledArgument, out var enabled)) return false;
+        if (!material.HasProperty(propertyName)) return false;
+
+        var propertyIndex = material.shader.FindPropertyIndex(propertyName);
+        if (propertyIndex < 0) return false;
+
+        var propertyType = material.shader.GetPropertyType(propertyIndex);
+        if (propertyType == UnityEngine.Rendering.ShaderPropertyType.Int) material.SetInt(propertyName, enabled ? 1 : 0);
+        else if (propertyType is UnityEngine.Rendering.ShaderPropertyType.Float or UnityEngine.Rendering.ShaderPropertyType.Range) material.SetFloat(propertyName, enabled ? 1f : 0f);
+        else return false;
+
+        if (!operation.TryGetString(KeywordArgument, out var keyword) || string.IsNullOrEmpty(keyword))
+        {
+            keyword = propertyName.ToUpperInvariant() + ToggleKeywordSuffix;
+        }
+
+        SetKeyword(material, keyword, enabled);
+        return true;
+    }
+
+    private static bool TryApplyTextureKeyword(Material material, MaterialShaderSpecificOperation operation)
+    {
+        if (!operation.TryGetString(PropertyArgument, out var propertyName)) return false;
+
+        var propertyIndex = material.shader.FindPropertyIndex(propertyName);
+        if (propertyIndex < 0) return false;
+        if (material.shader.GetPropertyType(propertyIndex) != UnityEngine.Rendering.ShaderPropertyType.Texture) return false;
+
+        if (!operation.TryGetString(KeywordArgument, out var keyword) || string.IsNullOrEmpty(keyword))
+        {
+            keyword = TextureKeywordPrefix + propertyName.TrimStart('_').ToUpperInvariant();
+        }
+
+        SetKeyword(material, keyword, material.GetTexture(propertyName) != null);
+        return true;
+    }
+
+    private static void SetKeyword(Material material, string keyword, bool enabled)
+    {
+        if (enabled) material.EnableKeyword(keyword);
+        else material.DisableKeyword(keyword);
     }
 
     private static bool UnlockPoiyomiMaterial(Material material, Material? sourceMaterial = null)
