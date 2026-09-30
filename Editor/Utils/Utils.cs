@@ -17,16 +17,19 @@ internal static class Utils
         return ObjectRegistry.GetReference(a).Equals(ObjectRegistry.GetReference(b));
     }
 
-    public static Material CloneAndRegister(Material material)
+    public static T CloneAndRegister<T>(T original) where T : Object
     {
-        return CloneAndRegister(material, "_AO_MaterialEditor");
+        return CloneAndRegister(original, "_AO_MaterialEditor");
     }
 
-    public static Material CloneAndRegister(Material material, string suffix)
+    public static T CloneAndRegister<T>(T original, string suffix) where T : Object
     {
-        var newMaterial = new Material(material) { name = $"{material.name}{suffix}" };
-        ObjectRegistry.RegisterReplacedObject(material, newMaterial);
-        return newMaterial;
+        var clone = original is Material material
+            ? (T)(Object)new Material(material)
+            : Object.Instantiate(original);
+        clone.name = $"{original.name}{suffix}";
+        ObjectRegistry.RegisterReplacedObject(original, clone);
+        return clone;
     }
 
     public static IEnumerable<Material> GetAllTargetMaterials(GameObject gameObject)

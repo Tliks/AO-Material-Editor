@@ -37,6 +37,10 @@ internal class MaterialEditorBuild : Pass<MaterialEditorBuild>
         var overridePlans = MaterialEditorProcessor.BuildOverridePlans(effectiveComponents, 
             allAssignments, Utils.OriginalReferenceEquals, Utils.OriginalReferenceEquals);
 
+#if ME_VRCSDK
+        VRCCompatibility.AddStreamingMipmapsOverrides(allAssignments, overridePlans);
+#endif
+
         var replacements = MaterialEditorProcessor.BuildReplacements(overridePlans, 
             Utils.CloneAndRegister);
 
