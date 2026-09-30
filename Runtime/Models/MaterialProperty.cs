@@ -48,7 +48,7 @@ internal struct MaterialProperty : IEquatable<MaterialProperty>
 
     public readonly bool TrySet(Material mat)
     {
-        if (!Validate(mat, PropertyName, PropertyType)) return false;
+        if (!CanSet(mat.shader)) return false;
 
         switch (PropertyType)
         {
@@ -190,19 +190,11 @@ internal struct MaterialProperty : IEquatable<MaterialProperty>
         return true;
     }
 
-    private static bool Validate(Material mat, string propertyName, ShaderPropertyType propertyType)
+    internal readonly bool CanSet(Shader? shader)
     {
-        if (!mat.HasProperty(propertyName))
-        {
-            return false;
-        }
-        var propertyIndex = mat.shader.FindPropertyIndex(propertyName);
-        if (propertyIndex == -1 || mat.shader.GetPropertyType(propertyIndex) != propertyType)
-        {
-            return false;
-        }
-
-        return true;
+        if (shader == null) return false;
+        var propertyIndex = shader.FindPropertyIndex(PropertyName);
+        return propertyIndex != -1 && shader.GetPropertyType(propertyIndex) == PropertyType;
     }
     
     private static bool ValidateIndex(Shader shader, int propertyIndex)

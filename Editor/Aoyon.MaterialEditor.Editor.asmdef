@@ -24,6 +24,11 @@
     "versionDefines": [
         {
             "name": "com.vrchat.base",
+            "expression": "",
+            "define": "ME_VRCSDK"
+        },
+        {
+            "name": "com.vrchat.base",
             "expression": "(3.3.99999,)",
             "define": "ME_HARMONY"
         },
